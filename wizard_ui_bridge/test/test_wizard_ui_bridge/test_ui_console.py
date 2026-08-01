@@ -4,8 +4,8 @@
 This covers the console bridge's typed ask methods: ask_text (including
 sensitive hidden input), ask_int, ask_yes_no and the ask_form question,
 plus the ask_table editor for both fixed and variable-row tables. The
-single-choice menu and show() are exercised through the wizard in
-test_wizard.py.
+choice menus are covered in test_ui_console_menu.py and the rules of one
+table cell in test_ui_table_cell.py.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -301,6 +301,21 @@ def test_yes_no_retry() -> None:
     assert '1: yes' in out.getvalue()
     assert '2: no' in out.getvalue()
     assert 'Please answer yes or no.' in err.getvalue()
+
+
+def test_yes_no_word() -> None:
+    """An unrecognised console yes/no word re-asks with guidance."""
+    err = StringIO()
+    bridge = WizardUiBridgeConsole(StringIO(), StringIO('maybe\nn\n'), err)
+    assert bridge.ask_yes_no('OK?', True) is False
+    assert 'Please answer yes or no.' in err.getvalue()
+
+
+def test_no_answer_left() -> None:
+    """Running out of console input names the unanswered question."""
+    bridge = WizardUiBridgeConsole(StringIO(), StringIO(''), StringIO())
+    with pytest.raises(EOFError, match='Name'):
+        bridge.ask_text('Name?')
 
 
 @pytest.mark.parametrize('token, error', [

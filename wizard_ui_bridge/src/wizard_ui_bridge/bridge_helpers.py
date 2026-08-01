@@ -23,6 +23,7 @@ _ERASE_TOKEN = ':e'  # empties an editable cell in a one-cell-at-a-time table
 CHOICE_ERROR = 'Please enter one of the listed choices.'
 INT_ERROR = 'Please enter an integer.'
 _PATH_REQUIRED = 'Please enter a path.'
+_VALUE_REQUIRED = 'Please enter a value.'
 
 
 def check_text_args(default: Optional[str], sensitive: bool) -> None:
@@ -227,9 +228,9 @@ def fill_cell(ask: AskReader, columns: Sequence[TableColumn],
     reason: Optional[str] = None
     while True:
         answer = ask(prompt, reason, cell.choices)
-        valid, candidate = _cell_value(answer, cell, current)
-        if not valid:
-            reason = 'Please enter a value.'
+        rejected, candidate = _cell_value(answer, cell, current)
+        if rejected is not None:
+            reason = rejected
             continue
         error = check(candidate)
         if error is None:
@@ -263,34 +264,71 @@ def cell_checker(table: list[list[Optional[str]]], position: tuple[int, int],
     return check
 
 
-def _cell_value(answer: str | int, cell: TableCell,
-                current: Optional[str]) -> tuple[bool, Optional[str]]:
-    """Map a bridge answer to a cell value and whether it is usable."""
+def _cell_value(answer: str | int, cell: TableCell, current: Optional[str]
+                ) -> tuple[Optional[str], Optional[str]]:
+    """Map a bridge answer to a rejection reason and a cell value.
+
+    The reason is None when the value can be used, and otherwise the
+    message to show the user before asking the cell again. A bool answer
+    is not a menu index and has no place in a table cell, so it is
+    rejected rather than read as the index bool inherits from int.
+    """
     if answer == '':
-        return (True, current)
+        return _kept_value(cell, current)
     if isinstance(answer, str) and answer.strip().lower() == _ERASE_TOKEN:
         return _erased_value(cell)
     if isinstance(answer, bool):
-        return (False, None)
+        return (_VALUE_REQUIRED, None)
     if isinstance(answer, int):
         return _indexed_value(answer, cell)
-    return (True, answer)
+    return _named_value(answer, cell)
 
 
-def _erased_value(cell: TableCell) -> tuple[bool, Optional[str]]:
-    """Map an erase request to a cell value and whether it is usable."""
+def _kept_value(cell: TableCell, current: Optional[str]
+                ) -> tuple[Optional[str], Optional[str]]:
+    """Map keeping the current value to a reason and a cell value.
+
+    Keeping a cell that is already empty leaves it empty, which is the
+    same outcome as erasing it, so a cell that may not be left empty is
+    not emptied just because the user kept it.
+    """
+    if current is not None:
+        return (None, current)
+    return _erased_value(cell)
+
+
+def _erased_value(cell: TableCell) -> tuple[Optional[str], Optional[str]]:
+    """Map an erase request to a reason and a cell value."""
     if cell.nullable:
-        return (True, None)
+        return (None, None)
     if cell.choices is None:
-        return (True, '')
-    return (False, None)
+        return (None, '')
+    return (_VALUE_REQUIRED, None)
 
 
-def _indexed_value(index: int, cell: TableCell) -> tuple[bool, Optional[str]]:
-    """Map a 0-based choice index to a cell value, or mark it unusable."""
-    if cell.choices is not None and 0 <= index < len(cell.choices):
-        return (True, cell.choices[index])
-    return (False, None)
+def _indexed_value(index: int, cell: TableCell
+                   ) -> tuple[Optional[str], Optional[str]]:
+    """Map a 0-based choice index to a reason and a cell value."""
+    return _choice_result(_choice_at_index(index, cell.choices or ()))
+
+
+def _named_value(text: str, cell: TableCell
+                 ) -> tuple[Optional[str], Optional[str]]:
+    """Map answer text to a reason and a cell value.
+
+    A cell that offers choices accepts only those values, so its text is
+    matched against them by name the same way a single-choice question
+    matches a typed name.
+    """
+    if cell.choices is None:
+        return (None, text)
+    return _choice_result(_best_match(text, cell.choices))
+
+
+def _choice_result(match: Optional[str]
+                   ) -> tuple[Optional[str], Optional[str]]:
+    """Return the cell result for a matched choice, or a rejection."""
+    return (None, match) if match is not None else (CHOICE_ERROR, None)
 
 
 def int_text(text: str) -> Optional[int]:

@@ -249,8 +249,11 @@
   * [\_cell\_prompt](#wizard_ui_bridge.bridge_helpers._cell_prompt)
   * [cell\_checker](#wizard_ui_bridge.bridge_helpers.cell_checker)
   * [\_cell\_value](#wizard_ui_bridge.bridge_helpers._cell_value)
+  * [\_kept\_value](#wizard_ui_bridge.bridge_helpers._kept_value)
   * [\_erased\_value](#wizard_ui_bridge.bridge_helpers._erased_value)
   * [\_indexed\_value](#wizard_ui_bridge.bridge_helpers._indexed_value)
+  * [\_named\_value](#wizard_ui_bridge.bridge_helpers._named_value)
+  * [\_choice\_result](#wizard_ui_bridge.bridge_helpers._choice_result)
   * [int\_text](#wizard_ui_bridge.bridge_helpers.int_text)
   * [out\_of\_range](#wizard_ui_bridge.bridge_helpers.out_of_range)
   * [range\_error](#wizard_ui_bridge.bridge_helpers.range_error)
@@ -4037,30 +4040,77 @@ Return a per-cell check that records a candidate and validates it.
 
 ```python
 def _cell_value(answer: str | int, cell: TableCell,
-                current: Optional[str]) -> tuple[bool, Optional[str]]
+                current: Optional[str]) -> tuple[Optional[str], Optional[str]]
 ```
 
-Map a bridge answer to a cell value and whether it is usable.
+Map a bridge answer to a rejection reason and a cell value.
+
+The reason is None when the value can be used, and otherwise the
+message to show the user before asking the cell again. A bool answer
+is not a menu index and has no place in a table cell, so it is
+rejected rather than read as the index bool inherits from int.
+
+<a id="wizard_ui_bridge.bridge_helpers._kept_value"></a>
+
+#### \_kept\_value
+
+```python
+def _kept_value(cell: TableCell,
+                current: Optional[str]) -> tuple[Optional[str], Optional[str]]
+```
+
+Map keeping the current value to a reason and a cell value.
+
+Keeping a cell that is already empty leaves it empty, which is the
+same outcome as erasing it, so a cell that may not be left empty is
+not emptied just because the user kept it.
 
 <a id="wizard_ui_bridge.bridge_helpers._erased_value"></a>
 
 #### \_erased\_value
 
 ```python
-def _erased_value(cell: TableCell) -> tuple[bool, Optional[str]]
+def _erased_value(cell: TableCell) -> tuple[Optional[str], Optional[str]]
 ```
 
-Map an erase request to a cell value and whether it is usable.
+Map an erase request to a reason and a cell value.
 
 <a id="wizard_ui_bridge.bridge_helpers._indexed_value"></a>
 
 #### \_indexed\_value
 
 ```python
-def _indexed_value(index: int, cell: TableCell) -> tuple[bool, Optional[str]]
+def _indexed_value(index: int,
+                   cell: TableCell) -> tuple[Optional[str], Optional[str]]
 ```
 
-Map a 0-based choice index to a cell value, or mark it unusable.
+Map a 0-based choice index to a reason and a cell value.
+
+<a id="wizard_ui_bridge.bridge_helpers._named_value"></a>
+
+#### \_named\_value
+
+```python
+def _named_value(text: str,
+                 cell: TableCell) -> tuple[Optional[str], Optional[str]]
+```
+
+Map answer text to a reason and a cell value.
+
+A cell that offers choices accepts only those values, so its text is
+matched against them by name the same way a single-choice question
+matches a typed name.
+
+<a id="wizard_ui_bridge.bridge_helpers._choice_result"></a>
+
+#### \_choice\_result
+
+```python
+def _choice_result(
+        match: Optional[str]) -> tuple[Optional[str], Optional[str]]
+```
+
+Return the cell result for a matched choice, or a rejection.
 
 <a id="wizard_ui_bridge.bridge_helpers.int_text"></a>
 

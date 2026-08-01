@@ -4,6 +4,7 @@
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
+import sys
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
@@ -13,7 +14,7 @@ from wizard_ui_bridge import PathAskOptions as PublicPathAskOptions, \
     WizardPathKind as PublicPathKind, WizardUiBridge, TableColumn, TableCell
 from wizard_ui_bridge.arg_types import PathAskOptions, \
     WizardPathKind
-from wizard_ui_bridge.bridge_helpers import path_answer
+from wizard_ui_bridge.bridge_helpers import path_answer, INT_ERROR
 
 
 # A test double implements only the ask methods its tests exercise.
@@ -96,6 +97,47 @@ def test_int_default_range() -> None:
         bridge.ask_int('How many?', min_value=1, max_value=5, default=9)
 
 
+def test_int_not_number() -> None:
+    """An answer that is not an integer re-asks the same question."""
+    bridge = _TextBridge(['ten', '10'])
+    assert bridge.ask_int('How many?') == 10
+    assert bridge.calls == [('How many?', None), ('How many?', INT_ERROR)]
+
+
+def test_int_nullable() -> None:
+    """An empty answer to a nullable integer question reports None."""
+    assert _TextBridge(['']).ask_int('How many?', nullable=True) is None
+
+
+@pytest.mark.parametrize('low, high, rejected, reason', [
+    (1, 5, '9', 'Please enter an integer between 1 and 5.'),
+    (1, 5, '0', 'Please enter an integer between 1 and 5.'),
+    (1, None, '0', 'Please enter an integer at least 1.'),
+    (None, 5, '6', 'Please enter an integer at most 5.')])
+def test_int_range(low: Optional[int], high: Optional[int], rejected: str,
+                   reason: str) -> None:
+    """An out-of-range integer re-asks and names the allowed range."""
+    bridge = _TextBridge([rejected, '3'])
+    assert bridge.ask_int('How many?', min_value=low, max_value=high) == 3
+    assert bridge.calls[1] == ('How many?', reason)
+
+
+@pytest.mark.parametrize('low, high, accepted', [
+    (1, 5, '1'), (1, 5, '5'), (1, None, '1'), (None, 5, '5'),
+    (None, None, '-7')])
+def test_int_in_range(low: Optional[int], high: Optional[int],
+                      accepted: str) -> None:
+    """The allowed integer range includes both of its bounds."""
+    bridge = _TextBridge([accepted])
+    result = bridge.ask_int('How many?', min_value=low, max_value=high)
+    assert result == int(accepted)
+
+
+def test_error_file_default() -> None:
+    """The base bridge sends validation diagnostics to standard error."""
+    assert WizardUiBridge().error_file() is sys.stderr
+
+
 def _path_case_paths(tmp_path: Path) -> dict[str, Path]:
     """Return existing and missing paths for path validation tests."""
     file_path = tmp_path / 'file.txt'
@@ -145,6 +187,27 @@ def test_path_default(tmp_path: Path) -> None:
                              default=paths['file'])
     result = _TextBridge(['']).ask_path('Path?', options=options)
     assert result == paths['file']
+
+
+def test_path_default_first(tmp_path: Path) -> None:
+    """A default beats nullable for an empty path answer, and is checked."""
+    paths = _path_case_paths(tmp_path)
+    options = PathAskOptions(kind=WizardPathKind.EXISTING_FILE, nullable=True,
+                             default=paths['file'])
+    assert _TextBridge(['']).ask_path('Path?', options=options) == \
+        paths['file']
+
+
+def test_path_blank_default(tmp_path: Path) -> None:
+    """A blank raw answer reports the default, nullable or not."""
+    paths = _path_case_paths(tmp_path)
+    options = PathAskOptions(nullable=True, default=paths['missing_file'])
+    assert path_answer('', options) == (True, paths['missing_file'], None)
+
+
+def test_path_none_answer() -> None:
+    """A bridge reporting no answer at all leaves the path unset."""
+    assert path_answer(None, PathAskOptions()) == (True, None, None)
 
 
 def test_path_empty(tmp_path: Path) -> None:
