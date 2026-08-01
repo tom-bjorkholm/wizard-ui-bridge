@@ -53,7 +53,6 @@
   * [prefilled\_field](#wizard_ui_bridge.form_helpers.prefilled_field)
 * [wizard\_ui\_bridge.bridge](#wizard_ui_bridge.bridge)
   * [WizardUiBridge](#wizard_ui_bridge.bridge.WizardUiBridge)
-    * [ask](#wizard_ui_bridge.bridge.WizardUiBridge.ask)
     * [ask\_text](#wizard_ui_bridge.bridge.WizardUiBridge.ask_text)
     * [ask\_int](#wizard_ui_bridge.bridge.WizardUiBridge.ask_int)
     * [ask\_path](#wizard_ui_bridge.bridge.WizardUiBridge.ask_path)
@@ -1090,13 +1089,7 @@ An application that drives the wizard is responsible for implementing
 the typed ask methods of its bridge, together with show(). A concrete
 bridge implements ask_text(), ask_choice(), ask_multi(), ask_yes_no()
 and ask_table(); ask_path() has a permanent base implementation that a
-bridge may override for a native file or directory picker. The low-level
-ask() is deprecated: calling it, overriding it, and the typed-method
-fallbacks written in terms of it each warn loudly. This is the LAST
-release that supports ask(); the next release REMOVES it, dropping both
-calling ask() and the fallbacks that let a bridge which only overrides
-ask() keep working. Migrate every bridge to implement the typed methods
-directly, or it will stop working.
+bridge may override for a native file or directory picker.
 
 A GUI, textual, curses or web application should override ask_form() to show
 the whole form at once, so the user sees every question together and answers
@@ -1130,55 +1123,8 @@ show the whole form at once, so the user sees every question together
 and answers them in any order. Overriding ask_form() and ask_path()
 is strongly recommended for a GUI, textual, curses or web application.
 
-The low-level ask() is deprecated: calling it, overriding it, and the
-typed-method fallbacks written in terms of it each warn loudly. This
-is the LAST release that supports ask(); the next release REMOVES it,
-dropping both the ability to call ask() and the fallbacks that let a
-bridge which only overrides ask() keep working. Migrate every bridge
-to implement ask_text(), ask_choice(), ask_multi(), ask_yes_no() and
-ask_table() directly, or it will stop working.
-
 Any ask method may raise a WizardNavigation subclass to request back,
 cancel-level or abort instead of returning an answer.
-
-<a id="wizard_ui_bridge.bridge.WizardUiBridge.ask"></a>
-
-#### ask
-
-```python
-def ask(question: str,
-        re_ask_reason: Optional[str] = None,
-        choices: Optional[Sequence[str]] = None) -> str | int
-```
-
-Ask a question and return the user's answer.
-
-Deprecated and REMOVED in the next release, after which this call
-will stop working. Call ask_text() for free text or ask_choice()
-for a single choice instead. This base implementation is temporary
-plumbing: it warns loudly and then dispatches to ask_text() when no
-choices are given and to ask_choice() otherwise, so existing
-callers keep working for this last release.
-
-**Arguments**:
-
-- `question` - The question to ask the user.
-- `re_ask_reason` - The reason for re-asking the question, for
-  instance that the user's answer was invalid.
-- `choices` - The choices to offer the user as a sequence of
-  strings.
-  
-
-**Returns**:
-
-  The user's answer: the entered text when no choices are
-  given, otherwise the chosen one of choices.
-
-**Raises**:
-
-- `WizardBack` - The user asked to return to the previous question.
-- `WizardCancelLevel` - The user cancelled the current level.
-- `WizardAbort` - The user abandoned the whole wizard.
 
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.ask_text"></a>
 
@@ -1196,10 +1142,7 @@ def ask_text(question: str,
 Ask a free-text question and return the entered text.
 
 The application is responsible for implementing this method with
-a real text-entry control. As a temporary migration aid the base
-class provides a fallback in terms of the deprecated ask(), so a
-bridge that still overrides ask() keeps working for non-sensitive
-questions.
+a real text-entry control. The base class has no implementation.
 
 **Arguments**:
 
@@ -1224,8 +1167,7 @@ questions.
 **Raises**:
 
 - `ValueError` - default is given together with sensitive.
-- `NotImplementedError` - The deprecated ask() fallback is used
-  for sensitive input.
+- `NotImplementedError` - The bridge does not implement ask_text().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -1327,11 +1269,8 @@ Ask a yes/no question and return the chosen boolean.
 Yes/no questions are asked through this method, and the
 application is responsible for implementing it with a real yes/no
 interface, such as a pair of yes and no buttons in a graphical
-bridge or a y/n prompt in a console bridge. As a temporary
-migration aid the base class provides a fallback in terms of the
-deprecated ask() with the choices ('yes', 'no'): an empty answer
-selects default, an index or matching text selects the boolean,
-and any other answer is re-asked.
+bridge or a y/n prompt in a console bridge. The base class has no
+implementation.
 
 **Arguments**:
 
@@ -1348,6 +1287,7 @@ and any other answer is re-asked.
 
 **Raises**:
 
+- `NotImplementedError` - The bridge does not implement ask_yes_no().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -1373,9 +1313,8 @@ question is re-asked.
 
 The application is responsible for implementing this method with
 a real single-choice control, such as a drop-down or a set of
-radio buttons in a graphical bridge. As a temporary migration aid
-the base class provides a fallback in terms of the deprecated
-ask().
+radio buttons in a graphical bridge. The base class has no
+implementation.
 
 **Arguments**:
 
@@ -1393,6 +1332,7 @@ ask().
 
 **Raises**:
 
+- `NotImplementedError` - The bridge does not implement ask_choice().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -1420,10 +1360,8 @@ nothing when default is None.
 
 The application is responsible for implementing this method with
 a real multi-selection control, such as a list of check boxes or
-a multi-select list in a graphical bridge. As a temporary
-migration aid the base class provides a fallback in terms of the
-deprecated ask() that reads one comma-separated answer of menu
-indexes or names.
+a multi-select list in a graphical bridge. The base class has no
+implementation.
 
 **Arguments**:
 
@@ -1443,6 +1381,7 @@ indexes or names.
 
 **Raises**:
 
+- `NotImplementedError` - The bridge does not implement ask_multi().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -1471,15 +1410,9 @@ each cell, such as a column of parameter names, while editable
 columns show pre-filled or empty values the user may change.
 
 The application is responsible for implementing this method with
-a real table widget. As a temporary migration aid the base class
-provides a fallback in terms of the deprecated ask(), asking once
-per editable cell and folding the read-only cells of the row into
-the prompt, so a bridge that still overrides ask() keeps working.
-The fallback only fills the rows given in cells, so it ignores
-min_rows and max_rows and cannot add or remove rows. In that
-fallback an empty answer keeps the cell's current value and a
-reserved erase token empties the cell, which is how a console
-user replaces a pre-filled default with an empty cell.
+a real table widget. The base class has no implementation, but
+the helpers in wizard_ui_bridge.bridge_helpers fill a table one
+cell at a time for a bridge that asks one question at a time.
 
 How an empty editable cell is reported follows its TableCell: a
 nullable cell reports None, a free-text cell reports an empty
@@ -1523,6 +1456,7 @@ still validates the final table.
 
 **Raises**:
 
+- `NotImplementedError` - The bridge does not implement ask_table().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -2145,8 +2079,8 @@ def run_table(
 Show one table question and fill its editable cells via ask.
 
 The read-only cells stay fixed and only the editable cells are asked,
-one at a time, through the ask reader. This is the shared core of the
-console table interface and the deprecated base-class table fallback.
+one at a time, through the ask reader. This is the shared core of a
+fixed-row table in any bridge that asks one question at a time.
 
 <a id="wizard_ui_bridge.bridge_helpers.fill_cell"></a>
 

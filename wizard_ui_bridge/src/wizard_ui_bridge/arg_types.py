@@ -18,12 +18,12 @@ value is accepted together with a message to show the user.
 
 type AskReader = Callable[
     [str, Optional[str], Optional[Sequence[str]]], str | int]
-"""An ask-like reader used by the temporary table fallback machinery.
+"""A reader of one raw user answer, used by the table helpers.
 
 It takes a prompt, an optional re-ask reason and optional choices and
-returns the raw user answer as text or a 0-based choice index, exactly
-like the deprecated WizardUiBridge.ask(). The shared table helpers take
-one so the console bridge and the deprecated base fallback share code.
+returns the raw user answer as text or a 0-based choice index. The
+shared table helpers take one, so every bridge that fills a table one
+cell at a time supplies its own reader and shares the table code.
 """
 
 

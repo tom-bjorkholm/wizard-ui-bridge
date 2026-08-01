@@ -19,7 +19,7 @@ from wizard_ui_bridge.arg_types import PartialCheck, \
     TableCell
 
 
-_ERASE_TOKEN = ':e'  # empties an editable cell in the ask_table fallback
+_ERASE_TOKEN = ':e'  # empties an editable cell in a one-cell-at-a-time table
 CHOICE_ERROR = 'Please enter one of the listed choices.'
 INT_ERROR = 'Please enter an integer.'
 _PATH_REQUIRED = 'Please enter a path.'
@@ -159,8 +159,8 @@ def run_table(ask: AskReader, show: Callable[[str], None],
     """Show one table question and fill its editable cells via ask.
 
     The read-only cells stay fixed and only the editable cells are asked,
-    one at a time, through the ask reader. This is the shared core of the
-    console table interface and the deprecated base-class table fallback.
+    one at a time, through the ask reader. This is the shared core of a
+    fixed-row table in any bridge that asks one question at a time.
     """
     show(question)
     if re_ask_reason is not None:

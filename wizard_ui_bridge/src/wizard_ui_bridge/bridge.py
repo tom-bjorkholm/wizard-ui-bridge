@@ -10,13 +10,7 @@ An application that drives the wizard is responsible for implementing
 the typed ask methods of its bridge, together with show(). A concrete
 bridge implements ask_text(), ask_choice(), ask_multi(), ask_yes_no()
 and ask_table(); ask_path() has a permanent base implementation that a
-bridge may override for a native file or directory picker. The low-level
-ask() is deprecated: calling it, overriding it, and the typed-method
-fallbacks written in terms of it each warn loudly. This is the LAST
-release that supports ask(); the next release REMOVES it, dropping both
-calling ask() and the fallbacks that let a bridge which only overrides
-ask() keep working. Migrate every bridge to implement the typed methods
-directly, or it will stop working.
+bridge may override for a native file or directory picker.
 
 A GUI, textual, curses or web application should override ask_form() to show
 the whole form at once, so the user sees every question together and answers
@@ -32,15 +26,12 @@ text and validates the path.
 # MIT License
 
 import sys
-import warnings
 from pathlib import Path
 from typing import Optional, Sequence, TextIO
 from wizard_ui_bridge.arg_types import PartialCheck, \
     PathAskOptions, TableColumn, TableCell, WizardBack
-from wizard_ui_bridge.bridge_helpers import check_text_args, \
-    text_answer, question_with_default, ask_yes_no, ask_one, \
-    ask_many, run_table, int_text, out_of_range, range_error, path_answer, \
-    INT_ERROR
+from wizard_ui_bridge.bridge_helpers import int_text, \
+    out_of_range, range_error, path_answer, INT_ERROR
 from wizard_ui_bridge.form_helpers import initial_answer, \
     valid_prefills, prefilled_field
 from wizard_ui_bridge._parse import ask_typed, parse_float, \
@@ -56,20 +47,6 @@ from wizard_ui_bridge.form_defs import AskField, AskFields, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField, \
     AnswerTimeField, AnswerDateTimeField, AnswerDurationField, \
     PrefillValueType
-
-
-def _warn_ask_removed(message: str, stacklevel: int) -> None:
-    """Warn, loudly, that deprecated ask() support ends next release.
-
-    The same message goes out three ways so no client can miss it: a
-    DeprecationWarning for tools and test runners, a UserWarning that
-    Python shows to end users by default, and a line printed to stderr
-    in case warnings are filtered out entirely. stacklevel points the
-    warnings at the caller of the deprecated API, as if warned there.
-    """
-    warnings.warn(message, DeprecationWarning, stacklevel=stacklevel + 1)
-    warnings.warn(message, UserWarning, stacklevel=stacklevel + 1)
-    print(message, file=sys.stderr)
 
 
 class WizardUiBridge:
@@ -88,66 +65,9 @@ class WizardUiBridge:
     and answers them in any order. Overriding ask_form() and ask_path()
     is strongly recommended for a GUI, textual, curses or web application.
 
-    The low-level ask() is deprecated: calling it, overriding it, and the
-    typed-method fallbacks written in terms of it each warn loudly. This
-    is the LAST release that supports ask(); the next release REMOVES it,
-    dropping both the ability to call ask() and the fallbacks that let a
-    bridge which only overrides ask() keep working. Migrate every bridge
-    to implement ask_text(), ask_choice(), ask_multi(), ask_yes_no() and
-    ask_table() directly, or it will stop working.
-
     Any ask method may raise a WizardNavigation subclass to request back,
     cancel-level or abort instead of returning an answer.
     """
-
-    def __init_subclass__(cls, **kwargs: object) -> None:
-        """Warn that overriding the deprecated ask() ends next release."""
-        super().__init_subclass__(**kwargs)
-        if 'ask' in cls.__dict__:
-            _warn_ask_removed(
-                'Overriding WizardUiBridge.ask() is deprecated. Backward '
-                'compatibility for ask() will be REMOVED in the next '
-                'release, after which this bridge will stop working. '
-                'Override ask_text(), ask_choice(), ask_multi(), '
-                'ask_yes_no() and ask_table() in the bridge instead.',
-                stacklevel=2)
-
-    def ask(self, question: str, re_ask_reason: Optional[str] = None,
-            choices: Optional[Sequence[str]] = None) -> str | int:
-        """Ask a question and return the user's answer.
-
-        Deprecated and REMOVED in the next release, after which this call
-        will stop working. Call ask_text() for free text or ask_choice()
-        for a single choice instead. This base implementation is temporary
-        plumbing: it warns loudly and then dispatches to ask_text() when no
-        choices are given and to ask_choice() otherwise, so existing
-        callers keep working for this last release.
-
-        Args:
-            question: The question to ask the user.
-            re_ask_reason: The reason for re-asking the question, for
-                           instance that the user's answer was invalid.
-            choices: The choices to offer the user as a sequence of
-                     strings.
-
-        Returns:
-            The user's answer: the entered text when no choices are
-            given, otherwise the chosen one of choices.
-        Raises:
-            WizardBack: The user asked to return to the previous question.
-            WizardCancelLevel: The user cancelled the current level.
-            WizardAbort: The user abandoned the whole wizard.
-        """
-        _warn_ask_removed(
-            'WizardUiBridge.ask() is deprecated and will be REMOVED in the '
-            'next release, after which this call will stop working. Call '
-            'ask_text() for free text or ask_choice() for a single choice '
-            'instead.', stacklevel=2)
-        if choices is None:
-            text = self.ask_text(question, re_ask_reason)
-            return '' if text is None else text
-        return self.ask_choice(question, choices=choices,
-                               re_ask_reason=re_ask_reason)
 
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
@@ -155,10 +75,7 @@ class WizardUiBridge:
         """Ask a free-text question and return the entered text.
 
         The application is responsible for implementing this method with
-        a real text-entry control. As a temporary migration aid the base
-        class provides a fallback in terms of the deprecated ask(), so a
-        bridge that still overrides ask() keeps working for non-sensitive
-        questions.
+        a real text-entry control. The base class has no implementation.
 
         Args:
             question: The question to ask the user.
@@ -178,21 +95,12 @@ class WizardUiBridge:
             or None for an empty answer when nullable.
         Raises:
             ValueError: default is given together with sensitive.
-            NotImplementedError: The deprecated ask() fallback is used
-                                 for sensitive input.
+            NotImplementedError: The bridge does not implement ask_text().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        check_text_args(default, sensitive)
-        if sensitive:
-            raise NotImplementedError('ask_text() sensitive input not '
-                                      'implemented')
-        self._guard_fallback('ask_text')
-        prompt = question_with_default(question, default)
-        answer = self.ask(prompt, re_ask_reason)
-        text = answer if isinstance(answer, str) else str(answer)
-        return text_answer(text, nullable, default)
+        raise NotImplementedError('ask_text() not implemented')
 
     # pylint: disable-next=too-many-arguments
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
@@ -285,11 +193,8 @@ class WizardUiBridge:
         Yes/no questions are asked through this method, and the
         application is responsible for implementing it with a real yes/no
         interface, such as a pair of yes and no buttons in a graphical
-        bridge or a y/n prompt in a console bridge. As a temporary
-        migration aid the base class provides a fallback in terms of the
-        deprecated ask() with the choices ('yes', 'no'): an empty answer
-        selects default, an index or matching text selects the boolean,
-        and any other answer is re-asked.
+        bridge or a y/n prompt in a console bridge. The base class has no
+        implementation.
 
         Args:
             question: The yes/no question to ask.
@@ -301,15 +206,12 @@ class WizardUiBridge:
         Returns:
             The user's choice as a boolean.
         Raises:
+            NotImplementedError: The bridge does not implement ask_yes_no().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        self._guard_fallback('ask_yes_no')
-
-        def reader(reason: Optional[str]) -> str | int:
-            return self.ask(question, reason, choices=('yes', 'no'))
-        return ask_yes_no(reader, default, re_ask_reason)
+        raise NotImplementedError('ask_yes_no() not implemented')
 
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
@@ -323,9 +225,8 @@ class WizardUiBridge:
 
         The application is responsible for implementing this method with
         a real single-choice control, such as a drop-down or a set of
-        radio buttons in a graphical bridge. As a temporary migration aid
-        the base class provides a fallback in terms of the deprecated
-        ask().
+        radio buttons in a graphical bridge. The base class has no
+        implementation.
 
         Args:
             question: The question to ask the user.
@@ -338,15 +239,12 @@ class WizardUiBridge:
         Returns:
             The chosen value, one of choices.
         Raises:
+            NotImplementedError: The bridge does not implement ask_choice().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        self._guard_fallback('ask_choice')
-
-        def reader(reason: Optional[str]) -> str | int:
-            return self.ask(question, reason, choices)
-        return ask_one(reader, choices, default, re_ask_reason)
+        raise NotImplementedError('ask_choice() not implemented')
 
     # pylint: disable-next=too-many-arguments
     def ask_multi(self, question: str, *, choices: Sequence[str],
@@ -362,10 +260,8 @@ class WizardUiBridge:
 
         The application is responsible for implementing this method with
         a real multi-selection control, such as a list of check boxes or
-        a multi-select list in a graphical bridge. As a temporary
-        migration aid the base class provides a fallback in terms of the
-        deprecated ask() that reads one comma-separated answer of menu
-        indexes or names.
+        a multi-select list in a graphical bridge. The base class has no
+        implementation.
 
         Args:
             question: The question to ask the user.
@@ -380,16 +276,12 @@ class WizardUiBridge:
         Returns:
             The chosen values, each one of choices, in choices order.
         Raises:
+            NotImplementedError: The bridge does not implement ask_multi().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        self._guard_fallback('ask_multi')
-
-        def reader(reason: Optional[str]) -> str | int:
-            return self.ask(question, reason, choices)
-        return ask_many(reader, choices, default, min_select, max_select,
-                        re_ask_reason, one_based=False)
+        raise NotImplementedError('ask_multi() not implemented')
 
     # pylint: disable-next=too-many-arguments
     def ask_table(self, columns: Sequence[TableColumn],
@@ -407,15 +299,9 @@ class WizardUiBridge:
         columns show pre-filled or empty values the user may change.
 
         The application is responsible for implementing this method with
-        a real table widget. As a temporary migration aid the base class
-        provides a fallback in terms of the deprecated ask(), asking once
-        per editable cell and folding the read-only cells of the row into
-        the prompt, so a bridge that still overrides ask() keeps working.
-        The fallback only fills the rows given in cells, so it ignores
-        min_rows and max_rows and cannot add or remove rows. In that
-        fallback an empty answer keeps the cell's current value and a
-        reserved erase token empties the cell, which is how a console
-        user replaces a pre-filled default with an empty cell.
+        a real table widget. The base class has no implementation, but
+        the helpers in wizard_ui_bridge.bridge_helpers fill a table one
+        cell at a time for a bridge that asks one question at a time.
 
         How an empty editable cell is reported follows its TableCell: a
         nullable cell reports None, a free-text cell reports an empty
@@ -454,14 +340,12 @@ class WizardUiBridge:
             columns, with one cell per column in each row. Each cell is
             the final string the user left, or None for an empty cell.
         Raises:
+            NotImplementedError: The bridge does not implement ask_table().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        self._guard_fallback('ask_table')
-        _ = (min_rows, max_rows)  # the fallback fills the fixed rows in cells
-        return run_table(self.ask, self.show, columns, cells, question,
-                         re_ask_reason, partial_check)
+        raise NotImplementedError('ask_table() not implemented')
 
     def ask_form(self, long_question: str, ask_fields: AskFields, *,
                  re_ask_reason: Optional[str] = None,
@@ -702,25 +586,6 @@ class WizardUiBridge:
         return AnswerMultiChoiceField(field, self.ask_multi(
             field.short_question, choices=field.choices, default=field.default,
             min_select=field.min_select, max_select=field.max_select))
-
-    def _guard_fallback(self, method_name: str) -> None:
-        """Guard a deprecated fallback and warn loudly it ends next release.
-
-        The base typed-method fallbacks work only while a bridge still
-        overrides the deprecated ask(). A bridge that overrides neither
-        ask() nor method_name has no implementation for it, so this
-        raises NotImplementedError; otherwise it warns loudly that the
-        fallback, and ask() itself, are REMOVED in the next release and
-        that method_name must be overridden instead.
-        """
-        if type(self).ask is WizardUiBridge.ask:
-            raise NotImplementedError(f'{method_name}() not implemented')
-        _warn_ask_removed(
-            f'WizardUiBridge.{method_name}() relies on temporary backward '
-            'compatibility code that will be REMOVED in the next release, '
-            'after which this bridge will stop working. Override '
-            f'{method_name}() in the bridge instead of the deprecated '
-            'ask().', stacklevel=3)
 
     def error_file(self) -> TextIO:
         """Return the stream used for validation diagnostics."""

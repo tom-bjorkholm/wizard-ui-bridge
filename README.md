@@ -23,19 +23,16 @@ share a common history. Up until version 1.1 there was only one repo.
 Now that repo is split in two, and each repo holds only code for its
 package. However, both repos have the common history.
 
+## Removed: `WizardUiBridge.ask()`
 
-## Deprecation: `WizardUiBridge.ask()` is removed next release
+The low-level `WizardUiBridge.ask()` method is gone, together with the
+backward-compatibility fallbacks that let a bridge which only overrode
+`ask()` keep working. Version 1.1 was the last version that supported
+it, and warned loudly about the removal on every use.
 
-This is the last release that supports the low-level
-`WizardUiBridge.ask()` method in `wizard-ui-bridge` (and re-exported by
-`tableio-cfg-json`). The next release removes it entirely: both calling
-`ask()` and the backward-compatibility fallbacks for a bridge that only
-overrides `ask()` are dropped, so such a bridge will stop working. Every
-use now warns loudly with a `DeprecationWarning`, an additional
-default-visible `UserWarning`, and a message on standard error, so the
-change is impossible to miss. Implement the typed `ask_text()`,
-`ask_choice()`, `ask_multi()`, `ask_yes_no()` and `ask_table()` methods
-directly instead. See the package READMEs for details.
+A bridge now implements the typed `ask_text()`, `ask_choice()`,
+`ask_multi()`, `ask_yes_no()` and `ask_table()` methods directly,
+together with `show()`. See the package READMEs for details.
 
 ## Related documentation
 
@@ -108,7 +105,7 @@ After a build, the generated reports can be browsed through
 
 ## Test summary
 
-- Test result: 627 passed in 29s
+- Test result: 628 passed in 31s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.

@@ -30,6 +30,8 @@ def _shown_answer(field: AskField, text: Optional[str]) -> AnswerField:
     return initial_answer(field)
 
 
+# A test double implements only the ask methods its tests exercise.
+# pylint: disable-next=abstract-method
 class _FakeBridge(WizardUiBridge):
     """A form bridge that supports only the original field kinds.
 
@@ -68,6 +70,7 @@ class _FakeBridge(WizardUiBridge):
                 for index, field in enumerate(self.seen)]
 
 
+# pylint: disable-next=abstract-method
 class _NoSupportBridge(_FakeBridge):
     """A form bridge that cannot show any field type."""
 

@@ -100,7 +100,8 @@ class WizardUiBridgeConsole(WizardUiBridge):
         """Emit one question and read a navigation-checked raw answer.
 
         Returns the entered text, or a 0-based index into choices when
-        choices are offered, like the deprecated WizardUiBridge.ask().
+        choices are offered, which is the raw-answer shape the table
+        helpers expect.
         """
         self._emit_question(question, re_ask_reason, _menu_lines(choices))
         text = self._read_answer(question)

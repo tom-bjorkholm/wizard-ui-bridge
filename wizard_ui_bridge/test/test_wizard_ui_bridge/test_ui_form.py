@@ -19,6 +19,8 @@ from wizard_ui_bridge.form_helpers import initial_answer, \
     valid_prefills
 
 
+# A test double implements only the ask methods its tests exercise.
+# pylint: disable-next=abstract-method
 class _FormBridge(WizardUiBridge):
     """Bridge that feeds scripted answers to the typed ask methods.
 

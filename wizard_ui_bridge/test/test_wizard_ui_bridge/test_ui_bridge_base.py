@@ -4,21 +4,20 @@
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-import warnings
-from contextlib import redirect_stderr
-from io import StringIO
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 import pytest
 
 from wizard_ui_bridge import PathAskOptions as PublicPathAskOptions, \
-    WizardPathKind as PublicPathKind, WizardUiBridge
+    WizardPathKind as PublicPathKind, WizardUiBridge, TableColumn, TableCell
 from wizard_ui_bridge.arg_types import PathAskOptions, \
     WizardPathKind
 from wizard_ui_bridge.bridge_helpers import path_answer
 
 
+# A test double implements only the ask methods its tests exercise.
+# pylint: disable-next=abstract-method
 class _TextBridge(WizardUiBridge):
     """Bridge that feeds scripted text answers to base helper methods."""
 
@@ -66,49 +65,22 @@ def test_path_api_exported() -> None:
     assert PublicPathKind is WizardPathKind
 
 
-with warnings.catch_warnings(), redirect_stderr(StringIO()):
-    warnings.simplefilter('ignore')
-
-    class _OldBridge(WizardUiBridge):
-        """Old bridge that only implements deprecated ask()."""
-
-        def __init__(self, answers: Sequence[str | int]) -> None:
-            """Store scripted raw answers returned in order by ask()."""
-            self.answers: list[str | int] = list(answers)
-
-        def ask(self, question: str, re_ask_reason: Optional[str] = None,
-                choices: Optional[Sequence[str]] = None) -> str | int:
-            """Return the next scripted raw answer."""
-            _ = (question, re_ask_reason, choices)
-            try:
-                return self.answers.pop(0)
-            except IndexError as error:
-                raise EOFError('No scripted answer left.') from error
-
-        def show(self, message: str) -> None:
-            """Ignore shown messages."""
-            _ = message
+_MANDATORY: list[tuple[str, Callable[[WizardUiBridge], object]]] = [
+    ('ask_text', lambda bridge: bridge.ask_text('q')),
+    ('ask_yes_no', lambda bridge: bridge.ask_yes_no('q', True)),
+    ('ask_choice', lambda bridge: bridge.ask_choice('q', choices=('a', 'b'))),
+    ('ask_multi', lambda bridge: bridge.ask_multi('q', choices=('a', 'b'))),
+    ('ask_table', lambda bridge: bridge.ask_table([TableColumn('c')],
+                                                  [[TableCell('v')]], 'q')),
+    ('show', lambda bridge: bridge.show('m'))]
 
 
-def test_text_default() -> None:
-    """The ask_text fallback returns default for an empty answer."""
-    bridge = _OldBridge([''])
-    with pytest.warns((DeprecationWarning, UserWarning), match='ask_text'):
-        assert bridge.ask_text('q', default='fallback') == 'fallback'
-
-
-def test_text_sensitive() -> None:
-    """The deprecated ask() fallback refuses sensitive text input."""
-    bridge = _OldBridge(['secret'])
-    with pytest.raises(NotImplementedError, match='sensitive'):
-        bridge.ask_text('q', sensitive=True)
-
-
-def test_text_secret_default() -> None:
-    """Sensitive text questions reject defaults."""
-    bridge = _OldBridge([''])
-    with pytest.raises(ValueError, match='default'):
-        bridge.ask_text('q', default='secret', sensitive=True)
+@pytest.mark.parametrize('name, call', _MANDATORY)
+def test_must_implement(name: str,
+                        call: Callable[[WizardUiBridge], object]) -> None:
+    """Each method a bridge must implement has no base implementation."""
+    with pytest.raises(NotImplementedError, match=name):
+        call(WizardUiBridge())
 
 
 def test_int_default() -> None:
@@ -200,33 +172,3 @@ def test_path_unusable(monkeypatch: pytest.MonkeyPatch) -> None:
     assert done is False
     assert value is None
     assert reason is not None and 'Invalid path' in reason
-
-
-def _check_visible(records: Sequence[warnings.WarningMessage], err: str,
-                   needle: str) -> None:
-    """Assert a DeprecationWarning, a UserWarning and stderr show needle."""
-    hits = [rec for rec in records if needle in str(rec.message)]
-    assert any(issubclass(rec.category, DeprecationWarning) for rec in hits)
-    assert any(issubclass(rec.category, UserWarning) for rec in hits)
-    assert needle in err
-
-
-def test_ask_removal_visible(capsys: pytest.CaptureFixture[str]) -> None:
-    """Every ask() deprecation site warns visibly and prints to stderr.
-
-    Overriding ask(), calling ask() and a typed-method fallback each
-    raise both a DeprecationWarning and a default-visible UserWarning,
-    and print the message to stderr, so no client can miss the removal.
-    """
-    def stand_in(*_args: object) -> str:
-        """Stand-in ask() used only to trigger the override warning."""
-        return ''
-    with pytest.warns(Warning) as records:
-        type('_Overrider', (WizardUiBridge,), {'ask': stand_in})
-    _check_visible(list(records), capsys.readouterr().err, 'Overriding')
-    with pytest.warns(Warning) as records:
-        assert _TextBridge(['typed']).ask('q') == 'typed'
-    _check_visible(list(records), capsys.readouterr().err, 'deprecated')
-    with pytest.warns(Warning) as records:
-        assert _OldBridge(['']).ask_text('q', default='x') == 'x'
-    _check_visible(list(records), capsys.readouterr().err, 'ask_text')

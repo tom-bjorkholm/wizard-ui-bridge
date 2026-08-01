@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-"""Tests for the single-screen Textual widgets and ask dispatch.
+"""Tests for the single-screen Textual widgets and their ask methods.
 
 This covers the free-text, path, choice and multi-choice screens, the
 directory picker screen and the bridge methods that map their outcomes
@@ -219,14 +219,6 @@ def test_ask_path_default(tmp_path: Path) -> None:
     app = bridge.launched[0]
     assert isinstance(app, _PathApp)
     assert app._value == str(path)
-
-
-def test_dep_ask_dispatch() -> None:
-    """The deprecated ask() dispatches to the typed Textual methods."""
-    with pytest.warns((DeprecationWarning, UserWarning), match='deprecated'):
-        assert _CannedBridge(['typed']).ask('q') == 'typed'
-    with pytest.warns((DeprecationWarning, UserWarning), match='deprecated'):
-        assert _CannedBridge([1]).ask('q', choices=['a', 'b', 'c']) == 'b'
 
 
 def test_ask_choice_value() -> None:

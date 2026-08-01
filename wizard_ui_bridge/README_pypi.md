@@ -127,26 +127,23 @@ asking methods. The modules `wizard_ui_bridge.bridge_helpers` and
 to interpret raw answers and to build form answers, so that a bridge of
 your own behaves the same way.
 
-## Deprecation: `WizardUiBridge.ask()` is removed next release
+## Removed: `WizardUiBridge.ask()`
 
-This is the **last release** that supports the low-level
-`WizardUiBridge.ask()` method. The **next release removes it entirely**,
-dropping both:
+The low-level `WizardUiBridge.ask()` method is **removed**, and with it:
 
 - calling `WizardUiBridge.ask()` from a wizard, and
 - the backward-compatibility fallbacks that let a bridge which only
-  overrides `ask()` keep working by rerouting the typed `ask_*()` calls
+  overrode `ask()` keep working by rerouting the typed `ask_*()` calls
   through it.
 
-After the next release, any bridge that still calls or overrides
-`ask()` **will stop working**. Every use now warns loudly, so the
-change is impossible to miss: it raises a `DeprecationWarning` (shown by
-pytest and other tools), an additional `UserWarning` that Python shows
-to end users by default, and it prints the message to standard error.
+Version 1.1 was the last version that supported `ask()`, where every use
+warned loudly that it was about to be removed. A bridge that still calls
+or overrides `ask()` no longer works.
 
-To keep your bridge working, implement the typed methods directly
-instead of `ask()`: `ask_text()`, `ask_choice()`, `ask_multi()`,
-`ask_yes_no()` and `ask_table()`. See *Writing your own bridge* above.
+Implement the typed methods directly instead of `ask()`: `ask_text()`,
+`ask_choice()`, `ask_multi()`, `ask_yes_no()` and `ask_table()`, together
+with `show()`. A typed method a bridge does not implement raises
+`NotImplementedError`. See *Writing your own bridge* above.
 
 ## Relation to tableio-cfg-json
 
@@ -188,7 +185,7 @@ MIT
 
 ## Test summary
 
-- Test result: 627 passed in 29s
+- Test result: 628 passed in 31s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
