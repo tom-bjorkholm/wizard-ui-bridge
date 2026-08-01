@@ -26,19 +26,19 @@ python -m wizard_ui_example.e02_question_kinds --ui console
 
 ## The examples, in reading order
 
-- [`e01_one_question.py`](https://github.com/tom-bjorkholm/tableio_cfg_json/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e01_one_question.py)
+- [`e01_one_question.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e01_one_question.py)
   obtains a bridge and asks a few free-text questions.
-- [`e02_question_kinds.py`](https://github.com/tom-bjorkholm/tableio_cfg_json/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e02_question_kinds.py)
+- [`e02_question_kinds.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e02_question_kinds.py)
   uses each one-at-a-time ask method once to gather export settings.
-- [`e03_navigation.py`](https://github.com/tom-bjorkholm/tableio_cfg_json/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e03_navigation.py)
+- [`e03_navigation.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e03_navigation.py)
   lets the user step back, cancel a nested section or abort the wizard.
-- [`e04_table_question.py`](https://github.com/tom-bjorkholm/tableio_cfg_json/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e04_table_question.py)
+- [`e04_table_question.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e04_table_question.py)
   edits a fixed-row table and then a variable-row table.
-- [`e05_ask_form.py`](https://github.com/tom-bjorkholm/tableio_cfg_json/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e05_ask_form.py)
+- [`e05_ask_form.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e05_ask_form.py)
   asks the same kind of export settings as one whole form.
-- [`e06_typed_form.py`](https://github.com/tom-bjorkholm/tableio_cfg_json/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e06_typed_form.py)
+- [`e06_typed_form.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e06_typed_form.py)
   adds the typed form fields (numbers, dates, times, durations) and prefills.
-- [`e07_custom_bridge.py`](https://github.com/tom-bjorkholm/tableio_cfg_json/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e07_custom_bridge.py)
+- [`e07_custom_bridge.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e07_custom_bridge.py)
   implements a bridge of your own for an unusual device and runs an earlier
   wizard through it.
 
