@@ -1,9 +1,11 @@
 #! /usr/bin/env python3
-"""Tests for the Textual option-form screen.
+"""Tests for the Textual whole-form screen.
 
-This covers the grid form of typed fields, its live and on-submit
-validation, the directory picker opened from a path field and the
-bridge method that maps the form outcome back to the wizard.
+This covers the grid form of the original field kinds, its live and
+on-submit validation, the naming and marking of a rejected field, the
+directory picker opened from a path field and the bridge method that maps
+the form outcome back to the wizard. The typed float and date-like fields
+are covered in test_ui_textual_typed.py.
 """
 
 # Copyright (c) 2026 Tom Björkholm

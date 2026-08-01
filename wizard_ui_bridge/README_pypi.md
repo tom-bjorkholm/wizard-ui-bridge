@@ -16,9 +16,9 @@ This package is a good fit when one or more of these apply:
 
 - You have a wizard, or a program that asks a user a series of questions,
   and you do not want the questions to be tied to one user interface.
-- You want typed questions: text, integer, float, path, yes/no, choice,
-  multi-choice, date, time, date and time, and duration, each with
-  validation and re-asking.
+- You want typed questions, each with validation and re-asking: text,
+  integer, path, yes/no, choice and multi-choice asked one at a time, and
+  float, date, time, date and time and duration as fields of a form.
 - You want to ask a whole form at once where the user interface can show
   one, and fall back to one question at a time where it cannot.
 - You want the user to be able to go back a step or cancel, without every
@@ -177,7 +177,7 @@ package. However, both repos have the common history.
 
 - Protected/internal API notes: [doc/wizard_ui_bridge_protected_api.md](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/doc/wizard_ui_bridge_protected_api.md)
 
-- Source repository: [tableio_cfg_json](https://github.com/tom-bjorkholm/wizard-ui-bridge/)
+- Source repository: [wizard-ui-bridge](https://github.com/tom-bjorkholm/wizard-ui-bridge/)
 
 ## License
 
@@ -185,7 +185,7 @@ MIT
 
 ## Test summary
 
-- Test result: 710 passed in 31s
+- Test result: 710 passed in 33s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.

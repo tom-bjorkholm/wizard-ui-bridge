@@ -99,13 +99,13 @@ The helper scripts are:
   Run pylint, flake8 and mypy on the given files only, for fast iteration
   without rebuilding the virtual environment.
 
-The standard verification suite includes pytest, pylint, flake8, and mypy.
-After a build, the generated reports can be browsed through
-`reports/index.html`.
+The standard verification suite includes pytest, pylint, flake8, mypy and
+the Python layout check. After a build, the generated reports can be
+browsed through `reports/index.html`.
 
 ## Test summary
 
-- Test result: 710 passed in 31s
+- Test result: 710 passed in 33s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.

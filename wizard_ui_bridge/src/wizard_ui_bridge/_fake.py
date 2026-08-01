@@ -13,7 +13,7 @@ requested typed answers.
 The whole form is shown once by the bridge's own ask_form(), so the user
 still sees and edits every field together. The parsing, formatting and
 range messages are shared with the console and Textual forms through the
-_wizard_ui_bridge_parse module, so the faked fields accept exactly the
+wizard_ui_bridge._parse module, so the faked fields accept exactly the
 same text.
 """
 

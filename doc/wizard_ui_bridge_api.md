@@ -1492,7 +1492,7 @@ dialog or form window with long_question and re_ask_reason shown
 above a grid with two columns: the left column a label with the
 field's short question, and the right column an input widget.
 
-See wizard_ui_bridge_form_defs.py for the AskFields, and the
+See wizard_ui_bridge.form_defs for the AskFields, and the
 description of how each field type is typically implemented in a GUI
 or textual interface.
 
@@ -1981,7 +1981,7 @@ requested typed answers.
 The whole form is shown once by the bridge's own ask_form(), so the user
 still sees and edits every field together. The parsing, formatting and
 range messages are shared with the console and Textual forms through the
-_wizard_ui_bridge_parse module, so the faked fields accept exactly the
+wizard_ui_bridge._parse module, so the faked fields accept exactly the
 same text.
 
 <a id="wizard_ui_bridge._fake.ask_form_faking"></a>

@@ -116,7 +116,7 @@ def schedule_validator(answers: AnswerFields,
     ask_form() calls this after every change (graphical or textual bridge)
     or after every answered field (console fallback), passing the current
     answers and the index of the field that changed. This validator uses
-    two of the three parts of a PartFormValidationResult:
+    two of the four parts of a PartFormValidationResult:
 
     - disable_row_idxs: a free event has no price, so the price row is
       disabled while "Free event" is ticked. Disabling never blocks

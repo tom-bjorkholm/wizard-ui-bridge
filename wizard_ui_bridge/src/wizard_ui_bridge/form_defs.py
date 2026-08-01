@@ -20,6 +20,9 @@ a form, and the validation callback function that is used to validate the
 answers of a partly filled form.
 """
 
+# Copyright (c) 2026 Tom Björkholm
+# MIT License
+
 from dataclasses import dataclass
 from typing import Any, Callable, NamedTuple, Optional, Protocol, Sequence, \
     TypeVar, Union
@@ -657,7 +660,8 @@ type PartialFormValidator = Callable[[AnswerFields, int],
    The callback receives the current state of the form as AnswerFields,
    and the index of the row most recently filled in.
    It returns a PartFormValidationResult, which indicates whether the form is
-   valid, and if not valid, a message to be displayed to the user, and a tuple
+   valid, and if not valid, a message to be displayed to the user, a tuple
    of row indexes that should be disabled in the form because they are
-   irrelevant given the current state of the form.
+   irrelevant given the current state of the form, and any values to prefill
+   into other rows. See PartFormValidationResult for the rules of each part.
 """

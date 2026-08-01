@@ -117,7 +117,7 @@ def export_validator(answers: AnswerFields,
     ask_form() calls this after every change (on a GUI or textual bridge)
     or after every answered field (on the console fallback), passing the
     current answers and the index of the field that changed. It returns a
-    PartFormValidationResult with three parts shown below and a forth field
+    PartFormValidationResult with three parts shown below and a fourth field
     that is described in example e06_typed_form.py:
 
     - is_valid / message: advisory validity and a message to show. A

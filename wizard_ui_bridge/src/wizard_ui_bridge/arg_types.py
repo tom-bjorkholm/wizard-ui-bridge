@@ -1,6 +1,9 @@
 #! /usr/local/bin/python3
 """Types used as arguments to the WizardUiBridge class."""
 
+# Copyright (c) 2026 Tom Björkholm
+# MIT License
+
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path

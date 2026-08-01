@@ -2314,7 +2314,7 @@ dialog or form window with long_question and re_ask_reason shown
 above a grid with two columns: the left column a label with the
 field's short question, and the right column an input widget.
 
-See wizard_ui_bridge_form_defs.py for the AskFields, and the
+See wizard_ui_bridge.form_defs for the AskFields, and the
 description of how each field type is typically implemented in a GUI
 or textual interface.
 
@@ -3406,7 +3406,7 @@ requested typed answers.
 The whole form is shown once by the bridge's own ask_form(), so the user
 still sees and edits every field together. The parsing, formatting and
 range messages are shared with the console and Textual forms through the
-_wizard_ui_bridge_parse module, so the faked fields accept exactly the
+wizard_ui_bridge._parse module, so the faked fields accept exactly the
 same text.
 
 <a id="wizard_ui_bridge._fake._FakeableBridge"></a>
@@ -4803,8 +4803,10 @@ One screen showing every form field in a two-column grid.
 
 The left column of each row is a label with the field's short
 question and the right column an input widget chosen by the field
-type: a text input, a spin-free integer input, a path input, a
-check box, a drop-down or a check-box list. A partial validator, when
+type: a text input, an integer input, a path input with a Browse
+button, a check box, a drop-down, a check-box list, a text input with
+a calendar Pick button for a date or date-time field, and a plain text
+input for a float, time or duration field. A partial validator, when
 given, runs after each change to show advisory feedback and to enable
 or disable rows. On submit each enabled field is validated, so the
 returned answers are complete and a choice with no default is always

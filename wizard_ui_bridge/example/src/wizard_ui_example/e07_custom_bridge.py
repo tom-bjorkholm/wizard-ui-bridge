@@ -10,7 +10,7 @@ The device: an uppercase-only teleprinter
 -----------------------------------------
 Imagine driving a classic uppercase-only teleprinter, such as a Teletype
 Model 33. It can print capital letters A-Z, the digits 0-9 and a handful of
-punctuation marks (``. , : - ( ) [ ]``) and nothing else: no lowercase, no
+punctuation marks (``. , : - ( ) [ ] ?``) and nothing else: no lowercase, no
 Unicode, no box drawing. Sending any other glyph does not merely look wrong,
 it jams the machine.
 

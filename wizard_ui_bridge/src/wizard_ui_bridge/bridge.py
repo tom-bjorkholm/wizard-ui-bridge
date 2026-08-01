@@ -368,7 +368,7 @@ class WizardUiBridge:
         above a grid with two columns: the left column a label with the
         field's short question, and the right column an input widget.
 
-        See wizard_ui_bridge_form_defs.py for the AskFields, and the
+        See wizard_ui_bridge.form_defs for the AskFields, and the
         description of how each field type is typically implemented in a GUI
         or textual interface.
 
