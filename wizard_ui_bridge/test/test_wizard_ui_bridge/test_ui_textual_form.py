@@ -200,7 +200,7 @@ def test_form_live_path_error(tmp_path: Path) -> None:
             await pilot.pause()
             return (shown, _status(app))
     error, cleared = asyncio.run(scenario())
-    assert error == 'Path already exists.'
+    assert error == "Field 'File': Path already exists."
     assert cleared == ''
 
 
@@ -215,7 +215,78 @@ def test_form_live_int_error() -> None:
             app.query_one('#field_0', Input).value = '9'
             await pilot.pause()
             return _status(app)
-    assert 'between 1 and 5' in asyncio.run(scenario())
+    assert asyncio.run(scenario()) == \
+        "Field 'N': Please enter an integer between 1 and 5."
+
+
+_NAMED_ERRORS = [
+    (AskIntField('Retries', None, min_value=1),
+     "Field 'Retries': Please enter an integer."),
+    (AskChoiceField('Color', None, choices=('red', 'green')),
+     "Field 'Color': Please choose a value."),
+    (AskMultiChoiceField('Tags', None, choices=('a', 'b'), min_select=1),
+     "Field 'Tags': Please select at least 1.")]
+
+
+@pytest.mark.parametrize('field, expected', _NAMED_ERRORS)
+def test_submit_names_field(field: AskField, expected: str) -> None:
+    """A field rejected on submit is named in the status line.
+
+    The form shows every field at once, so a message that only says what
+    is wrong leaves the user guessing which of the fields it is about.
+    The rejected field is the second one, so the name shown has to be
+    read from the failing field and not from the first one.
+    """
+    fields: list[AskField] = [AskTextField('Name', None), field]
+    app = _FormApp('H', fields, [], None)
+
+    async def scenario() -> str:
+        async with app.run_test() as pilot:
+            await pilot.click('#submit')
+            return _status(app)
+    assert asyncio.run(scenario()) == expected
+
+
+def test_error_marks_label() -> None:
+    """Only the rejected field's label is marked, until it is fixed.
+
+    The marked label is what points the user at the field the status
+    line names, so no other label may carry the mark and the mark has to
+    go once the field becomes acceptable.
+    """
+    fields: list[AskField] = [AskTextField('Name', None),
+                              AskIntField('Retries', None, min_value=1)]
+    app = _FormApp('H', fields, [], None)
+
+    async def scenario() -> tuple[bool, bool, bool]:
+        async with app.run_test() as pilot:
+            app.query_one('#field_1', Input).value = '0'
+            await pilot.pause()
+            marked = (app.query_one('#label_1').has_class('field_error'),
+                      app.query_one('#label_0').has_class('field_error'))
+            app.query_one('#field_1', Input).value = '7'
+            await pilot.pause()
+            return marked + (app.query_one('#label_1'
+                                           ).has_class('field_error'),)
+    assert asyncio.run(scenario()) == (True, False, False)
+
+
+def test_validator_msg_plain() -> None:
+    """A whole-form validator message names and marks no field."""
+    fields: list[AskField] = [AskTextField('Name', None)]
+
+    def rule(answers: Sequence[AnswerField],
+             changed: int) -> PartFormValidationResult:
+        _ = (answers, changed)
+        return PartFormValidationResult(False, 'Not ready yet.')
+    app = _FormApp('H', fields, [], rule)
+
+    async def scenario() -> tuple[str, bool]:
+        async with app.run_test() as pilot:
+            await pilot.click('#submit')
+            return (_status(app),
+                    app.query_one('#label_0').has_class('field_error'))
+    assert asyncio.run(scenario()) == ('Not ready yet.', False)
 
 
 def test_form_live_disabled(toggle_fields: list[AskField],

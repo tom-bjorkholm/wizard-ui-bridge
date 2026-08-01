@@ -222,6 +222,8 @@
   * [\_browse\_index](#wizard_ui_bridge._textual_widgets._browse_index)
   * [\_pick\_index](#wizard_ui_bridge._textual_widgets._pick_index)
   * [\_multi\_error](#wizard_ui_bridge._textual_widgets._multi_error)
+  * [\_field\_message](#wizard_ui_bridge._textual_widgets._field_message)
+  * [\_cell\_message](#wizard_ui_bridge._textual_widgets._cell_message)
   * [\_date\_of](#wizard_ui_bridge._textual_widgets._date_of)
   * [\_calendar\_setup](#wizard_ui_bridge._textual_widgets._calendar_setup)
   * [\_combined\_text](#wizard_ui_bridge._textual_widgets._combined_text)
@@ -306,6 +308,7 @@
     * [\_remove\_clicked](#wizard_ui_bridge.textual_bridge._TableApp._remove_clicked)
     * [\_add\_row](#wizard_ui_bridge.textual_bridge._TableApp._add_row)
     * [\_remove\_row](#wizard_ui_bridge.textual_bridge._TableApp._remove_row)
+    * [\_report](#wizard_ui_bridge.textual_bridge._TableApp._report)
     * [\_set\_status](#wizard_ui_bridge.textual_bridge._TableApp._set_status)
     * [\_read\_cell](#wizard_ui_bridge.textual_bridge._TableApp._read_cell)
   * [\_FormApp](#wizard_ui_bridge.textual_bridge._FormApp)
@@ -320,7 +323,7 @@
     * [\_changed](#wizard_ui_bridge.textual_bridge._FormApp._changed)
     * [\_maybe\_open\_calendar](#wizard_ui_bridge.textual_bridge._FormApp._maybe_open_calendar)
     * [\_apply\_validator](#wizard_ui_bridge.textual_bridge._FormApp._apply_validator)
-    * [\_live\_message](#wizard_ui_bridge.textual_bridge._FormApp._live_message)
+    * [\_show\_live](#wizard_ui_bridge.textual_bridge._FormApp._show_live)
     * [\_apply\_disabled](#wizard_ui_bridge.textual_bridge._FormApp._apply_disabled)
     * [\_submit\_clicked](#wizard_ui_bridge.textual_bridge._FormApp._submit_clicked)
     * [\_browse\_clicked](#wizard_ui_bridge.textual_bridge._FormApp._browse_clicked)
@@ -332,6 +335,7 @@
     * [action\_submit](#wizard_ui_bridge.textual_bridge._FormApp.action_submit)
     * [\_validator\_accepts](#wizard_ui_bridge.textual_bridge._FormApp._validator_accepts)
     * [\_first\_error](#wizard_ui_bridge.textual_bridge._FormApp._first_error)
+    * [\_report](#wizard_ui_bridge.textual_bridge._FormApp._report)
     * [\_set\_status](#wizard_ui_bridge.textual_bridge._FormApp._set_status)
     * [\_read\_field](#wizard_ui_bridge.textual_bridge._FormApp._read_field)
     * [\_read\_new\_field](#wizard_ui_bridge.textual_bridge._FormApp._read_new_field)
@@ -3517,13 +3521,18 @@ Return the first enabled faked field's parse error, or None.
 
 # wizard\_ui\_bridge.\_textual\_widgets
 
-Widget builders and id helpers for the Textual wizard bridge.
+Widget builders, id helpers and message helpers for Textual.
 
 The Textual bridge builds one input widget per form field and per menu,
 and it maps widget ids back to field indexes and table positions. These
 pure builders and id helpers are kept apart from the screen classes so
 the main bridge module stays small; they hold no screen state and only
 turn field descriptions into widgets and widget ids into indexes.
+
+A form and a table screen show every field at once but report validation
+in one shared status line, so the message helpers here name the field or
+the cell a message complains about; without that name the user cannot
+tell which of the fields on the screen to correct.
 
 <a id="wizard_ui_bridge._textual_widgets._header_widgets"></a>
 
@@ -3709,6 +3718,29 @@ def _multi_error(count: int, field: AskMultiChoiceField) -> Optional[str]
 ```
 
 Return the multi-choice count error, or None when acceptable.
+
+<a id="wizard_ui_bridge._textual_widgets._field_message"></a>
+
+#### \_field\_message
+
+```python
+def _field_message(field: AskField, message: str) -> str
+```
+
+Return message named for the form field it complains about.
+
+<a id="wizard_ui_bridge._textual_widgets._cell_message"></a>
+
+#### \_cell\_message
+
+```python
+def _cell_message(header: str, row: int, message: str) -> str
+```
+
+Return message named for the table cell it complains about.
+
+The 0-based row index is shown as a 1-based row number, so it counts
+the rows the way the user sees them on the screen.
 
 <a id="wizard_ui_bridge._textual_widgets._date_of"></a>
 
@@ -4488,6 +4520,9 @@ to max_rows and shrink it down to min_rows. Every cell in an added
 row is editable, even in a read-only column, and its descriptor comes
 from _new_row_template().
 
+A rejected cell is framed in the error colour while the shared status
+line names it, so the user sees which cell of the grid to correct.
+
 <a id="wizard_ui_bridge.textual_bridge._TableApp.__init__"></a>
 
 #### \_\_init\_\_
@@ -4672,6 +4707,20 @@ def _remove_row() -> None
 
 Remove the last row, down to min_rows.
 
+<a id="wizard_ui_bridge.textual_bridge._TableApp._report"></a>
+
+#### \_report
+
+```python
+def _report(position: Optional[tuple[int, int]], message: str) -> None
+```
+
+Show a message, naming and framing the cell it complains of.
+
+A message given no cell position, such as one about the number of
+rows, is about the whole table: it is shown unchanged and no cell
+is framed.
+
 <a id="wizard_ui_bridge.textual_bridge._TableApp._set_status"></a>
 
 #### \_set\_status
@@ -4710,6 +4759,10 @@ given, runs after each change to show advisory feedback and to enable
 or disable rows. On submit each enabled field is validated, so the
 returned answers are complete and a choice with no default is always
 answered.
+
+A rejected field is named in the shared status line and its label is
+shown in the error colour, so the user sees which of the fields on
+the screen the message is about.
 
 <a id="wizard_ui_bridge.textual_bridge._FormApp.__init__"></a>
 
@@ -4831,15 +4884,15 @@ def _apply_validator(index: int) -> str
 
 Apply the validator's disabled rows and prefills, return message.
 
-<a id="wizard_ui_bridge.textual_bridge._FormApp._live_message"></a>
+<a id="wizard_ui_bridge.textual_bridge._FormApp._show_live"></a>
 
-#### \_live\_message
+#### \_show\_live
 
 ```python
-def _live_message(index: int, validator_message: str) -> str
+def _show_live(index: int, validator_message: str) -> None
 ```
 
-Return the changed field's own error, else the validator's.
+Report the changed field's own error, else the validator's.
 
 A field disabled by the validator is skipped, as on submit, so an
 irrelevant field never blocks the user with its own error. This
@@ -4962,10 +5015,24 @@ Return whether the partial validator accepts the whole form.
 #### \_first\_error
 
 ```python
-def _first_error() -> Optional[str]
+def _first_error() -> Optional[tuple[int, str]]
 ```
 
-Return the first enabled field's validation error, or None.
+Return the first enabled field's index and error, or None.
+
+<a id="wizard_ui_bridge.textual_bridge._FormApp._report"></a>
+
+#### \_report
+
+```python
+def _report(index: Optional[int], message: str) -> None
+```
+
+Show a message, naming and marking the field it complains of.
+
+A message given no field index, such as one from the partial
+validator, is about the whole form: it is shown unchanged and no
+field label is marked.
 
 <a id="wizard_ui_bridge.textual_bridge._FormApp._set_status"></a>
 

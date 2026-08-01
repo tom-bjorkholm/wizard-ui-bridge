@@ -45,7 +45,8 @@ from wizard_ui_bridge._calendar import _CalendarScreen
 from wizard_ui_bridge._textual_widgets import \
     _header_widgets, _default_index, _preselected, _parse_cell_id, \
     _make_select, _make_field_widget, _field_index, _browse_index, \
-    _pick_index, _multi_error, _calendar_setup, _combined_text
+    _pick_index, _multi_error, _calendar_setup, _combined_text, \
+    _field_message, _cell_message
 from wizard_ui_bridge._path import _PathPick, \
     _PickerScreen, _start_dir, _start_value
 from wizard_ui_bridge.arg_types import PartialCheck, \
@@ -255,10 +256,16 @@ class _TableApp(_NavApp[list[list[Optional[str]]]]):
     to max_rows and shrink it down to min_rows. Every cell in an added
     row is editable, even in a read-only column, and its descriptor comes
     from _new_row_template().
+
+    A rejected cell is framed in the error colour while the shared status
+    line names it, so the user sees which cell of the grid to correct.
     """
 
     BINDINGS: ClassVar[list[BindingType]] = [('ctrl+s', 'submit', 'Submit')]
-    CSS = '#grid { height: auto; }'
+    CSS = '''
+    #grid { height: auto; }
+    #grid .cell_error { border: tall $error; }
+    '''
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def __init__(self, columns: Sequence[TableColumn],
@@ -358,7 +365,8 @@ class _TableApp(_NavApp[list[list[Optional[str]]]]):
         if self._partial_check is None:
             return
         accepted, message = self._partial_check(self._table, position)
-        self._set_status('' if accepted else message)
+        self._report(None if accepted else position,
+                     '' if accepted else message)
 
     def action_submit(self) -> None:
         """Exit returning every cell, including the read-only columns."""
@@ -385,19 +393,19 @@ class _TableApp(_NavApp[list[list[Optional[str]]]]):
     def _add_row(self) -> None:
         """Append one editable row, up to max_rows."""
         if len(self._rows) >= self._max_rows:
-            self._set_status(f'At most {self._max_rows} rows allowed.')
+            self._report(None, f'At most {self._max_rows} rows allowed.')
             return
         row = len(self._rows)
         self._rows.append(list(self._new_row))
         self._added.append(True)
         self._table.append([cell.value for cell in self._new_row])
         self.query_one('#grid', Grid).mount(*self._row_widgets(row))
-        self._set_status('')
+        self._report(None, '')
 
     def _remove_row(self) -> None:
         """Remove the last row, down to min_rows."""
         if len(self._rows) <= self._min_rows:
-            self._set_status(f'At least {self._min_rows} rows required.')
+            self._report(None, f'At least {self._min_rows} rows required.')
             return
         row = len(self._rows) - 1
         for col in range(len(self._columns)):
@@ -405,7 +413,24 @@ class _TableApp(_NavApp[list[list[Optional[str]]]]):
         self._rows.pop()
         self._added.pop()
         self._table.pop()
-        self._set_status('')
+        self._report(None, '')
+
+    def _report(self, position: Optional[tuple[int, int]],
+                message: str) -> None:
+        """Show a message, naming and framing the cell it complains of.
+
+        A message given no cell position, such as one about the number of
+        rows, is about the whole table: it is shown unchanged and no cell
+        is framed.
+        """
+        self.query('.cell_error').remove_class('cell_error')
+        if position is None:
+            self._set_status(message)
+            return
+        row, col = position
+        self.query_one(f'#cell_{row}_{col}').add_class('cell_error')
+        self._set_status(_cell_message(self._columns[col].header, row,
+                                       message))
 
     def _set_status(self, message: str) -> None:
         """Show a status message below the table."""
@@ -438,11 +463,16 @@ class _FormApp(_NavApp[list[AnswerField]]):
     or disable rows. On submit each enabled field is validated, so the
     returned answers are complete and a choice with no default is always
     answered.
+
+    A rejected field is named in the shared status line and its label is
+    shown in the error colour, so the user sees which of the fields on
+    the screen the message is about.
     """
 
     BINDINGS: ClassVar[list[BindingType]] = [('ctrl+s', 'submit', 'Submit')]
     CSS = '''
     #form_grid { height: auto; }
+    #form_grid .field_error { color: $error; text-style: bold; }
     #form_grid Horizontal { height: auto; width: 1fr; }
     #form_grid Horizontal Input { width: 1fr; }
     #form_grid Horizontal Button { width: auto; margin-left: 1; }
@@ -527,7 +557,7 @@ class _FormApp(_NavApp[list[AnswerField]]):
         self._last_changed = index
         self._answers[index] = self._read_field(index)
         validator_message = self._apply_validator(index)
-        self._set_status(self._live_message(index, validator_message))
+        self._show_live(index, validator_message)
 
     def _maybe_open_calendar(self, index: int) -> bool:
         """Open the calendar when a date field holds the pick token.
@@ -554,8 +584,8 @@ class _FormApp(_NavApp[list[AnswerField]]):
         apply_prefills(self, self._fields, index, result.prefill_values)
         return '' if result.is_valid else result.message
 
-    def _live_message(self, index: int, validator_message: str) -> str:
-        """Return the changed field's own error, else the validator's.
+    def _show_live(self, index: int, validator_message: str) -> None:
+        """Report the changed field's own error, else the validator's.
 
         A field disabled by the validator is skipped, as on submit, so an
         irrelevant field never blocks the user with its own error. This
@@ -563,10 +593,12 @@ class _FormApp(_NavApp[list[AnswerField]]):
         immediate feedback while editing that the console bridge gives by
         re-asking, instead of waiting for submit.
         """
-        if index in self._disabled:
-            return validator_message
-        error = self._field_error(index, self._fields[index])
-        return validator_message if error is None else error
+        error = None if index in self._disabled \
+            else self._field_error(index, self._fields[index])
+        if error is None:
+            self._report(None, validator_message)
+        else:
+            self._report(index, error)
 
     def _apply_disabled(self, disable_row_idxs: tuple[int, ...]) -> None:
         """Enable or disable each row to match the validator result."""
@@ -645,9 +677,9 @@ class _FormApp(_NavApp[list[AnswerField]]):
         """Validate every enabled field and exit with the answers."""
         for index in range(len(self._fields)):
             self._answers[index] = self._read_field(index)
-        error = self._first_error()
-        if error is not None:
-            self._set_status(error)
+        failing = self._first_error()
+        if failing is not None:
+            self._report(*failing)
             return
         if not self._validator_accepts():
             return
@@ -660,18 +692,32 @@ class _FormApp(_NavApp[list[AnswerField]]):
         result = self._validator(self._answers, self._last_changed)
         self._apply_disabled(result.disable_row_idxs)
         if not result.is_valid:
-            self._set_status(result.message)
+            self._report(None, result.message)
         return result.is_valid
 
-    def _first_error(self) -> Optional[str]:
-        """Return the first enabled field's validation error, or None."""
+    def _first_error(self) -> Optional[tuple[int, str]]:
+        """Return the first enabled field's index and error, or None."""
         for index, field in enumerate(self._fields):
             if index in self._disabled:
                 continue
             error = self._field_error(index, field)
             if error is not None:
-                return error
+                return (index, error)
         return None
+
+    def _report(self, index: Optional[int], message: str) -> None:
+        """Show a message, naming and marking the field it complains of.
+
+        A message given no field index, such as one from the partial
+        validator, is about the whole form: it is shown unchanged and no
+        field label is marked.
+        """
+        self.query('.field_error').remove_class('field_error')
+        if index is None:
+            self._set_status(message)
+            return
+        self.query_one(f'#label_{index}').add_class('field_error')
+        self._set_status(_field_message(self._fields[index], message))
 
     def _set_status(self, message: str) -> None:
         """Show a status message below the form."""

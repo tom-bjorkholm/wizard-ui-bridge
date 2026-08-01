@@ -1,11 +1,16 @@
 #! /usr/local/bin/python3
-"""Widget builders and id helpers for the Textual wizard bridge.
+"""Widget builders, id helpers and message helpers for Textual.
 
 The Textual bridge builds one input widget per form field and per menu,
 and it maps widget ids back to field indexes and table positions. These
 pure builders and id helpers are kept apart from the screen classes so
 the main bridge module stays small; they hold no screen state and only
 turn field descriptions into widgets and widget ids into indexes.
+
+A form and a table screen show every field at once but report validation
+in one shared status line, so the message helpers here name the field or
+the cell a message complains about; without that name the user cannot
+tell which of the fields on the screen to correct.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -189,6 +194,20 @@ def _multi_error(count: int, field: AskMultiChoiceField) -> Optional[str]:
     if too_few or too_many:
         return multi_count_error(field.min_select, field.max_select)
     return None
+
+
+def _field_message(field: AskField, message: str) -> str:
+    """Return message named for the form field it complains about."""
+    return f"Field '{field.short_question}': {message}"
+
+
+def _cell_message(header: str, row: int, message: str) -> str:
+    """Return message named for the table cell it complains about.
+
+    The 0-based row index is shown as a 1-based row number, so it counts
+    the rows the way the user sees them on the screen.
+    """
+    return f"Row {row + 1}, field '{header}': {message}"
 
 
 def _date_of(value: Optional[date]) -> Optional[date]:

@@ -10,12 +10,18 @@ import asyncio
 from typing import Optional
 
 import pytest
+from textual.widgets import Input, Static
 from wizard_ui_bridge import TableCell, TableColumn, WizardBack, \
     WizardCancelLevel
 from wizard_ui_bridge.textual_bridge import _TableApp
 from wizard_ui_bridge._textual_widgets import _parse_cell_id
 from wizard_ui_bridge._table import _new_row_template
 from .ui_textual_support import drive, _CannedBridge
+
+
+def _status(app: _TableApp) -> str:
+    """Return the text currently shown in the table status line."""
+    return str(app.query_one('#table_status', Static).render())
 
 
 def test_table_prefilled() -> None:
@@ -89,6 +95,52 @@ def test_table_partial_check() -> None:
     assert driven.return_value == [['ok']]
     assert ([['bad']], (0, 0)) in calls
     assert ([['ok']], (0, 0)) in calls
+
+
+def test_cell_message_named() -> None:
+    """A rejected cell is named and framed, until it is fixed.
+
+    The grid shows every cell at once and shares one status line, so a
+    bare partial-check message leaves the user guessing which cell it is
+    about. The rejected cell is in the second row and in the column after
+    a read-only one, so neither number may be taken from the first cell.
+    """
+    columns = (TableColumn('Guest', read_only=True), TableColumn('Meal'))
+    cells = [[TableCell(value='Ann'), TableCell(value='ok')],
+             [TableCell(value='Bo'), TableCell(value='ok')]]
+
+    def check(table: list[list[Optional[str]]],
+              position: tuple[int, int]) -> tuple[bool, str]:
+        value = table[position[0]][position[1]]
+        return (value != 'bad', '' if value != 'bad' else 'Unknown meal.')
+    app = _TableApp(columns, cells, 'q', [], check)
+
+    async def scenario() -> tuple[str, bool, bool]:
+        async with app.run_test() as pilot:
+            app.query_one('#cell_1_1', Input).value = 'bad'
+            await pilot.pause()
+            shown = (_status(app),
+                     app.query_one('#cell_1_1').has_class('cell_error'))
+            app.query_one('#cell_1_1', Input).value = 'fish'
+            await pilot.pause()
+            return shown + (app.query_one('#cell_1_1'
+                                          ).has_class('cell_error'),)
+    assert asyncio.run(scenario()) == \
+        ("Row 2, field 'Meal': Unknown meal.", True, False)
+
+
+def test_row_count_unnamed() -> None:
+    """A message about the row count names no cell and frames none."""
+    columns = (TableColumn('Value'),)
+    cells = [[TableCell(value='a')]]
+    app = _TableApp(columns, cells, 'q', [], None, 1, 1)
+
+    async def scenario() -> tuple[str, int]:
+        async with app.run_test() as pilot:
+            await pilot.click('#add_row')
+            await pilot.pause()
+            return (_status(app), len(app.query('.cell_error')))
+    assert asyncio.run(scenario()) == ('At most 1 rows allowed.', 0)
 
 
 def test_ask_table_canned() -> None:
