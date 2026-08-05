@@ -110,5 +110,5 @@ browsed through `reports/index.html`.
 - No mypy errors found.
 - No pylint warnings.
 - No python layout warnings.
-- Built version(s): 1.2
+- Built version(s): 1.2.1
 - Build and test using Python 3.14.6
