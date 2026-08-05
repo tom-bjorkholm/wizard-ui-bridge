@@ -193,7 +193,7 @@ MIT
 
 ## Test summary
 
-- Test result: 974 passed in 35s
+- Test result: 965 passed, 9 deselected in 34s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
