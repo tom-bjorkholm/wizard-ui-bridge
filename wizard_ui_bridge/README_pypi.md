@@ -10,6 +10,14 @@ through, so the same wizard runs on a plain console, on a full-screen
 graphical user interface you write yourself, or on a scripted bridge in
 your tests.
 
+## Tk companion
+
+`wizard-ui-bridge` has a companion
+[wizard-tk-bridge](https://pypi.org/project/wizard-tk-bridge/) that
+implements the same user-interface-independent way for a wizard to
+ask a user questions using a Tkinter GUI.
+
+
 ## Is this package for you?
 
 This package is a good fit when one or more of these apply:
@@ -185,7 +193,7 @@ MIT
 
 ## Test summary
 
-- Test result: 713 passed in 30s
+- Test result: 713 passed in 31s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
