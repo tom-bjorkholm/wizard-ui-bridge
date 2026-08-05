@@ -105,7 +105,7 @@ browsed through `reports/index.html`.
 
 ## Test summary
 
-- Test result: 713 passed in 31s
+- Test result: 974 passed in 35s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
