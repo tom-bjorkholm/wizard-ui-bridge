@@ -67,6 +67,22 @@ def test_picker_cancel() -> None:
         # pylint: disable-next=protected-access
         picker._cancel()
         assert picked == [None]
+        # pylint: disable-next=protected-access
+        assert not picker._win.winfo_exists()
+
+
+def test_callback_closes() -> None:
+    """Test a callback failure still closes the calendar window."""
+    with gui_root() as root:
+        def _fail(_day: Optional[date]) -> None:
+            """Raise a sample application callback failure."""
+            raise ValueError('callback failed')
+        picker = CalendarPicker(root, date(2026, 7, 24), None, None, _fail)
+        with pytest.raises(ValueError, match='callback failed'):
+            # pylint: disable-next=protected-access
+            picker._cancel()
+        # pylint: disable-next=protected-access
+        assert not picker._win.winfo_exists()
 
 
 def test_restore_grab_none() -> None:
@@ -120,6 +136,8 @@ def test_grab_retry(monkeypatch: pytest.MonkeyPatch) -> None:
         picker._grab()
         # pylint: disable-next=protected-access
         assert scheduled == [(50, picker._grab)]
+        # pylint: disable-next=protected-access
+        picker._cancel()
 
 
 @pytest.mark.focus_sensitive
@@ -187,3 +205,5 @@ def test_picker_bounds() -> None:
                   for button in _day_buttons(picker)}
         assert states[5] == 'disabled'
         assert states[15] == 'normal'
+        # pylint: disable-next=protected-access
+        picker._cancel()

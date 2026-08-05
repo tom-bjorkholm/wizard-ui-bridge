@@ -13,9 +13,9 @@ does not jump around the display.
 The bridge supports three ways an application can show the wizard:
 
 - In a new window of its own: give ``parent``, the Tk widget the new
-  window is shown over. This suits both an application with other
-  windows and a standalone CLI program, which passes a hidden root it
-  created for the purpose (``tk.Tk()`` withdrawn right after creation).
+  window is shown over. This suits an application with other windows.
+  A standalone CLI program can omit both ``parent`` and ``area``; the
+  bridge then owns the hidden root needed for this window.
 - Embedded in an area the application already built: give ``area``, the
   frame or other container the wizard should fill instead of a window of
   its own.
@@ -25,7 +25,9 @@ The bridge supports three ways an application can show the wizard:
   placed to decide this, since only it knows whether its other content
   should stay usable while the wizard runs.
 
-Exactly one of ``parent`` and ``area`` must be given.
+At most one of ``parent`` and ``area`` may be given. If neither is given,
+the bridge creates and owns a hidden root, which is useful for a standalone
+CLI program that has no other Tkinter code.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -52,18 +54,24 @@ class WizardUiBridgeTk(WizardUiBridge):
 
         Args:
             parent: The widget the wizard's own new window is shown over.
-                    Exactly one of parent or area must be given.
+                    Leave both parent and area as None for a standalone
+                    bridge that owns its hidden root.
             area: The existing container the wizard fills instead of a
-                  window of its own. Exactly one of parent or area must
-                  be given.
+                  window of its own. It cannot be given together with
+                  parent.
             modal: Whether the wizard grabs its window (or area's window)
                    for the session; see the module docstring.
             log: Stream that receives low-level wizard diagnostics.
         Raises:
-            ValueError: Neither or both of parent and area were given.
+            ValueError: Both parent and area were given.
         """
-        if (parent is None) == (area is None):
-            raise ValueError('Give exactly one of parent or area.')
+        if parent is not None and area is not None:
+            raise ValueError('Give at most one of parent and area.')
+        self._root: Optional[tk.Tk] = None
+        if parent is None and area is None:
+            self._root = tk.Tk()
+            self._root.withdraw()
+            parent = self._root
         self._parent = parent
         self._area = area
         self._modal = modal
@@ -157,9 +165,14 @@ class WizardUiBridgeTk(WizardUiBridge):
 
     def close(self) -> None:
         """Close the wizard window, or clear its area, when one was built."""
-        if self._window is not None:
-            self._window.close()
-            self._window = None
+        try:
+            if self._window is not None:
+                self._window.close()
+                self._window = None
+        finally:
+            if self._root is not None:
+                self._root.destroy()
+                self._root = None
 
     def _window_obj(self) -> WizardWindow:
         """Return the wizard window, building it on first use."""

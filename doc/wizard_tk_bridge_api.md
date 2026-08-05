@@ -1037,9 +1037,9 @@ does not jump around the display.
 The bridge supports three ways an application can show the wizard:
 
 - In a new window of its own: give ``parent``, the Tk widget the new
-  window is shown over. This suits both an application with other
-  windows and a standalone CLI program, which passes a hidden root it
-  created for the purpose (``tk.Tk()`` withdrawn right after creation).
+  window is shown over. This suits an application with other windows.
+  A standalone CLI program can omit both ``parent`` and ``area``; the
+  bridge then owns the hidden root needed for this window.
 - Embedded in an area the application already built: give ``area``, the
   frame or other container the wizard should fill instead of a window of
   its own.
@@ -1049,7 +1049,9 @@ The bridge supports three ways an application can show the wizard:
   placed to decide this, since only it knows whether its other content
   should stay usable while the wizard runs.
 
-Exactly one of ``parent`` and ``area`` must be given.
+At most one of ``parent`` and ``area`` may be given. If neither is given,
+the bridge creates and owns a hidden root, which is useful for a standalone
+CLI program that has no other Tkinter code.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk"></a>
 
@@ -1077,17 +1079,18 @@ Store where and how to show the wizard, and the optional log.
 **Arguments**:
 
 - `parent` - The widget the wizard's own new window is shown over.
-  Exactly one of parent or area must be given.
+  Leave both parent and area as None for a standalone
+  bridge that owns its hidden root.
 - `area` - The existing container the wizard fills instead of a
-  window of its own. Exactly one of parent or area must
-  be given.
+  window of its own. It cannot be given together with
+  parent.
 - `modal` - Whether the wizard grabs its window (or area's window)
   for the session; see the module docstring.
 - `log` - Stream that receives low-level wizard diagnostics.
 
 **Raises**:
 
-- `ValueError` - Neither or both of parent and area were given.
+- `ValueError` - Both parent and area were given.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_text"></a>
 
@@ -1359,13 +1362,10 @@ configuration or abandon it.
 
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
-given as ``area``; exactly one of the two is given. Owning its own window
-suits both a new pop-up in an application with other windows and a
-standalone CLI program that made ``parent`` a hidden root; embedding
-suits an application that wants the wizard inside a part of a window it
-already has. ``modal`` decides whether the wizard grabs that window for
-the session, which the caller is best placed to decide since only it
-knows whether the rest of that window should stay usable meanwhile.
+given as ``area``. Exactly one of the two is given.
+``modal`` decides whether the wizard grabs that window for the session,
+which the caller is best placed to decide since only it knows whether the
+rest of the window should stay usable meanwhile.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow"></a>
 

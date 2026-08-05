@@ -13,30 +13,76 @@ example stay focused on that one difference.
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from typing import Optional
-from wizard_ui_bridge import WizardNavigation, WizardUiBridge
+from dataclasses import dataclass
+from typing import Callable, Optional
+from wizard_ui_bridge import WizardAbort, WizardBack, WizardCancelLevel, \
+    WizardUiBridge
 from wizard_tk_bridge import WizardUiBridgeTk
 
 TOPPINGS = ('Mushroom', 'Pepperoni', 'Olive')
 
 
+@dataclass
+class _PizzaDraft:
+    """Keep pizza answers so revisited questions have useful defaults."""
+
+    name: Optional[str] = None
+    topping: Optional[str] = None
+    extra_cheese: bool = False
+
+
+def _ask_name(bridge: WizardUiBridge, draft: _PizzaDraft) -> None:
+    """Ask the customer's name, keeping an earlier answer as default."""
+    draft.name = bridge.ask_text('Your name?', nullable=True,
+                                 default=draft.name)
+
+
+def _ask_topping(bridge: WizardUiBridge, draft: _PizzaDraft) -> None:
+    """Ask for a topping, keeping an earlier answer as default."""
+    draft.topping = bridge.ask_choice('Favorite topping?', choices=TOPPINGS,
+                                      default=draft.topping)
+
+
+def _ask_cheese(bridge: WizardUiBridge, draft: _PizzaDraft) -> None:
+    """Ask whether to add cheese, keeping an earlier answer as default."""
+    draft.extra_cheese = bridge.ask_yes_no('Extra cheese?',
+                                           default=draft.extra_cheese)
+
+
+def _previous(position: int) -> int:
+    """Return the previous position, staying at the first question."""
+    return max(0, position - 1)
+
+
 def ask_pizza_order(bridge: WizardUiBridge) -> Optional[str]:
     """Ask a name, a topping and whether to add cheese; return a summary.
 
-    Any WizardNavigation raised by an ask method -- the user asked to go
-    back, cancel or abort -- is treated here as "gave up", since a
-    three-question wizard has nowhere else to go; this example returns
-    None in that case instead of a summary.
+    Back moves to the previous question and the draft supplies earlier
+    answers as defaults. At the first question Back stays there. Out one
+    level has no meaning at this top level, so it re-asks the current
+    question with a note; Abort returns None.
     """
-    try:
-        name = bridge.ask_text('Your name?', nullable=True)
-        topping = bridge.ask_choice('Favorite topping?', choices=TOPPINGS)
-        extra_cheese = bridge.ask_yes_no('Extra cheese?', default=False)
-    except WizardNavigation:
-        return None
-    who = name or 'Anonymous'
-    cheese = ' with extra cheese' if extra_cheese else ''
-    return f'{who} orders a {topping} pizza{cheese}.'
+    draft = _PizzaDraft()
+    steps: tuple[Callable[[WizardUiBridge, _PizzaDraft], None], ...] = (
+        _ask_name, _ask_topping, _ask_cheese)
+    position = 0
+    while position < len(steps):
+        try:
+            steps[position](bridge, draft)
+        except WizardBack:
+            if position == 0:
+                bridge.show('Already at the first question.')
+            position = _previous(position)
+        except WizardCancelLevel:
+            bridge.show('This is the top level; there is nothing to cancel.')
+        except WizardAbort:
+            return None
+        else:
+            position += 1
+    who = draft.name or 'Anonymous'
+    cheese = ' with extra cheese' if draft.extra_cheese else ''
+    assert draft.topping is not None
+    return f'{who} orders a {draft.topping} pizza{cheese}.'
 
 
 def run_pizza_order(bridge: WizardUiBridgeTk) -> Optional[str]:

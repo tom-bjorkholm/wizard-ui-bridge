@@ -11,13 +11,10 @@ configuration or abandon it.
 
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
-given as ``area``; exactly one of the two is given. Owning its own window
-suits both a new pop-up in an application with other windows and a
-standalone CLI program that made ``parent`` a hidden root; embedding
-suits an application that wants the wizard inside a part of a window it
-already has. ``modal`` decides whether the wizard grabs that window for
-the session, which the caller is best placed to decide since only it
-knows whether the rest of that window should stay usable meanwhile.
+given as ``area``. Exactly one of the two is given.
+``modal`` decides whether the wizard grabs that window for the session,
+which the caller is best placed to decide since only it knows whether the
+rest of the window should stay usable meanwhile.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -60,12 +57,13 @@ class WizardWindow:
         docstring for what each means and how modal applies to it.
         """
         if (parent is None) == (area is None):
-            raise ValueError('Give exactly one of parent or area.')
+            raise ValueError('Give exactly one of parent and area.')
         self._result: object = ''
         self._nav: Optional[type[WizardNavigation]] = None
         self._editor: Optional[TableEditor] = None
         self._form: Optional[FormEditor] = None
         self._modal = modal
+        self._closed = False
         if parent is not None:
             self._win: Optional[tk.Toplevel] = self._build_toplevel(parent)
             container: tk.Misc = self._win
@@ -76,7 +74,7 @@ class WizardWindow:
             container = area
             self._grab_target = area.winfo_toplevel()
         if modal:
-            self._grab_target.grab_set()
+            self._grab()
         self._done = tk.IntVar(container, 0)
         self._messages = self._build_messages(container)
         self._content = tk.Frame(container)
@@ -88,8 +86,12 @@ class WizardWindow:
         win.title(WIZARD_TITLE)
         win.geometry(WINDOW_SIZE)
         win.resizable(True, True)
-        if isinstance(parent, tk.Wm):
-            win.transient(parent)
+        top = parent.winfo_toplevel()
+        if isinstance(top, tk.Wm) and top.state() != 'withdrawn':
+            win.transient(top)
+        else:
+            win.deiconify()
+            win.lift()
         win.protocol('WM_DELETE_WINDOW', self._cancel)
         bind_close(win, self._cancel)
         return win
@@ -110,10 +112,17 @@ class WizardWindow:
 
     def close(self) -> None:
         """Release any modal grab and remove the wizard's own widgets."""
-        if self._modal:
-            self._grab_target.grab_release()
+        if self._closed:
+            return
+        self._closed = True
+        if self._modal and self._grab_target.winfo_exists():
+            try:
+                self._grab_target.grab_release()
+            except tk.TclError:
+                pass
         if self._win is not None:
-            self._win.destroy()
+            if self._win.winfo_exists():
+                self._win.destroy()
         else:
             self._messages.destroy()
             self._content.destroy()
@@ -371,6 +380,8 @@ class WizardWindow:
 
     def _wait(self) -> object:
         """Focus the first input, then wait for an answer or navigation."""
+        if self._win is not None:
+            self._win.lift()
         focus_first_input(self._content)
         self._content.wait_variable(self._done)
         if self._nav is not None:
@@ -398,3 +409,12 @@ class WizardWindow:
         """Record a navigation request and release the waiting prompt."""
         self._nav = request
         self._done.set(self._done.get() + 1)
+
+    def _grab(self) -> None:
+        """Take the modal grab, retrying until the target is viewable."""
+        if self._closed or not self._grab_target.winfo_exists():
+            return
+        try:
+            self._grab_target.grab_set()
+        except tk.TclError:
+            self._grab_target.after(50, self._grab)

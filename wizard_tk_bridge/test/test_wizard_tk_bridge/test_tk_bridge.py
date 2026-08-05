@@ -13,10 +13,34 @@ from wizard_tk_bridge._no_text_io import NoTextIO
 from .gui_test_helpers import gui_root
 
 
+def test_standalone_owns_root(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test a standalone bridge creates and destroys its hidden root."""
+    class _Root:
+        """Small root fake for the construction-only lifecycle test."""
+
+        def __init__(self) -> None:
+            """Start with no lifecycle calls recorded."""
+            self.withdrawn = False
+            self.destroyed = False
+
+        def withdraw(self) -> None:
+            """Record hiding the root."""
+            self.withdrawn = True
+
+        def destroy(self) -> None:
+            """Record destroying the root."""
+            self.destroyed = True
+
+    root = _Root()
+    monkeypatch.setattr('wizard_tk_bridge.tk_bridge.tk.Tk', lambda: root)
+    bridge = WizardUiBridgeTk()
+    assert root.withdrawn
+    bridge.close()
+    assert root.destroyed
+
+
 def test_parent_area_excl() -> None:
-    """Test giving neither or both of parent and area is rejected."""
-    with pytest.raises(ValueError):
-        WizardUiBridgeTk()
+    """Test giving both parent and area is rejected."""
     with gui_root() as root:
         with pytest.raises(ValueError):
             WizardUiBridgeTk(root, tk.Frame(root))

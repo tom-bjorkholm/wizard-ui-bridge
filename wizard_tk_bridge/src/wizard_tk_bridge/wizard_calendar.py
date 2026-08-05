@@ -181,7 +181,9 @@ class CalendarPicker:
     def _finish(self, chosen: Optional[date]) -> None:
         """Report the outcome, destroy the window and restore the grab."""
         parent = self._win.master
-        self._on_pick(chosen)
-        self._win.destroy()
-        if self._restore:
-            _restore_grab(parent)
+        try:
+            self._on_pick(chosen)
+        finally:
+            self._win.destroy()
+            if self._restore:
+                _restore_grab(parent)

@@ -11,7 +11,7 @@ import pytest
 from wizard_tk_example import e01_cli_wizard, e02_new_window, \
     e03_embedded_area
 from wizard_tk_example._shared_wizard import ask_pizza_order
-from wizard_ui_bridge import WizardAbort, WizardUiBridge
+from wizard_ui_bridge import WizardAbort, WizardBack, WizardUiBridge
 
 
 # pylint: disable-next=abstract-method
@@ -21,17 +21,22 @@ class _FakeBridge(WizardUiBridge):
     def __init__(self, answers: Sequence[object]) -> None:
         """Store the answers to return in order, one per ask call."""
         self._answers = list(answers)
+        self.defaults: list[object] = []
 
     def _next(self) -> object:
         """Return the next scripted answer, or abort when none are left."""
         if not self._answers:
             raise WizardAbort()
-        return self._answers.pop(0)
+        answer = self._answers.pop(0)
+        if isinstance(answer, WizardBack):
+            raise answer
+        return answer
 
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
                  sensitive: bool = False) -> Optional[str]:
         """Return the next scripted text answer."""
+        self.defaults.append(default)
         answer = self._next()
         assert answer is None or isinstance(answer, str)
         return answer
@@ -40,6 +45,7 @@ class _FakeBridge(WizardUiBridge):
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None) -> str:
         """Return the next scripted choice answer."""
+        self.defaults.append(default)
         answer = self._next()
         assert isinstance(answer, str)
         return answer
@@ -47,6 +53,7 @@ class _FakeBridge(WizardUiBridge):
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None) -> bool:
         """Return the next scripted yes/no answer."""
+        self.defaults.append(default)
         answer = self._next()
         assert isinstance(answer, bool)
         return answer
@@ -74,6 +81,14 @@ def test_pizza_order_cancel() -> None:
     assert ask_pizza_order(bridge) is None
 
 
+def test_pizza_back_defaults() -> None:
+    """Test Back revisits a question and keeps its later answer default."""
+    bridge = _FakeBridge(['Alice', 'Pepperoni', WizardBack(), 'Olive', True])
+    assert ask_pizza_order(bridge) == \
+        'Alice orders a Olive pizza with extra cheese.'
+    assert bridge.defaults == [None, None, False, 'Pepperoni', False]
+
+
 @contextmanager
 def _gui_root() -> Iterator[tk.Tk]:
     """Yield a withdrawn Tk root, skipping the test with no display.
@@ -96,17 +111,33 @@ def _gui_root() -> Iterator[tk.Tk]:
 
 
 def test_cli_wizard_plumbing(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test run_cli_wizard drives a real bridge and returns its summary.
+    """Test run_cli_wizard owns and closes its bridge.
 
     ask_pizza_order itself is exercised directly by the fake-bridge tests
-    above; this test instead checks the plumbing around it -- that a
-    real WizardUiBridgeTk is built over the given root and closed again.
+    above; this test instead checks the standalone lifecycle around it.
     """
-    monkeypatch.setattr(e01_cli_wizard, 'run_pizza_order',
+    class _Bridge:
+        """Record that the standalone example closes its bridge."""
+
+        def __init__(self) -> None:
+            """Start with no close call."""
+            self.closed = False
+
+        def close(self) -> None:
+            """Record the cleanup call."""
+            self.closed = True
+
+        def is_closed(self) -> bool:
+            """Return whether close() has been called."""
+            return self.closed
+
+    bridge = _Bridge()
+    monkeypatch.setattr(e01_cli_wizard, 'WizardUiBridgeTk', lambda: bridge)
+    monkeypatch.setattr(e01_cli_wizard, 'ask_pizza_order',
                         lambda bridge: 'Bob orders a Mushroom pizza.')
-    with _gui_root() as root:
-        summary = e01_cli_wizard.run_cli_wizard(root)
-        assert summary == 'Bob orders a Mushroom pizza.'
+    summary = e01_cli_wizard.run_cli_wizard()
+    assert summary == 'Bob orders a Mushroom pizza.'
+    assert bridge.is_closed()
 
 
 def test_new_window_builds() -> None:

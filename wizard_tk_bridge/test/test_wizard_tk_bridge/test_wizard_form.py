@@ -333,6 +333,7 @@ def test_tooltip_show_twice() -> None:
         tip.show()
         tip.show()
         assert len(_bubbles(anchor)) == 1
+        tip.hide()
 
 
 def test_tooltip_hide_none() -> None:

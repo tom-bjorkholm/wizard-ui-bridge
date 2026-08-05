@@ -6,15 +6,14 @@ otherwise a plain command-line program, with no window of its own, that
 still wants to ask its questions through a graphical wizard instead of
 the console.
 
-The trick: a hidden root is still a real Tk application
---------------------------------------------------------
+The bridge owns the Tk application
+----------------------------------
 Every Tkinter window needs exactly one ``tk.Tk()`` root somewhere in the
-process, even if the program never shows it. So a CLI program creates
-one, immediately withdraws it (hides it from the screen and the
-taskbar/dock), and hands it to :class:`~wizard_tk_bridge.WizardUiBridgeTk`
-as ``parent``. The bridge then builds its own pop-up window over that
-hidden root -- the *only* window the user ever sees -- runs the wizard in
-it, and the CLI program destroys the root once it is done.
+process, even if the program never shows it. With no ``parent`` or
+``area``, :class:`~wizard_tk_bridge.WizardUiBridgeTk` creates that root,
+hides it, and builds the only visible wizard window over it. The bridge
+also destroys the root when it closes, so this CLI program contains no
+other Tkinter code.
 
 No mainloop() call is needed here: each ask method waits for its answer
 with Tk's own ``wait_variable``, which pumps the event loop just long
@@ -31,30 +30,18 @@ Running it
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-import tkinter as tk
 from typing import Optional
-from wizard_tk_example._shared_wizard import run_pizza_order
+from wizard_tk_example._shared_wizard import ask_pizza_order
 from wizard_tk_bridge import WizardUiBridgeTk
 
 
-def run_cli_wizard(root: Optional[tk.Tk] = None) -> Optional[str]:
-    """Ask the pizza wizard through a hidden root and return its summary.
-
-    Args:
-        root: A Tk root to reuse instead of creating and destroying one,
-              so a test can schedule answers on it beforehand. A real
-              CLI run leaves this as None.
-    """
-    owns_root = root is None
-    if root is None:
-        root = tk.Tk()
-        root.withdraw()
-    bridge = WizardUiBridgeTk(root)
+def run_cli_wizard() -> Optional[str]:
+    """Ask the pizza wizard through the bridge-owned Tk application."""
+    bridge = WizardUiBridgeTk()
     try:
-        return run_pizza_order(bridge)
+        return ask_pizza_order(bridge)
     finally:
-        if owns_root:
-            root.destroy()
+        bridge.close()
 
 
 def main() -> int:
