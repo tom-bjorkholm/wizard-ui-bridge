@@ -105,10 +105,10 @@ browsed through `reports/index.html`.
 
 ## Test summary
 
-- Test result: 713 passed in 37s
+- Test result: 713 passed in 35s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
 - No python layout warnings.
 - Built version(s): 1.2
-- Build and test using Python 3.12.10
+- Build and test using Python 3.13.14
