@@ -6,8 +6,11 @@
 
 import tkinter as tk
 import pytest
+from wizard_ui_bridge import AskTextField, AnswerTextField, TableCell, \
+    TableColumn
 from wizard_tk_bridge import wizard_window
-from wizard_tk_bridge.wizard_window import WizardWindow
+from wizard_tk_bridge.wizard_table import TableEditor
+from wizard_tk_bridge.wizard_window import WizardWindow, _bind_submit
 from .gui_test_helpers import CloseSpy, gui_root
 
 
@@ -167,6 +170,107 @@ def test_text_binds_return() -> None:
                    if isinstance(w, tk.Entry)]
         assert entries and entries[0].bind('<Return>') != ''
         window.close()
+
+
+def test_ok_is_default() -> None:
+    """Test the confirm button is the marked default of a prompt."""
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        # pylint: disable-next=protected-access
+        window._add_buttons(lambda: None)
+        # pylint: disable-next=protected-access
+        box = window._content.winfo_children()[-1]
+        buttons = [w for w in box.winfo_children()
+                   if isinstance(w, tk.Button)]
+        assert str(buttons[0].cget('text')) == 'OK'
+        assert str(buttons[0].cget('default')) == 'active'
+        assert all(str(w.cget('default')) != 'active' for w in buttons[1:])
+        window.close()
+
+
+def test_table_ok_plain() -> None:
+    """Test a table's confirm button is not marked as the default one.
+
+    A table binds no Return key, so promising the key on its button
+    would be wrong; see the module docstring for why it cannot.
+    """
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        columns = [TableColumn('A')]
+        cells = [[TableCell(value='x')]]
+        # pylint: disable-next=protected-access
+        editor = TableEditor(window._content, columns, cells, None, None, None)
+        # pylint: disable-next=protected-access
+        window._add_table_buttons(editor)
+        # pylint: disable-next=protected-access
+        box = window._content.winfo_children()[-1]
+        buttons = [w for w in box.winfo_children() if isinstance(w, tk.Button)]
+        assert str(buttons[0].cget('text')) == 'OK'
+        assert str(buttons[0].cget('default')) != 'active'
+        window.close()
+
+
+def test_bind_submit_inputs() -> None:
+    """Test binding Return reaches every input, and only the inputs.
+
+    An input nested in a two-widget row is reached through the
+    recursion, while a button keeps its own key handling.
+    """
+    with gui_root() as root:
+        frame = tk.Frame(root)
+        entry = tk.Entry(frame)
+        row = tk.Frame(frame)
+        nested = tk.Entry(row)
+        button = tk.Button(frame)
+        _bind_submit(frame, lambda: None)
+        assert entry.bind('<Return>') != ''
+        assert nested.bind('<Return>') != ''
+        assert button.bind('<Return>') == ''
+        assert frame.bind('<Return>') == ''
+
+
+def test_form_binds_return() -> None:
+    """Test a form input is bound to submit on Return."""
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        field = AskTextField('Name', None, default='Ada')
+        # pylint: disable-next=protected-access
+        root.after(0, lambda: window._finish([AnswerTextField(field, 'Ada')]))
+        window.ask_form('Fill in', [field], None, None)
+        # pylint: disable-next=protected-access
+        form = window._form
+        assert form is not None
+        # pylint: disable-next=protected-access
+        assert form._rows[0].widget.bind('<Return>') != ''
+        window.close()
+
+
+@pytest.mark.focus_sensitive
+def test_return_submits_form() -> None:
+    """Test really pressing Return in a form input submits the form.
+
+    The key needs a shown and focused window to be delivered, which is
+    why this runs only in the manual focus-sensitive test run.
+    """
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        field = AskTextField('Name', None, default='Ada')
+        root.after(200, lambda: _press_return_in_form(window))
+        answers = window.ask_form('Fill in', [field], None, None)
+        assert answers == [AnswerTextField(field, 'Ada')]
+        window.close()
+
+
+def _press_return_in_form(window: WizardWindow) -> None:
+    """Focus the first input of the shown form and press Return in it."""
+    # pylint: disable-next=protected-access
+    form = window._form
+    assert form is not None
+    # pylint: disable-next=protected-access
+    entry = form._rows[0].widget
+    entry.focus_force()
+    entry.update()
+    entry.event_generate('<Return>', when='now')
 
 
 def test_parent_area_excl() -> None:

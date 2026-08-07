@@ -102,10 +102,6 @@ class PathRow:
         self._entry['state'] = state
         self._button['state'] = state
 
-    def bind_return(self, callback: Callable[[], None]) -> None:
-        """Call callback when Return is pressed while the entry has focus."""
-        self._entry.bind('<Return>', lambda _event: callback())
-
     def _browse(self) -> None:
         """Open the native picker and fill the entry with the choice."""
         chosen = pick_path(self.frame, self._options, self.get())

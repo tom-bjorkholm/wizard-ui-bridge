@@ -112,11 +112,12 @@
   * [handles\_field](#wizard_tk_bridge.wizard_form.handles_field)
   * [int\_answer](#wizard_tk_bridge.wizard_form.int_answer)
   * [\_Input](#wizard_tk_bridge.wizard_form._Input)
+  * [\_inside](#wizard_tk_bridge.wizard_form._inside)
   * [HelpTooltip](#wizard_tk_bridge.wizard_form.HelpTooltip)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_form.HelpTooltip.__init__)
     * [show](#wizard_tk_bridge.wizard_form.HelpTooltip.show)
     * [hide](#wizard_tk_bridge.wizard_form.HelpTooltip.hide)
-    * [\_geometry](#wizard_tk_bridge.wizard_form.HelpTooltip._geometry)
+    * [\_position](#wizard_tk_bridge.wizard_form.HelpTooltip._position)
   * [FormRow](#wizard_tk_bridge.wizard_form.FormRow)
   * [\_text\_input](#wizard_tk_bridge.wizard_form._text_input)
   * [\_int\_input](#wizard_tk_bridge.wizard_form._int_input)
@@ -194,10 +195,10 @@
     * [get](#wizard_tk_bridge.wizard_path.PathRow.get)
     * [set\_text](#wizard_tk_bridge.wizard_path.PathRow.set_text)
     * [set\_enabled](#wizard_tk_bridge.wizard_path.PathRow.set_enabled)
-    * [bind\_return](#wizard_tk_bridge.wizard_path.PathRow.bind_return)
     * [\_browse](#wizard_tk_bridge.wizard_path.PathRow._browse)
 * [wizard\_tk\_bridge.wizard\_window](#wizard_tk_bridge.wizard_window)
   * [\_default\_path\_text](#wizard_tk_bridge.wizard_window._default_path_text)
+  * [\_bind\_submit](#wizard_tk_bridge.wizard_window._bind_submit)
   * [WizardWindow](#wizard_tk_bridge.wizard_window.WizardWindow)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_window.WizardWindow.__init__)
     * [\_build\_toplevel](#wizard_tk_bridge.wizard_window.WizardWindow._build_toplevel)
@@ -223,6 +224,7 @@
     * [\_begin](#wizard_tk_bridge.wizard_window.WizardWindow._begin)
     * [\_add\_label](#wizard_tk_bridge.wizard_window.WizardWindow._add_label)
     * [\_add\_buttons](#wizard_tk_bridge.wizard_window.WizardWindow._add_buttons)
+    * [\_button\_box](#wizard_tk_bridge.wizard_window.WizardWindow._button_box)
     * [\_add\_table\_buttons](#wizard_tk_bridge.wizard_window.WizardWindow._add_table_buttons)
     * [\_add\_nav\_buttons](#wizard_tk_bridge.wizard_window.WizardWindow._add_nav_buttons)
     * [\_wait](#wizard_tk_bridge.wizard_window.WizardWindow._wait)
@@ -1528,6 +1530,16 @@ class _Input(NamedTuple)
 
 A built input: the widget to place, plus type-specific handles.
 
+<a id="wizard_tk_bridge.wizard_form._inside"></a>
+
+#### \_inside
+
+```python
+def _inside(start: int, size: int, limit: int) -> int
+```
+
+Return the start coordinate that keeps size within limit.
+
 <a id="wizard_tk_bridge.wizard_form.HelpTooltip"></a>
 
 ## HelpTooltip Objects
@@ -1538,11 +1550,14 @@ class HelpTooltip()
 
 A hover bubble showing a field's help text over its widgets.
 
-The bubble is a borderless top-level window shown when the pointer
-enters a bound widget and destroyed when it leaves, so help appears
-on hover as it does in the textual bridge. It uses neither a
-transient window, forced focus nor a grab, which can crash Tk in
-automated runs.
+The bubble is a label placed over the window that holds the bound
+widgets, shown when the pointer enters one of them and destroyed
+when it leaves, so help appears on hover as it does in the textual
+bridge. A window of its own is drawn with the platform's window
+shape, which on macOS rounds the corners of a borderless window so
+much that a one-line bubble loses its first and last characters. A
+placed label is a plain rectangle on every platform, takes neither
+focus nor a grab, and cannot outlive the widgets it belongs to.
 
 <a id="wizard_tk_bridge.wizard_form.HelpTooltip.__init__"></a>
 
@@ -1575,15 +1590,15 @@ def hide() -> None
 
 Destroy the help bubble when one is shown.
 
-<a id="wizard_tk_bridge.wizard_form.HelpTooltip._geometry"></a>
+<a id="wizard_tk_bridge.wizard_form.HelpTooltip._position"></a>
 
-#### \_geometry
+#### \_position
 
 ```python
-def _geometry() -> str
+def _position(host: tk.Misc, tip: tk.Label) -> tuple[int, int]
 ```
 
-Return the position string placing the bubble under the anchor.
+Return where in host to place the bubble under the anchor.
 
 <a id="wizard_tk_bridge.wizard_form.FormRow"></a>
 
@@ -2482,16 +2497,6 @@ def set_enabled(enabled: bool) -> None
 
 Enable or disable both the entry and the Browse button.
 
-<a id="wizard_tk_bridge.wizard_path.PathRow.bind_return"></a>
-
-#### bind\_return
-
-```python
-def bind_return(callback: Callable[[], None]) -> None
-```
-
-Call callback when Return is pressed while the entry has focus.
-
 <a id="wizard_tk_bridge.wizard_path.PathRow._browse"></a>
 
 #### \_browse
@@ -2516,6 +2521,11 @@ offers back, out-one-level and abort buttons, which raise the matching
 :class:`WizardNavigation` request so the wizard can step within the
 configuration or abandon it.
 
+Return pressed in an input confirms the prompt, exactly as its OK button
+does, which that button shows by being the marked default one. The
+editable table is the exception: a row added after the buttons were built
+would miss the binding, so a table is confirmed by its button alone.
+
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
 given as ``area``. Exactly one of the two is given.
@@ -2532,6 +2542,22 @@ def _default_path_text(options: PathAskOptions) -> str
 ```
 
 Return the initial path text from the option's default.
+
+<a id="wizard_tk_bridge.wizard_window._bind_submit"></a>
+
+#### \_bind\_submit
+
+```python
+def _bind_submit(widget: tk.Misc, on_ok: Callable[[], None]) -> None
+```
+
+Bind Return to the confirm action on every input inside widget.
+
+A prompt builds its inputs before its buttons, so binding them all
+from one place gives every prompt the same rule: Return in an input
+does what the default OK button does. Only inputs are bound, which
+both leaves the Browse, Pick and navigation buttons their own keys
+and reaches the entry inside a two-widget input row.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow"></a>
 
@@ -2812,7 +2838,20 @@ Add one wrapped label to the content area.
 def _add_buttons(on_ok: Callable[[], None]) -> None
 ```
 
-Add the confirm and navigation buttons.
+Add the confirm and navigation buttons, and bind Return.
+
+The confirm button is marked as the default one, which is how a
+platform shows that pressing Return does the same thing.
+
+<a id="wizard_tk_bridge.wizard_window.WizardWindow._button_box"></a>
+
+#### \_button\_box
+
+```python
+def _button_box() -> tk.Frame
+```
+
+Add and return the frame holding a prompt's buttons.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow._add_table_buttons"></a>
 
@@ -2823,6 +2862,9 @@ def _add_table_buttons(editor: TableEditor) -> None
 ```
 
 Add confirm, optional add/remove-row and navigation buttons.
+
+A table binds no Return key, since a row added later would miss
+the binding, so its confirm button is not marked as the default.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow._add_nav_buttons"></a>
 

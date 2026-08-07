@@ -136,12 +136,3 @@ def test_browse_no_change(monkeypatch: pytest.MonkeyPatch) -> None:
         # pylint: disable-next=protected-access
         row._browse()
         assert row.get() == '/picked'
-
-
-def test_path_row_bind_return() -> None:
-    """Test bind_return registers a Return-key binding on the entry."""
-    with gui_root() as root:
-        row = PathRow(root, PathAskOptions(), '')
-        row.bind_return(lambda: None)
-        # pylint: disable-next=protected-access
-        assert row._entry.bind('<Return>') != ''

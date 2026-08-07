@@ -20,7 +20,7 @@ from wizard_ui_bridge import AnswerFields, AnswerField, AskField, \
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_error, out_of_range, range_error, text_answer
 from wizard_tk_bridge.wizard_form import FormEditor, HelpTooltip, \
-    handles_field, int_answer, _set_combo, _set_entry_text, _set_multi
+    handles_field, int_answer, _inside, _set_combo, _set_entry_text, _set_multi
 from .gui_test_helpers import gui_root
 
 
@@ -308,10 +308,11 @@ def test_form_no_tooltip() -> None:
         assert editor._rows[0].tooltip is None
 
 
-def _bubbles(anchor: tk.Widget) -> list[tk.Toplevel]:
-    """Return the tooltip top-level windows parented to a widget."""
-    return [child for child in anchor.winfo_children()
-            if isinstance(child, tk.Toplevel)]
+def _bubbles(anchor: tk.Widget) -> list[tk.Label]:
+    """Return the tooltip labels placed over the anchor's own window."""
+    host = anchor.winfo_toplevel()
+    return [child for child in host.winfo_children()
+            if isinstance(child, tk.Label) and child.place_info()]
 
 
 def test_tooltip_show_hide() -> None:
@@ -343,6 +344,44 @@ def test_tooltip_hide_none() -> None:
         tip = HelpTooltip('help me', anchor, (anchor,))
         tip.hide()
         assert not _bubbles(anchor)
+
+
+def test_tooltip_on_destroy() -> None:
+    """Test a shown bubble goes away when its bound widget is destroyed."""
+    with gui_root() as root:
+        anchor = tk.Label(root, text='x')
+        anchor.pack()
+        tip = HelpTooltip('help me', anchor, (anchor,))
+        tip.show()
+        assert len(_bubbles(anchor)) == 1
+        holder = tk.Label(root, text='y')
+        holder.pack()
+        anchor.destroy()
+        assert not _bubbles(holder)
+
+
+@pytest.mark.parametrize('start, size, limit, expected', [
+    (10, 50, 200, 10), (180, 50, 200, 150), (-5, 50, 200, 0),
+    (10, 300, 200, 0), (150, 50, 200, 150)])
+def test_inside(start: int, size: int, limit: int, expected: int) -> None:
+    """Test a bubble coordinate is moved back inside the window."""
+    assert _inside(start, size, limit) == expected
+
+
+def test_tooltip_inside() -> None:
+    """Test a bubble under the last row still starts inside the window."""
+    with gui_root() as root:
+        root.geometry('200x80')
+        root.update()
+        anchor = tk.Label(root, text='a rather wide label text here')
+        anchor.pack(side='bottom')
+        root.update()
+        tip = HelpTooltip('a help text wider than the window', anchor,
+                          (anchor,))
+        tip.show()
+        bubble = _bubbles(anchor)[0]
+        assert int(bubble.place_info()['x']) == 0
+        assert 0 <= int(bubble.place_info()['y']) <= 80
 
 
 def test_multi_error_bounds() -> None:

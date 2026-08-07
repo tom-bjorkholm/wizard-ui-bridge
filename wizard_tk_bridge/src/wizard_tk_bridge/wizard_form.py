@@ -49,6 +49,7 @@ CHOICE_WIDTH = 30
 _CHOICE_REQUIRED = 'Please choose a value.'
 TOOLTIP_BG = '#ffffe0'
 TOOLTIP_WRAP = 320
+TOOLTIP_GAP = 2
 _HANDLED = (AskTextField, AskIntField, AskPathField, AskYesNoField,
             AskChoiceField, AskMultiChoiceField, AskFloatField, AskDateField,
             AskTimeField, AskDateTimeField, AskDurationField)
@@ -90,14 +91,22 @@ class _Input(NamedTuple):
     typed: Optional[TypedInput] = None
 
 
+def _inside(start: int, size: int, limit: int) -> int:
+    """Return the start coordinate that keeps size within limit."""
+    return max(0, min(start, limit - size))
+
+
 class HelpTooltip:
     """A hover bubble showing a field's help text over its widgets.
 
-    The bubble is a borderless top-level window shown when the pointer
-    enters a bound widget and destroyed when it leaves, so help appears
-    on hover as it does in the textual bridge. It uses neither a
-    transient window, forced focus nor a grab, which can crash Tk in
-    automated runs.
+    The bubble is a label placed over the window that holds the bound
+    widgets, shown when the pointer enters one of them and destroyed
+    when it leaves, so help appears on hover as it does in the textual
+    bridge. A window of its own is drawn with the platform's window
+    shape, which on macOS rounds the corners of a borderless window so
+    much that a one-line bubble loses its first and last characters. A
+    placed label is a plain rectangle on every platform, takes neither
+    focus nor a grab, and cannot outlive the widgets it belongs to.
     """
 
     def __init__(self, text: str, anchor: tk.Widget,
@@ -105,33 +114,38 @@ class HelpTooltip:
         """Bind hover show and hide on each widget for the help text."""
         self.text = text
         self._anchor = anchor
-        self._tip: Optional[tk.Toplevel] = None
+        self._tip: Optional[tk.Label] = None
         for widget in widgets:
             widget.bind('<Enter>', lambda _event: self.show(), add='+')
             widget.bind('<Leave>', lambda _event: self.hide(), add='+')
+            widget.bind('<Destroy>', lambda _event: self.hide(), add='+')
 
     def show(self) -> None:
         """Show the help bubble just below the anchor widget."""
         if self._tip is not None:
             return
-        tip = tk.Toplevel(self._anchor)
-        tip.wm_overrideredirect(True)
-        tip.wm_geometry(self._geometry())
-        tk.Label(tip, text=self.text, background=TOOLTIP_BG, relief='solid',
-                 borderwidth=1, justify='left', wraplength=TOOLTIP_WRAP).pack()
+        host = self._anchor.winfo_toplevel()
+        tip = tk.Label(host, text=self.text, background=TOOLTIP_BG,
+                       relief='solid', borderwidth=1, justify='left',
+                       wraplength=TOOLTIP_WRAP)
+        left, top = self._position(host, tip)
+        tip.place(x=left, y=top)
+        tip.lift()
         self._tip = tip
 
     def hide(self) -> None:
         """Destroy the help bubble when one is shown."""
-        if self._tip is not None:
+        if self._tip is not None and self._tip.winfo_exists():
             self._tip.destroy()
-            self._tip = None
+        self._tip = None
 
-    def _geometry(self) -> str:
-        """Return the position string placing the bubble under the anchor."""
-        x = self._anchor.winfo_rootx()
-        y = self._anchor.winfo_rooty() + self._anchor.winfo_height() + 2
-        return f'+{x}+{y}'
+    def _position(self, host: tk.Misc, tip: tk.Label) -> tuple[int, int]:
+        """Return where in host to place the bubble under the anchor."""
+        left = self._anchor.winfo_rootx() - host.winfo_rootx()
+        top = (self._anchor.winfo_rooty() - host.winfo_rooty()
+               + self._anchor.winfo_height() + TOOLTIP_GAP)
+        return (_inside(left, tip.winfo_reqwidth(), host.winfo_width()),
+                _inside(top, tip.winfo_reqheight(), host.winfo_height()))
 
 
 @dataclass(frozen=True)

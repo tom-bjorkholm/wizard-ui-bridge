@@ -9,6 +9,11 @@ offers back, out-one-level and abort buttons, which raise the matching
 :class:`WizardNavigation` request so the wizard can step within the
 configuration or abandon it.
 
+Return pressed in an input confirms the prompt, exactly as its OK button
+does, which that button shows by being the marked default one. The
+editable table is the exception: a row added after the buttons were built
+would miss the binding, so a table is confirmed by its button alone.
+
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
 given as ``area``. Exactly one of the two is given.
@@ -22,6 +27,7 @@ rest of the window should stay usable meanwhile.
 
 import tkinter as tk
 from pathlib import Path
+from tkinter import ttk
 from typing import Callable, Optional, Sequence
 from wizard_ui_bridge import AnswerFields, AskFields, PartialCheck, \
     PartialFormValidator, PathAskOptions, TableCell, TableColumn, \
@@ -38,11 +44,27 @@ WINDOW_SIZE = '720x620'
 WRAP_LENGTH = 520
 MESSAGE_HEIGHT = 8
 CHOICE_HEIGHT = 10
+_RETURN_INPUTS = (tk.Entry, tk.Listbox, tk.Checkbutton, ttk.Combobox)
 
 
 def _default_path_text(options: PathAskOptions) -> str:
     """Return the initial path text from the option's default."""
     return '' if options.default is None else str(options.default)
+
+
+def _bind_submit(widget: tk.Misc, on_ok: Callable[[], None]) -> None:
+    """Bind Return to the confirm action on every input inside widget.
+
+    A prompt builds its inputs before its buttons, so binding them all
+    from one place gives every prompt the same rule: Return in an input
+    does what the default OK button does. Only inputs are bound, which
+    both leaves the Browse, Pick and navigation buttons their own keys
+    and reaches the entry inside a two-widget input row.
+    """
+    if isinstance(widget, _RETURN_INPUTS):
+        widget.bind('<Return>', lambda _event: on_ok(), add='+')
+    for child in widget.winfo_children():
+        _bind_submit(child, on_ok)
 
 
 # pylint: disable-next=too-many-instance-attributes
@@ -144,7 +166,6 @@ class WizardWindow:
         style_input(entry)
         entry.pack(anchor='w', pady=6)
         self._add_buttons(lambda: self._finish(entry.get()))
-        entry.bind('<Return>', lambda event: self._finish(entry.get()))
         result = self._wait()
         assert isinstance(result, str)
         return self._text_result(result, nullable, default)
@@ -182,7 +203,6 @@ class WizardWindow:
         style_input(entry)
         entry.pack(anchor='w', pady=6)
         self._add_buttons(lambda: self._finish(entry.get()))
-        entry.bind('<Return>', lambda _event: self._finish(entry.get()))
         result = self._wait()
         assert isinstance(result, str)
         return result
@@ -207,7 +227,6 @@ class WizardWindow:
         row = PathRow(self._content, options, initial)
         row.frame.pack(anchor='w', pady=6)
         self._add_buttons(lambda: self._finish(row.get()))
-        row.bind_return(lambda: self._finish(row.get()))
         result = self._wait()
         assert isinstance(result, str)
         return result
@@ -236,7 +255,9 @@ class WizardWindow:
         yes.pack(side='left', padx=6)
         no.pack(side='left', padx=6)
         self._add_nav_buttons(box)
-        (yes if default else no).focus_set()
+        chosen = yes if default else no
+        chosen.configure(default='active')
+        chosen.focus_set()
         result = self._wait()
         assert isinstance(result, bool)
         return result
@@ -349,16 +370,30 @@ class WizardWindow:
         label.pack(anchor='w', pady=4)
 
     def _add_buttons(self, on_ok: Callable[[], None]) -> None:
-        """Add the confirm and navigation buttons."""
-        box = tk.Frame(self._content)
-        box.pack(side='bottom', anchor='w', pady=10)
-        tk.Button(box, text='OK', command=on_ok).pack(side='left')
+        """Add the confirm and navigation buttons, and bind Return.
+
+        The confirm button is marked as the default one, which is how a
+        platform shows that pressing Return does the same thing.
+        """
+        _bind_submit(self._content, on_ok)
+        box = self._button_box()
+        tk.Button(box, text='OK', command=on_ok,
+                  default='active').pack(side='left')
         self._add_nav_buttons(box)
 
-    def _add_table_buttons(self, editor: TableEditor) -> None:
-        """Add confirm, optional add/remove-row and navigation buttons."""
+    def _button_box(self) -> tk.Frame:
+        """Add and return the frame holding a prompt's buttons."""
         box = tk.Frame(self._content)
         box.pack(side='bottom', anchor='w', pady=10)
+        return box
+
+    def _add_table_buttons(self, editor: TableEditor) -> None:
+        """Add confirm, optional add/remove-row and navigation buttons.
+
+        A table binds no Return key, since a row added later would miss
+        the binding, so its confirm button is not marked as the default.
+        """
+        box = self._button_box()
         tk.Button(box, text='OK',
                   command=lambda: self._finish(editor.values())).pack(
                       side='left')

@@ -97,7 +97,6 @@
     * [get](#wizard_tk_bridge.wizard_path.PathRow.get)
     * [set\_text](#wizard_tk_bridge.wizard_path.PathRow.set_text)
     * [set\_enabled](#wizard_tk_bridge.wizard_path.PathRow.set_enabled)
-    * [bind\_return](#wizard_tk_bridge.wizard_path.PathRow.bind_return)
 * [wizard\_tk\_bridge.wizard\_window](#wizard_tk_bridge.wizard_window)
   * [WizardWindow](#wizard_tk_bridge.wizard_window.WizardWindow)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_window.WizardWindow.__init__)
@@ -929,11 +928,14 @@ class HelpTooltip()
 
 A hover bubble showing a field's help text over its widgets.
 
-The bubble is a borderless top-level window shown when the pointer
-enters a bound widget and destroyed when it leaves, so help appears
-on hover as it does in the textual bridge. It uses neither a
-transient window, forced focus nor a grab, which can crash Tk in
-automated runs.
+The bubble is a label placed over the window that holds the bound
+widgets, shown when the pointer enters one of them and destroyed
+when it leaves, so help appears on hover as it does in the textual
+bridge. A window of its own is drawn with the platform's window
+shape, which on macOS rounds the corners of a borderless window so
+much that a one-line bubble loses its first and last characters. A
+placed label is a plain rectangle on every platform, takes neither
+focus nor a grab, and cannot outlive the widgets it belongs to.
 
 <a id="wizard_tk_bridge.wizard_form.HelpTooltip.__init__"></a>
 
@@ -1336,16 +1338,6 @@ def set_enabled(enabled: bool) -> None
 
 Enable or disable both the entry and the Browse button.
 
-<a id="wizard_tk_bridge.wizard_path.PathRow.bind_return"></a>
-
-#### bind\_return
-
-```python
-def bind_return(callback: Callable[[], None]) -> None
-```
-
-Call callback when Return is pressed while the entry has focus.
-
 <a id="wizard_tk_bridge.wizard_window"></a>
 
 # wizard\_tk\_bridge.wizard\_window
@@ -1359,6 +1351,11 @@ form on one screen, kept below a lasting message area. Every prompt also
 offers back, out-one-level and abort buttons, which raise the matching
 :class:`WizardNavigation` request so the wizard can step within the
 configuration or abandon it.
+
+Return pressed in an input confirms the prompt, exactly as its OK button
+does, which that button shows by being the marked default one. The
+editable table is the exception: a row added after the buttons were built
+would miss the binding, so a table is confirmed by its button alone.
 
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
