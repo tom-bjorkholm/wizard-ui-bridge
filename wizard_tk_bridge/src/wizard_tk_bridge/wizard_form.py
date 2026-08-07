@@ -8,10 +8,12 @@ per row, runs the optional partial validator after every change to show
 advisory feedback and disable irrelevant rows, and validates every
 enabled field on submit so a submitted form is always complete.
 
-The small scalar-answer helpers (:func:`text_answer`, :func:`int_answer`
-and friends) turn the raw text of a text or integer field into its typed
-answer. They are shared with the reused wizard window, which asks a
-standalone integer question with the same rules.
+Turning the raw text of a field into its typed answer is the same job on
+a form row and in a standalone question, so :func:`int_answer` lives
+here and is shared with the wizard window. Its text counterpart is
+:func:`wizard_ui_bridge.bridge_helpers.text_answer`, which every bridge
+shares, so a graphical answer is accepted or rejected exactly as a
+console one is.
 """
 
 # Copyright (c) 2026 Tom Björkholm

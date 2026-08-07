@@ -13,7 +13,7 @@ requires-python = ">=3.12"
 license = "MIT"
 license-files = ["LICENSE.txt"]
 keywords = [
-    "wizard", "user interface", "console", "textual", "form"
+    "wizard", "user interface", "gui", "tk", "tkinter", "form"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",

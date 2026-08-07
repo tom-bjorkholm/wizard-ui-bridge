@@ -47,8 +47,9 @@ correctness, not polish -- a wizard that expects the user to extend a table
 (a translation table, say) cannot receive those rows otherwise. Implementing
 the add/remove interface is left out here only for brevity, so ask_table()
 raises NotImplementedError for a variable-row request rather than silently
-returning just the starting rows; WizardUiBridgeConsole and
-WizardUiBridgeTextual show two ways to implement it.
+returning just the starting rows; WizardUiBridgeConsole,
+WizardUiBridgeTextual and the WizardUiBridgeTk of the companion package
+wizard-tk-bridge show three ways to implement it.
 
 User experience second: the "override to improve" move
 ------------------------------------------------------
@@ -65,17 +66,22 @@ The UX ladder: what a real bridge should climb next
 ---------------------------------------------------
 This bridge deliberately stops at the floor plus one rung, so the code stays
 readable. A real bridge should keep climbing. Each rung below names the
-capability it exploits and the built-in bridge that already shows how, so the
-console and Textual bridges in this package are your two reference rungs:
+capability it exploits and a finished bridge that already shows how. The
+console and Textual bridges in this package are two reference rungs, and
+the WizardUiBridgeTk of the companion package wizard-tk-bridge is a
+graphical bridge that has climbed all six:
 
 1. Whole-screen ``ask_form`` -- show every field at once instead of one at a
    time. See ``WizardUiBridgeTextual.ask_form``.
 2. A native ``ask_path`` picker -- a file/directory dialog instead of typed
-   text. A GUI toolkit supplies one; the text bridges validate typed text.
-3. A calendar for date fields -- see the date widgets in the Textual bridge.
+   text. The text bridges validate typed text; a GUI toolkit supplies a
+   real dialog, as the Tk bridge does.
+3. A calendar for date fields -- see the date widgets in the Textual bridge,
+   and the month calendar of the Tk bridge.
 4. Richer typed-field widgets (spin boxes, sliders) for the float, time and
    duration fields.
-5. ``help_text`` as a tooltip rather than an extra printed line.
+5. ``help_text`` as a tooltip rather than an extra printed line, as in the
+   Textual and Tk bridges.
 6. Inline re-ask -- show a rejected value's reason beside the field instead
    of scrolling it into the transcript.
 

@@ -6,9 +6,10 @@ ask a user questions.
 A wizard asks a series of questions and turns the answers into something,
 often a configuration file. `WizardUiBridge` is the interface it asks
 through, so the same wizard runs on a plain console, on a full-screen
-[Textual](https://pypi.org/project/textual/) user interface, on a
-graphical user interface you write yourself, or on a scripted bridge in
-your tests.
+[Textual](https://pypi.org/project/textual/) user interface, in a
+graphical user interface (Tkinter through the companion package below,
+or a toolkit you write a bridge for yourself), or on a scripted bridge
+in your tests.
 
 ## Tk companion
 
@@ -134,39 +135,25 @@ asking methods. The modules `wizard_ui_bridge.bridge_helpers` and
 to interpret raw answers and to build form answers, so that a bridge of
 your own behaves the same way.
 
-## Removed: `WizardUiBridge.ask()`
+## History
 
-The low-level `WizardUiBridge.ask()` method is **removed**, and with it:
+The low-level `WizardUiBridge.ask()` method was **removed** in version
+1.2, together with the fallbacks that let a bridge which only overrode
+`ask()` keep working by rerouting the typed `ask_*()` calls through it.
+Version 1.1 was the last version that supported it. A bridge implements
+the typed methods directly: `ask_text()`, `ask_choice()`, `ask_multi()`,
+`ask_yes_no()` and `ask_table()`, together with `show()`. A typed method
+a bridge does not implement raises `NotImplementedError`. See *Writing
+your own bridge* above.
 
-- calling `WizardUiBridge.ask()` from a wizard, and
-- the backward-compatibility fallbacks that let a bridge which only
-  overrode `ask()` keep working by rerouting the typed `ask_*()` calls
-  through it.
-
-Version 1.1 was the last version that supported `ask()`, where every use
-warned loudly that it was about to be removed. A bridge that still calls
-or overrides `ask()` no longer works.
-
-Implement the typed methods directly instead of `ask()`: `ask_text()`,
-`ask_choice()`, `ask_multi()`, `ask_yes_no()` and `ask_table()`, together
-with `show()`. A typed method a bridge does not implement raises
-`NotImplementedError`. See *Writing your own bridge* above.
-
-## Relation to tableio-cfg-json
+### Relation to tableio-cfg-json
 
 This package used to be part of
 [tableio-cfg-json](https://pypi.org/project/tableio-cfg-json/). It was
 split out so that a wizard that has nothing to do with TableIO does not
 have to install TableIO and everything TableIO depends on.
 
-Applications that import the bridge from `tableio_cfg_json` keep working,
-with a deprecation warning per name, and should change the imports as
-described in the `tableio-cfg-json` documentation.
-
 ### Source code repo history
-
-The wizard UI bridge `wizard-ui-bridge` code used to be part of
-`tableio-cfg-json` git repo, but has been split out.
 
 The two git repos
 [https://github.com/tom-bjorkholm/wizard-ui-bridge](https://github.com/tom-bjorkholm/wizard-ui-bridge)

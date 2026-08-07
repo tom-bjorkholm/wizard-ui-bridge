@@ -394,7 +394,8 @@ translation table, say) has no way to receive those rows otherwise.
 Implementing the add/remove interface is left out here only for brevity, so
 `ask_table()` raises `NotImplementedError` for a variable-row request rather
 than silently returning just the starting rows. See the variable-row table in
-`WizardUiBridgeConsole` and `WizardUiBridgeTextual` for two implementations.
+`WizardUiBridgeConsole`, `WizardUiBridgeTextual` and the `WizardUiBridgeTk` of
+the companion package `wizard-tk-bridge` for three implementations.
 
 ### User experience second: the "override to improve" move
 
@@ -411,17 +412,19 @@ re-ask loop to `super().ask_int()` — better UX, no logic rewritten.
 
 The example stops at the floor plus one rung so the code stays readable. A
 production bridge should keep climbing. Each rung names the capability it
-exploits and the built-in bridge that already shows how, so
-`WizardUiBridgeConsole` and `WizardUiBridgeTextual` are your two reference
-rungs:
+exploits and a finished bridge that already shows how: `WizardUiBridgeConsole`
+and `WizardUiBridgeTextual` are two reference rungs, and the
+`WizardUiBridgeTk` of the companion package `wizard-tk-bridge` is a graphical
+bridge that has climbed all six:
 
 1. Whole-screen `ask_form()` — show every field at once instead of one at a
-   time (Textual bridge).
+   time (Textual and Tk bridges).
 2. A native `ask_path()` picker — a file/directory dialog instead of typed
-   text (a GUI toolkit).
-3. A calendar for date fields (Textual bridge).
+   text (Tk bridge).
+3. A calendar for date fields (Textual and Tk bridges).
 4. Richer typed-field widgets (spin boxes, sliders) for float/time/duration.
-5. `help_text` as a tooltip rather than an extra printed line.
+5. `help_text` as a tooltip rather than an extra printed line (Textual and Tk
+   bridges).
 6. Inline re-ask — a rejected value's reason beside the field, not scrolled
    into the transcript.
 

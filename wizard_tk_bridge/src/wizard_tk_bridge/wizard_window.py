@@ -6,8 +6,8 @@ integer entry, a path entry with a native Browse button, a yes/no button
 pair, a single- and a multi-selection list, an editable table and a whole
 form on one screen, kept below a lasting message area. Every prompt also
 offers back, out-one-level and abort buttons, which raise the matching
-:class:`WizardNavigation` request so the wizard can step within the
-configuration or abandon it.
+:class:`WizardNavigation` request so the wizard can step within its
+questions or be abandoned.
 
 Return pressed in an input confirms the prompt, exactly as its OK button
 does, which that button shows by being the marked default one. The
@@ -422,7 +422,7 @@ class WizardWindow:
         self._navigate(WizardCancelLevel)
 
     def _cancel(self) -> None:
-        """Request abandoning the whole configuration."""
+        """Request abandoning the whole wizard."""
         self._navigate(WizardAbort)
 
     def _navigate(self, request: type[WizardNavigation]) -> None:

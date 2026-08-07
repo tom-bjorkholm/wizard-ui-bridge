@@ -161,7 +161,7 @@ NoTextIO can be used as a TextIO object that does nothing.
 
 When a function expects a TextIO object for output, you can pass in
 a NoTextIO object and no output will be produced.
-The differrence compared to using StringIO to suppress output is that
+The difference compared to using StringIO to suppress output is that
 the NoTextIO does not store any data, so no matter how much is
 written to it, you do not risk running out of memory.
 
@@ -886,10 +886,12 @@ per row, runs the optional partial validator after every change to show
 advisory feedback and disable irrelevant rows, and validates every
 enabled field on submit so a submitted form is always complete.
 
-The small scalar-answer helpers (:func:`text_answer`, :func:`int_answer`
-and friends) turn the raw text of a text or integer field into its typed
-answer. They are shared with the reused wizard window, which asks a
-standalone integer question with the same rules.
+Turning the raw text of a field into its typed answer is the same job on
+a form row and in a standalone question, so :func:`int_answer` lives
+here and is shared with the wizard window. Its text counterpart is
+:func:`wizard_ui_bridge.bridge_helpers.text_answer`, which every bridge
+shares, so a graphical answer is accepted or rejected exactly as a
+console one is.
 
 <a id="wizard_tk_bridge.wizard_form.handles_field"></a>
 
@@ -1040,20 +1042,20 @@ The bridge supports three ways an application can show the wizard:
 
 - In a new window of its own: give ``parent``, the Tk widget the new
   window is shown over. This suits an application with other windows.
-  A standalone CLI program can omit both ``parent`` and ``area``; the
-  bridge then owns the hidden root needed for this window.
 - Embedded in an area the application already built: give ``area``, the
   frame or other container the wizard should fill instead of a window of
   its own.
-- Either way, ``modal`` decides whether the wizard grabs its window (or
-  the window containing ``area``) for the duration of the session, so
-  the rest of that window is unusable meanwhile. The application is best
-  placed to decide this, since only it knows whether its other content
-  should stay usable while the wizard runs.
+- In a window of its own over a hidden root the bridge itself owns: give
+  neither ``parent`` nor ``area``. This suits a standalone CLI program
+  that has no other Tkinter code.
 
-At most one of ``parent`` and ``area`` may be given. If neither is given,
-the bridge creates and owns a hidden root, which is useful for a standalone
-CLI program that has no other Tkinter code.
+At most one of ``parent`` and ``area`` may be given.
+
+Whichever of the three is used, ``modal`` decides whether the wizard
+grabs its window (or the window containing ``area``) for the duration of
+the session, so the rest of that window is unusable meanwhile. The
+application is best placed to decide this, since only it knows whether
+its other content should stay usable while the wizard runs.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk"></a>
 
@@ -1349,8 +1351,8 @@ integer entry, a path entry with a native Browse button, a yes/no button
 pair, a single- and a multi-selection list, an editable table and a whole
 form on one screen, kept below a lasting message area. Every prompt also
 offers back, out-one-level and abort buttons, which raise the matching
-:class:`WizardNavigation` request so the wizard can step within the
-configuration or abandon it.
+:class:`WizardNavigation` request so the wizard can step within its
+questions or be abandoned.
 
 Return pressed in an input confirms the prompt, exactly as its OK button
 does, which that button shows by being the marked default one. The

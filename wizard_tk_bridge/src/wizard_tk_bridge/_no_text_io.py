@@ -15,7 +15,7 @@ class NoTextIO(io.StringIO):
 
     When a function expects a TextIO object for output, you can pass in
     a NoTextIO object and no output will be produced.
-    The differrence compared to using StringIO to suppress output is that
+    The difference compared to using StringIO to suppress output is that
     the NoTextIO does not store any data, so no matter how much is
     written to it, you do not risk running out of memory.
     """

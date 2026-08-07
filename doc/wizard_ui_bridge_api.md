@@ -1654,9 +1654,10 @@ Textual is an optional dependency, installed with the extra
 only when it is about to be used, and asking for it without Textual
 installed raises ImportError instead of degrading silently.
 
-This factory chooses between text-mode bridges only. An application
-with a graphical user interface should provide and use its own
-graphical bridge instead.
+This factory chooses between text-mode bridges only. An application with
+a graphical user interface constructs a graphical bridge itself instead:
+WizardUiBridgeTk from the companion package wizard-tk-bridge for Tkinter,
+or a bridge of its own for another toolkit.
 
 <a id="wizard_ui_bridge.factory.textual_installed"></a>
 

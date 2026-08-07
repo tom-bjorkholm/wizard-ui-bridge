@@ -14,20 +14,20 @@ The bridge supports three ways an application can show the wizard:
 
 - In a new window of its own: give ``parent``, the Tk widget the new
   window is shown over. This suits an application with other windows.
-  A standalone CLI program can omit both ``parent`` and ``area``; the
-  bridge then owns the hidden root needed for this window.
 - Embedded in an area the application already built: give ``area``, the
   frame or other container the wizard should fill instead of a window of
   its own.
-- Either way, ``modal`` decides whether the wizard grabs its window (or
-  the window containing ``area``) for the duration of the session, so
-  the rest of that window is unusable meanwhile. The application is best
-  placed to decide this, since only it knows whether its other content
-  should stay usable while the wizard runs.
+- In a window of its own over a hidden root the bridge itself owns: give
+  neither ``parent`` nor ``area``. This suits a standalone CLI program
+  that has no other Tkinter code.
 
-At most one of ``parent`` and ``area`` may be given. If neither is given,
-the bridge creates and owns a hidden root, which is useful for a standalone
-CLI program that has no other Tkinter code.
+At most one of ``parent`` and ``area`` may be given.
+
+Whichever of the three is used, ``modal`` decides whether the wizard
+grabs its window (or the window containing ``area``) for the duration of
+the session, so the rest of that window is unusable meanwhile. The
+application is best placed to decide this, since only it knows whether
+its other content should stay usable while the wizard runs.
 """
 
 # Copyright (c) 2026 Tom Björkholm
