@@ -26,7 +26,7 @@ More text to be written here
 
 ## Documentation
 
-- Teaching examples and walkthroughs: [wizard_tk_bridge/example/src/wizard_tk_example](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example)
+- Teaching examples and walkthroughs: [wizard_tk_bridge/example/src/wizard_tk_example/README.md](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/README.md)
 
 - Public API notes: [doc/wizard_tk_bridge_api.md](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/doc/wizard_tk_bridge_api.md)
 

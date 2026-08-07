@@ -39,6 +39,8 @@ together with `show()`. See the package READMEs for details.
 - Package overview [wizard_ui_bridge/README_pypi.md](wizard_ui_bridge/README_pypi.md)
 - Public API note [doc/wizard_ui_bridge_api.md](doc/wizard_ui_bridge_api.md)
 - Protected/internal API notes [doc/wizard_ui_bridge_protected_api.md](doc/wizard_ui_bridge_protected_api.md)
+- Teaching examples for `wizard-ui-bridge`: [wizard_ui_bridge/example/src/wizard_ui_example/README.md](wizard_ui_bridge/example/src/wizard_ui_example/README.md)
+- Teaching examples for `wizard-tk-bridge`: [wizard_tk_bridge/example/src/wizard_tk_example/README.md](wizard_tk_bridge/example/src/wizard_tk_example/README.md)
 - Build system design: [common_build_tools/README.md](common_build_tools/README.md)
 
 There is an example directory with worked examples for new

@@ -45,6 +45,18 @@ python -m wizard_ui_example.e02_question_kinds --ui console
 The examples so far all *used* a bridge this package provides; `e07` is the
 one that *implements* one, so it comes last.
 
+## The same wizards on a graphical bridge
+
+Every wizard here is bridge-independent, so the same modules also run on a
+graphical bridge without a line changed. The companion package
+`wizard-tk-bridge` is a Tkinter bridge, and its
+[teaching examples](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/README.md)
+show how to place a wizard in a command-line program, in a pop-up window, or
+in an area of a window the application already built. Its `run_e01` to
+`run_e06` examples import `e01` to `e06` from this folder and run those very
+modules through Tk, which is the easiest way to see what these questions look
+like in a real graphical interface.
+
 ## `e01_one_question.py`: obtaining a bridge and asking
 
 The smallest useful program that talks to a user through the bridge.

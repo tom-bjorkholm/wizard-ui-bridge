@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 """Examples for the wizard user interface Tk bridge.
 
-The Tk versions of examples e02 through e06 reuse the corresponding
-bridge-independent teaching modules. When these source-tree examples are
-run directly, make that sibling example source directory importable too.
+The run_e01 through run_e06 examples reuse the corresponding
+bridge-independent teaching modules of wizard_ui_example. When these
+source-tree examples are run directly, make that sibling example source
+directory importable too.
 """
 
 # Copyright (c) 2026 Tom Björkholm
