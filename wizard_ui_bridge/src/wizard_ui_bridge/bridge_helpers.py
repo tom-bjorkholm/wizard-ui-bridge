@@ -405,11 +405,8 @@ def _resolve_multi(answer: str | int, choices: Sequence[str],
     if labels is None:
         return (None, CHOICE_ERROR)
     chosen = [choice for choice in choices if choice in set(labels)]
-    too_few = len(chosen) < min_select
-    too_many = max_select is not None and len(chosen) > max_select
-    if too_few or too_many:
-        return (None, multi_count_error(min_select, max_select))
-    return (chosen, '')
+    error = multi_count_message(len(chosen), min_select, max_select)
+    return (chosen, '') if error is None else (None, error)
 
 
 def _multi_labels(answer: str | int, choices: Sequence[str],
@@ -472,3 +469,18 @@ def multi_count_error(min_select: int, max_select: Optional[int]) -> str:
     if min_select == max_select:
         return f'Please select exactly {min_select}.'
     return f'Please select between {min_select} and {max_select}.'
+
+
+def multi_count_message(count: int, min_select: int,
+                        max_select: Optional[int]) -> Optional[str]:
+    """Return why count is not an allowed selection size, or None.
+
+    Every bridge accepts the same selection counts and explains a
+    rejected count with the same message, so each of them asks here
+    instead of repeating the bounds check and the wording.
+    """
+    too_few = count < min_select
+    too_many = max_select is not None and count > max_select
+    if too_few or too_many:
+        return multi_count_error(min_select, max_select)
+    return None

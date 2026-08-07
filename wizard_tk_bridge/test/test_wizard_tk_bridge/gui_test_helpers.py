@@ -7,11 +7,14 @@
 import time
 import tkinter as tk
 from contextlib import contextmanager
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterator, Optional, Sequence, TypeVar
 import pytest
+from wizard_tk_bridge.wizard_window import WizardWindow
 
 SCREEN_CLEAR_TIME = 0.5
 EVENT_LOOP_STEP = 0.01
+PROMPT_TIMEOUT_MS = 5000
+_W = TypeVar('_W', bound=tk.Misc)
 
 
 def root_or_skip() -> tk.Tk:
@@ -77,6 +80,115 @@ def gui_root() -> Iterator[tk.Tk]:
     finally:
         _clear_screen(root)
         root.destroy()
+
+
+def content_of(window: WizardWindow) -> tk.Frame:
+    """Return the frame a wizard prompt builds its own widgets into."""
+    # pylint: disable-next=protected-access
+    return window._content
+
+
+def abort_prompt(window: WizardWindow) -> None:
+    """Abandon the waiting prompt, as the window's Abort button does."""
+    # pylint: disable-next=protected-access
+    window._cancel()
+
+
+@contextmanager
+def prompt_window() -> Iterator[tuple[tk.Tk, WizardWindow]]:
+    """Yield a root and a modal wizard window of its own, closed after."""
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        try:
+            yield (root, window)
+        finally:
+            window.close()
+
+
+def find_widgets(parent: tk.Misc, kind: type[_W]) -> list[_W]:
+    """Return every widget of the given kind under parent, in child order."""
+    found: list[_W] = []
+    for child in parent.winfo_children():
+        if isinstance(child, kind):
+            found.append(child)
+        found.extend(find_widgets(child, kind))
+    return found
+
+
+def click_button(parent: tk.Misc, text: str) -> None:
+    """Press the button labelled text somewhere under parent."""
+    for button in find_widgets(parent, tk.Button):
+        if str(button.cget('text')) == text:
+            button.invoke()
+            return
+    pytest.fail(f'No button labelled {text} was built.')
+
+
+def set_entry(entry: tk.Entry, text: str) -> None:
+    """Replace what an entry holds with the given text."""
+    entry.delete(0, 'end')
+    entry.insert(0, text)
+
+
+def first_entry(window: WizardWindow) -> tk.Entry:
+    """Return the first entry the shown prompt built."""
+    return find_widgets(content_of(window), tk.Entry)[0]
+
+
+def answer_entry(window: WizardWindow, text: str) -> None:
+    """Type text into the prompt's first entry and press its OK button."""
+    set_entry(first_entry(window), text)
+    click_button(content_of(window), 'OK')
+
+
+def answer_list(window: WizardWindow, rows: Sequence[int]) -> None:
+    """Select exactly the given rows of the prompt's list and press OK."""
+    listbox = find_widgets(content_of(window), tk.Listbox)[0]
+    listbox.selection_clear(0, 'end')
+    for row in rows:
+        listbox.selection_set(row)
+    click_button(content_of(window), 'OK')
+
+
+def label_texts(parent: tk.Misc) -> list[str]:
+    """Return the texts of the labels under parent, in child order."""
+    return [str(label.cget('text'))
+            for label in find_widgets(parent, tk.Label)]
+
+
+# pylint: disable-next=too-few-public-methods
+class PromptDriver:
+    """Answer the prompts of one wizard window, one action per prompt.
+
+    Every prompt waits in a nested event loop of its own, and Tk runs all
+    callbacks that are already due in the same loop, so the actions cannot
+    all be scheduled up front: each one is scheduled from within the
+    previous one instead. A watchdog abandons a prompt that no action
+    answered, so a mistaken test fails instead of waiting for ever.
+    """
+
+    def __init__(self, root: tk.Tk, window: WizardWindow,
+                 actions: Sequence[Callable[[], None]]) -> None:
+        """Schedule the first action and keep the rest for later prompts."""
+        self._root = root
+        self._window = window
+        self._left = list(actions)
+        root.after(PROMPT_TIMEOUT_MS, self._give_up)
+        self._schedule()
+
+    def _schedule(self) -> None:
+        """Let the next action run inside the next prompt's wait loop."""
+        if self._left:
+            self._root.after(0, self._run_next)
+
+    def _run_next(self) -> None:
+        """Run one action, leaving the rest for the prompts after it."""
+        self._schedule()
+        self._left.pop(0)()
+
+    def _give_up(self) -> None:
+        """Abandon a prompt no action answered, ending the nested loop."""
+        abort_prompt(self._window)
 
 
 def press_close(win: tk.Toplevel) -> None:

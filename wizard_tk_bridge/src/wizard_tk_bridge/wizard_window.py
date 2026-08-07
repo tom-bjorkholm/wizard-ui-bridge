@@ -32,7 +32,8 @@ from typing import Callable, Optional, Sequence
 from wizard_ui_bridge import AnswerFields, AskFields, PartialCheck, \
     PartialFormValidator, PathAskOptions, TableCell, TableColumn, \
     WizardAbort, WizardBack, WizardCancelLevel, WizardNavigation
-from wizard_ui_bridge.bridge_helpers import path_answer
+from wizard_ui_bridge.bridge_helpers import multi_count_message, \
+    path_answer, text_answer
 from wizard_tk_bridge.close_binding import bind_close
 from wizard_tk_bridge.gui_style import focus_first_input, style_input
 from wizard_tk_bridge.wizard_form import FormEditor, int_answer
@@ -82,7 +83,6 @@ class WizardWindow:
             raise ValueError('Give exactly one of parent and area.')
         self._result: object = ''
         self._nav: Optional[type[WizardNavigation]] = None
-        self._editor: Optional[TableEditor] = None
         self._form: Optional[FormEditor] = None
         self._modal = modal
         self._closed = False
@@ -168,17 +168,7 @@ class WizardWindow:
         self._add_buttons(lambda: self._finish(entry.get()))
         result = self._wait()
         assert isinstance(result, str)
-        return self._text_result(result, nullable, default)
-
-    @staticmethod
-    def _text_result(result: str, nullable: bool,
-                     default: Optional[str]) -> Optional[str]:
-        """Return the answer after the default and nullable rules."""
-        if result != '':
-            return result
-        if default is not None:
-            return default
-        return None if nullable else ''
+        return text_answer(result, nullable, default)
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def ask_int(self, question: str, re_ask: Optional[str], nullable: bool,
@@ -281,11 +271,8 @@ class WizardWindow:
         reason = re_ask
         while True:
             chosen = self._run_multi(question, reason, choices, default)
-            if len(chosen) < min_select:
-                reason = f'Please select at least {min_select}.'
-            elif max_select is not None and len(chosen) > max_select:
-                reason = f'Please select at most {max_select}.'
-            else:
+            reason = multi_count_message(len(chosen), min_select, max_select)
+            if reason is None:
                 return chosen
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
@@ -298,7 +285,6 @@ class WizardWindow:
         self._begin(question, re_ask)
         editor = TableEditor(self._content, columns, cells, partial_check,
                              min_rows, max_rows)
-        self._editor = editor
         self._add_table_buttons(editor)
         result = self._wait()
         assert isinstance(result, list)
@@ -355,7 +341,6 @@ class WizardWindow:
     def _begin(self, question: str, re_ask: Optional[str]) -> None:
         """Clear the content area and show the question and any reason."""
         self._nav = None
-        self._editor = None
         self._form = None
         for child in self._content.winfo_children():
             child.destroy()

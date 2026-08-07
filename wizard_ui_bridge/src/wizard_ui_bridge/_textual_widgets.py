@@ -23,7 +23,7 @@ from textual.widget import Widget
 from textual.widgets import Button, Checkbox, Input, Select, SelectionList, \
     Static
 from textual.widgets.selection_list import Selection
-from wizard_ui_bridge.bridge_helpers import multi_count_error
+from wizard_ui_bridge.bridge_helpers import multi_count_message
 from wizard_ui_bridge._parse import format_new_value, \
     parse_date, parse_datetime
 from wizard_ui_bridge.arg_types import TableCell
@@ -189,11 +189,7 @@ def _pick_index(widget_id: Optional[str]) -> Optional[int]:
 
 def _multi_error(count: int, field: AskMultiChoiceField) -> Optional[str]:
     """Return the multi-choice count error, or None when acceptable."""
-    too_few = count < field.min_select
-    too_many = field.max_select is not None and count > field.max_select
-    if too_few or too_many:
-        return multi_count_error(field.min_select, field.max_select)
-    return None
+    return multi_count_message(count, field.min_select, field.max_select)
 
 
 def _field_message(field: AskField, message: str) -> str:

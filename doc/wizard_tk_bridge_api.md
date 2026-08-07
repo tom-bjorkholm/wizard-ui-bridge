@@ -176,7 +176,7 @@ def write(s: str) -> int
 
 Write a string to the NoTextIO object.
 
-This method does nothing and returns 0.
+This method does nothing and returns length of the string.
 
 <a id="wizard_tk_bridge._no_text_io.NoTextIO.writelines"></a>
 

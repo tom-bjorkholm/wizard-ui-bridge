@@ -5,6 +5,7 @@
 # MIT License
 
 import tkinter as tk
+from tkinter import ttk
 import pytest
 from wizard_ui_bridge import AskTextField, AnswerTextField, TableCell, \
     TableColumn
@@ -222,11 +223,29 @@ def test_bind_submit_inputs() -> None:
         row = tk.Frame(frame)
         nested = tk.Entry(row)
         button = tk.Button(frame)
+        listbox = tk.Listbox(frame)
+        combo = ttk.Combobox(frame)
         _bind_submit(frame, lambda: None)
         assert entry.bind('<Return>') != ''
         assert nested.bind('<Return>') != ''
+        assert listbox.bind('<Return>') != ''
+        assert combo.bind('<Return>') != ''
         assert button.bind('<Return>') == ''
         assert frame.bind('<Return>') == ''
+
+
+def test_messages_kept() -> None:
+    """Test shown messages are kept in order in a read-only message area."""
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        window.show('first message')
+        window.show('second message')
+        # pylint: disable-next=protected-access
+        messages = window._messages
+        assert messages.get('1.0', 'end-1c').splitlines() == [
+            'first message', 'second message']
+        assert str(messages.cget('state')) == 'disabled'
+        window.close()
 
 
 def test_form_binds_return() -> None:

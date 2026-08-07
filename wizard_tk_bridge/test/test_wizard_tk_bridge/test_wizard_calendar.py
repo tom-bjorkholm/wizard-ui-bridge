@@ -8,6 +8,7 @@ import tkinter as tk
 from datetime import date
 from typing import Optional
 import pytest
+from wizard_tk_bridge import wizard_calendar
 from wizard_tk_bridge.wizard_calendar import CalendarPicker, _restore_grab, \
     day_out_of_range, month_weeks, shift_month
 from .gui_test_helpers import gui_root
@@ -41,12 +42,12 @@ def test_day_out_of_range(day: date, lo: Optional[date], hi: Optional[date],
     assert day_out_of_range(day, lo, hi) is expected
 
 
-def _picker(root: tk.Tk, seed: date, lo: Optional[date] = None,
+def _picker(parent: tk.Misc, seed: date, lo: Optional[date] = None,
             hi: Optional[date] = None
             ) -> tuple[CalendarPicker, list[Optional[date]]]:
     """Build a calendar picker recording every picked outcome."""
     picked: list[Optional[date]] = []
-    return CalendarPicker(root, seed, lo, hi, picked.append), picked
+    return CalendarPicker(parent, seed, lo, hi, picked.append), picked
 
 
 def test_picker_pick_day() -> None:
@@ -161,6 +162,26 @@ def test_grab_real() -> None:
         picker._cancel()
         root.update()
         assert root.grab_current() is root  # type: ignore[no-untyped-call]
+
+
+def test_restore_grab_given(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test closing hands the grab back when the host held one.
+
+    A grab needs a window on the screen, which the manual focus-sensitive
+    run provides; here the host's grab and the hand-back are recorded
+    instead, so the same rule is checked without a shown window.
+    """
+    restored: list[Optional[tk.Misc]] = []
+    monkeypatch.setattr(wizard_calendar, '_held_grab', lambda _widget: True)
+    monkeypatch.setattr(wizard_calendar, '_restore_grab', restored.append)
+    with gui_root() as root:
+        area = tk.Frame(root)
+        picker, _ = _picker(area, date(2026, 7, 24))
+        # pylint: disable-next=protected-access
+        assert picker._restore is True
+        # pylint: disable-next=protected-access
+        picker._cancel()
+        assert restored == [area]
 
 
 def test_no_restore_no_grab() -> None:

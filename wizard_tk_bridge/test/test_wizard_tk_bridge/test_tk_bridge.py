@@ -5,12 +5,15 @@
 # MIT License
 
 from io import StringIO
+from pathlib import Path
 import tkinter as tk
 import pytest
-from wizard_ui_bridge import AskFloatField, AskTextField
+from wizard_ui_bridge import AskFloatField, AskTextField, PathAskOptions, \
+    TableCell, TableColumn, WizardPathKind
 from wizard_tk_bridge import WizardUiBridgeTk
 from wizard_tk_bridge._no_text_io import NoTextIO
-from .gui_test_helpers import gui_root
+from wizard_tk_bridge.wizard_window import WizardWindow
+from .gui_test_helpers import answer_entry, answer_list, gui_root
 
 
 def test_standalone_owns_root(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -151,6 +154,83 @@ def test_ask_yes_no_delegates() -> None:
         bridge = WizardUiBridgeTk(root)
         root.after(0, lambda: _finish_bridge(bridge, True))
         assert bridge.ask_yes_no('OK?', True) is True
+        bridge.close()
+
+
+def _window_of(bridge: WizardUiBridgeTk) -> WizardWindow:
+    """Return the wizard window the bridge built for its session."""
+    # pylint: disable-next=protected-access
+    window = bridge._window
+    assert window is not None
+    return window
+
+
+def test_ask_path_no_options() -> None:
+    """Test ask_path without options asks for a plain file path."""
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: answer_entry(_window_of(bridge), 'new.txt'))
+        assert bridge.ask_path('File?') == Path('new.txt')
+        bridge.close()
+
+
+def test_ask_path_options(tmp_path: Path) -> None:
+    """Test ask_path passes the given options on to the wizard window."""
+    wanted = tmp_path / 'here.txt'
+    wanted.write_text('content', encoding='utf-8')
+    options = PathAskOptions(kind=WizardPathKind.EXISTING_FILE)
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: answer_entry(_window_of(bridge), str(wanted)))
+        assert bridge.ask_path('File?', options=options) == wanted
+        bridge.close()
+
+
+def test_ask_choice_delegates() -> None:
+    """Test ask_choice reaches the wizard window and returns its answer."""
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: answer_list(_window_of(bridge), [1]))
+        assert bridge.ask_choice('Pick?', choices=['a', 'b']) == 'b'
+        bridge.close()
+
+
+def test_ask_multi_delegates() -> None:
+    """Test ask_multi reaches the wizard window and returns its answer."""
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: answer_list(_window_of(bridge), [0, 2]))
+        answer = bridge.ask_multi('Pick?', choices=['a', 'b', 'c'],
+                                  min_select=2)
+        assert answer == ['a', 'c']
+        bridge.close()
+
+
+def test_ask_table_delegates() -> None:
+    """Test ask_table reaches the wizard window and returns its rows."""
+    columns = [TableColumn('Name')]
+    cells = [[TableCell(value='a')]]
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: answer_entry(_window_of(bridge), 'b'))
+        assert bridge.ask_table(columns, cells, 'Fill?') == [['b']]
+        bridge.close()
+
+
+def test_window_is_reused() -> None:
+    """Test every question of one session is asked in the same window.
+
+    The bridge builds its wizard window once, so a session does not jump
+    around the display as it asks its questions.
+    """
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: answer_entry(_window_of(bridge), 'first'))
+        assert bridge.ask_text('One?') == 'first'
+        window = _window_of(bridge)
+        root.after(0, lambda: answer_entry(_window_of(bridge), 'second'))
+        assert bridge.ask_text('Two?') == 'second'
+        assert _window_of(bridge) is window
         bridge.close()
 
 

@@ -24,10 +24,9 @@ class NoTextIO(io.StringIO):
     def write(self, s: str) -> int:
         """Write a string to the NoTextIO object.
 
-        This method does nothing and returns 0.
+        This method does nothing and returns length of the string.
         """
-        _ = s
-        return 0
+        return len(s)
 
     @override
     def writelines(self,  # type: ignore[override]

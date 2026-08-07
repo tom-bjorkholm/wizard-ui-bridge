@@ -107,6 +107,7 @@
   * [ask\_many](#wizard_ui_bridge.bridge_helpers.ask_many)
   * [match\_token](#wizard_ui_bridge.bridge_helpers.match_token)
   * [multi\_count\_error](#wizard_ui_bridge.bridge_helpers.multi_count_error)
+  * [multi\_count\_message](#wizard_ui_bridge.bridge_helpers.multi_count_message)
 * [wizard\_ui\_bridge.textual\_bridge](#wizard_ui_bridge.textual_bridge)
   * [WizardUiBridgeTextual](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual)
     * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.__init__)
@@ -2206,6 +2207,21 @@ def multi_count_error(min_select: int, max_select: Optional[int]) -> str
 ```
 
 Return the message shown when the selected count is not allowed.
+
+<a id="wizard_ui_bridge.bridge_helpers.multi_count_message"></a>
+
+#### multi\_count\_message
+
+```python
+def multi_count_message(count: int, min_select: int,
+                        max_select: Optional[int]) -> Optional[str]
+```
+
+Return why count is not an allowed selection size, or None.
+
+Every bridge accepts the same selection counts and explains a
+rejected count with the same message, so each of them asks here
+instead of repeating the bounds check and the wording.
 
 <a id="wizard_ui_bridge.textual_bridge"></a>
 

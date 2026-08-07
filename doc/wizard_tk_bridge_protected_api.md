@@ -206,7 +206,6 @@
     * [show](#wizard_tk_bridge.wizard_window.WizardWindow.show)
     * [close](#wizard_tk_bridge.wizard_window.WizardWindow.close)
     * [ask\_text](#wizard_tk_bridge.wizard_window.WizardWindow.ask_text)
-    * [\_text\_result](#wizard_tk_bridge.wizard_window.WizardWindow._text_result)
     * [ask\_int](#wizard_tk_bridge.wizard_window.WizardWindow.ask_int)
     * [\_run\_int](#wizard_tk_bridge.wizard_window.WizardWindow._run_int)
     * [ask\_path](#wizard_tk_bridge.wizard_window.WizardWindow.ask_path)
@@ -300,7 +299,7 @@ def write(s: str) -> int
 
 Write a string to the NoTextIO object.
 
-This method does nothing and returns 0.
+This method does nothing and returns length of the string.
 
 <a id="wizard_tk_bridge._no_text_io.NoTextIO.writelines"></a>
 
@@ -1823,10 +1822,6 @@ def _multi_error(row: FormRow, field: AskMultiChoiceField) -> Optional[str]
 
 Return the multi-selection row's count error, or None.
 
-The count check mirrors wizard_ui_bridge._textual_widgets, the
-private module behind the Textual bridge's own form fields; that
-module is not public API a sibling package may import.
-
 <a id="wizard_tk_bridge.wizard_form._set_widget_state"></a>
 
 #### \_set\_widget\_state
@@ -2640,18 +2635,6 @@ Ask one free-text question and return the entered text.
 
 A sensitive question masks the typed text; a default value is
 pre-filled and returned when the answer is left empty.
-
-<a id="wizard_tk_bridge.wizard_window.WizardWindow._text_result"></a>
-
-#### \_text\_result
-
-```python
-@staticmethod
-def _text_result(result: str, nullable: bool,
-                 default: Optional[str]) -> Optional[str]
-```
-
-Return the answer after the default and nullable rules.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_int"></a>
 

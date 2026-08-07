@@ -17,7 +17,6 @@ your tests.
 implements the same user-interface-independent way for a wizard to
 ask a user questions using a Tkinter GUI.
 
-
 ## Is this package for you?
 
 This package is a good fit when one or more of these apply:
@@ -193,7 +192,7 @@ MIT
 
 ## Test summary
 
-- Test result: 979 passed, 9 deselected in 36s
+- Test result: 1051 passed, 9 deselected in 38s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.

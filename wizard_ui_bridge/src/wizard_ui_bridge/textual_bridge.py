@@ -35,7 +35,7 @@ from textual.widgets import Button, Checkbox, Footer, Input, \
 from textual.widgets.selection_list import Selection
 from wizard_ui_bridge.bridge import WizardUiBridge
 from wizard_ui_bridge.bridge_helpers import check_text_args, INT_ERROR, \
-    int_text, multi_count_error, out_of_range, path_answer, range_error, \
+    int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
 from wizard_ui_bridge.form_helpers import initial_answer
 from wizard_ui_bridge._form_prefill import apply_prefills
@@ -228,17 +228,12 @@ class _MultiApp(_NavApp[list[int]]):
     def action_submit(self) -> None:
         """Exit with the selection, or show why the count is wrong."""
         chosen = list(self._list.selected)
-        if self._count_ok(len(chosen)):
+        message = multi_count_message(len(chosen), self._min_select,
+                                      self._max_select)
+        if message is None:
             self.exit(chosen)
             return
-        message = multi_count_error(self._min_select, self._max_select)
         self.query_one('#multi_error', Static).update(message)
-
-    def _count_ok(self, count: int) -> bool:
-        """Return whether count is within the allowed selection range."""
-        if count < self._min_select:
-            return False
-        return self._max_select is None or count <= self._max_select
 
 
 # pylint: disable-next=too-many-instance-attributes

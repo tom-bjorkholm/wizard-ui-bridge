@@ -267,6 +267,7 @@
   * [\_best\_match](#wizard_ui_bridge.bridge_helpers._best_match)
   * [\_choice\_at\_index](#wizard_ui_bridge.bridge_helpers._choice_at_index)
   * [multi\_count\_error](#wizard_ui_bridge.bridge_helpers.multi_count_error)
+  * [multi\_count\_message](#wizard_ui_bridge.bridge_helpers.multi_count_message)
 * [wizard\_ui\_bridge.textual\_bridge](#wizard_ui_bridge.textual_bridge)
   * [\_NavApp](#wizard_ui_bridge.textual_bridge._NavApp)
     * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge._NavApp.__init__)
@@ -292,7 +293,6 @@
     * [\_selections](#wizard_ui_bridge.textual_bridge._MultiApp._selections)
     * [\_clicked](#wizard_ui_bridge.textual_bridge._MultiApp._clicked)
     * [action\_submit](#wizard_ui_bridge.textual_bridge._MultiApp.action_submit)
-    * [\_count\_ok](#wizard_ui_bridge.textual_bridge._MultiApp._count_ok)
   * [\_TableApp](#wizard_ui_bridge.textual_bridge._TableApp)
     * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge._TableApp.__init__)
     * [compose](#wizard_ui_bridge.textual_bridge._TableApp.compose)
@@ -4256,6 +4256,21 @@ def multi_count_error(min_select: int, max_select: Optional[int]) -> str
 
 Return the message shown when the selected count is not allowed.
 
+<a id="wizard_ui_bridge.bridge_helpers.multi_count_message"></a>
+
+#### multi\_count\_message
+
+```python
+def multi_count_message(count: int, min_select: int,
+                        max_select: Optional[int]) -> Optional[str]
+```
+
+Return why count is not an allowed selection size, or None.
+
+Every bridge accepts the same selection counts and explains a
+rejected count with the same message, so each of them asks here
+instead of repeating the bounds check and the wording.
+
 <a id="wizard_ui_bridge.textual_bridge"></a>
 
 # wizard\_ui\_bridge.textual\_bridge
@@ -4537,16 +4552,6 @@ def action_submit() -> None
 ```
 
 Exit with the selection, or show why the count is wrong.
-
-<a id="wizard_ui_bridge.textual_bridge._MultiApp._count_ok"></a>
-
-#### \_count\_ok
-
-```python
-def _count_ok(count: int) -> bool
-```
-
-Return whether count is within the allowed selection range.
 
 <a id="wizard_ui_bridge.textual_bridge._TableApp"></a>
 

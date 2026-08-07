@@ -30,7 +30,7 @@ from wizard_ui_bridge import AskField, AnswerField, PartialFormValidator, \
     AnswerTextField, AnswerIntField, AnswerPathField, AnswerYesNoField, \
     AnswerChoiceField, AnswerMultiChoiceField
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
-    int_text, multi_count_error, out_of_range, path_answer, range_error, \
+    int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
 from wizard_ui_bridge.form_helpers import valid_prefills
 from wizard_tk_bridge.auto_scroll import auto_hide
@@ -332,20 +332,9 @@ def _int_error(row: FormRow, field: AskIntField) -> Optional[str]:
 
 
 def _multi_error(row: FormRow, field: AskMultiChoiceField) -> Optional[str]:
-    """Return the multi-selection row's count error, or None.
-
-    The count check mirrors wizard_ui_bridge._textual_widgets, the
-    private module behind the Textual bridge's own form fields; that
-    module is not public API a sibling package may import.
-    """
-    # pylint: disable=duplicate-code
-    count = len(_multi_selected(row))
-    too_few = count < field.min_select
-    too_many = field.max_select is not None and count > field.max_select
-    if too_few or too_many:
-        return multi_count_error(field.min_select, field.max_select)
-    return None
-# pylint: enable=duplicate-code
+    """Return the multi-selection row's count error, or None."""
+    return multi_count_message(len(_multi_selected(row)), field.min_select,
+                               field.max_select)
 
 
 def _set_widget_state(row: FormRow, enabled: bool) -> None:
