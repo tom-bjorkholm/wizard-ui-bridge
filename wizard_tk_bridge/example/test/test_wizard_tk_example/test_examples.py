@@ -93,9 +93,12 @@ def test_pizza_back_defaults() -> None:
 def _gui_root() -> Iterator[tk.Tk]:
     """Yield a withdrawn Tk root, skipping the test with no display.
 
-    This mirrors test_wizard_tk_bridge.gui_test_helpers.gui_root; the two
-    test packages are built and analyzed as separate roots, so this one
-    keeps its own copy instead of importing across that boundary.
+    The root stays withdrawn and these tests build no window of their
+    own, so nothing of this test package ever reaches the screen. The
+    bridge tests need more than this on teardown and have their own
+    gui_root in test_wizard_tk_bridge.gui_test_helpers; the two test
+    packages are built and analyzed as separate roots, so neither
+    imports across that boundary.
     """
     # pylint: disable=duplicate-code
     try:
@@ -143,7 +146,6 @@ def test_cli_wizard_plumbing(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_new_window_builds() -> None:
     """Test the pop-up example builds its main widgets and wizard button."""
     with _gui_root() as root:
-        root.deiconify()
         app = e02_new_window.PizzaCounterApp(root)
         # pylint: disable-next=protected-access
         assert isinstance(app._log, tk.Listbox)
@@ -154,7 +156,6 @@ def test_new_window_logs(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(e02_new_window, 'run_pizza_order',
                         lambda bridge: 'Cara orders a Olive pizza.')
     with _gui_root() as root:
-        root.deiconify()
         app = e02_new_window.PizzaCounterApp(root)
         # pylint: disable-next=protected-access
         app._take_order()
@@ -165,7 +166,6 @@ def test_new_window_logs(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_embedded_app_builds() -> None:
     """Test the embedded example builds its two panels and status label."""
     with _gui_root() as root:
-        root.deiconify()
         app = e03_embedded_area.SplitWindowApp(root)
         # pylint: disable-next=protected-access
         assert app._status.cget('text') == 'No order yet.'
@@ -180,7 +180,6 @@ def test_embedded_logs_order(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(e03_embedded_area, 'run_pizza_order',
                         lambda bridge: 'Dave orders a Pepperoni pizza.')
     with _gui_root() as root:
-        root.deiconify()
         app = e03_embedded_area.SplitWindowApp(root)
         # pylint: disable-next=protected-access
         app._take_order()

@@ -197,8 +197,13 @@ def test_area_no_toplevel() -> None:
         assert area.winfo_exists()
 
 
+@pytest.mark.visible_window
 def test_area_modal_off() -> None:
-    """Test an embedded, non-modal wizard never grabs the area's window."""
+    """Test an embedded, non-modal wizard never grabs the area's window.
+
+    The application window is really shown here, as a grab only applies
+    to a window on the screen.
+    """
     with gui_root() as root:
         root.deiconify()
         area = tk.Frame(root)
@@ -209,8 +214,13 @@ def test_area_modal_off() -> None:
         window.close()
 
 
+@pytest.mark.visible_window
 def test_area_modal_on_grabs() -> None:
-    """Test an embedded, modal wizard grabs the area's own top-level."""
+    """Test an embedded, modal wizard grabs the area's own top-level.
+
+    The application window is really shown here, as a grab only applies
+    to a window on the screen.
+    """
     with gui_root() as root:
         root.deiconify()
         area = tk.Frame(root)
@@ -223,8 +233,13 @@ def test_area_modal_on_grabs() -> None:
         assert root.grab_current() is None
 
 
+@pytest.mark.visible_window
 def test_parent_modal_off() -> None:
-    """Test a non-modal own window never grabs its parent."""
+    """Test a non-modal own window never grabs its parent.
+
+    The parent window is really shown here, so the wizard window is the
+    transient window over a shown application that a user would see.
+    """
     with gui_root() as root:
         root.deiconify()
         window = WizardWindow(tk.Frame(root), modal=False)
