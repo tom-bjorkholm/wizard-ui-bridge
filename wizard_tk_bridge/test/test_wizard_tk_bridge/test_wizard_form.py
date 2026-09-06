@@ -19,6 +19,7 @@ from wizard_ui_bridge import AnswerFields, AnswerField, AskField, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_error, out_of_range, range_error, text_answer
+from wizard_tk_bridge.auto_scroll import _wheel_area
 from wizard_tk_bridge.wizard_form import FormEditor, HelpTooltip, \
     handles_field, int_answer, _inside, _set_combo, _set_entry_text, _set_multi
 from .gui_test_helpers import gui_root
@@ -599,3 +600,11 @@ def test_set_multi_helper() -> None:
         _set_multi(box, ('a', 'b', 'c'), ['a', 'c'])
         picks = box.curselection()  # type: ignore[no-untyped-call]
         assert [int(index) for index in picks] == [0, 2]
+
+
+def test_form_wheel_area() -> None:
+    """Test a field of the form sits in the wheel-scrolling area."""
+    with gui_root() as root:
+        editor, _ = _build(root, [AskTextField('Name', None, default='Bob')])
+        # pylint: disable-next=protected-access
+        assert _wheel_area(editor._rows[0].widget) is not None

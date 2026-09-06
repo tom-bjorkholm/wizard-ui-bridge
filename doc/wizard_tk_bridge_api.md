@@ -2,6 +2,7 @@
 
 * [wizard\_tk\_bridge.auto\_scroll](#wizard_tk_bridge.auto_scroll)
   * [auto\_hide](#wizard_tk_bridge.auto_scroll.auto_hide)
+  * [bind\_wheel](#wizard_tk_bridge.auto_scroll.bind_wheel)
 * [wizard\_tk\_bridge.\_no\_text\_io](#wizard_tk_bridge._no_text_io)
   * [NoTextIO](#wizard_tk_bridge._no_text_io.NoTextIO)
     * [write](#wizard_tk_bridge._no_text_io.NoTextIO.write)
@@ -115,7 +116,7 @@
 
 # wizard\_tk\_bridge.auto\_scroll
 
-A scroll command that shows a scrollbar only while it can scroll.
+Scroll commands and wheel and touchpad support for an area.
 
 A table that fits its area needs no scrollbar, and a scrollbar that is
 always shown wastes space and hints at hidden content that is not there.
@@ -124,6 +125,12 @@ command hides the scrollbar while the whole range is visible and shows it
 again once the widget grows past its area. It works for any widget that
 reports its position through an ``xscrollcommand`` or ``yscrollcommand``,
 so a wizard table's canvas and any other scrolling widget can share it.
+
+Tk binds the mouse wheel and, from Tk 9 on, the touchpad on each of its
+scrolling widgets, but binds neither on a canvas. A scrolling area built
+from a canvas therefore answers a scroll only while the pointer is over
+its scrollbar. :func:`bind_wheel` gives the area both over its content
+as well.
 
 <a id="wizard_tk_bridge.auto_scroll.auto_hide"></a>
 
@@ -142,6 +149,25 @@ The result is used as a widget's ``xscrollcommand`` or
 passes as strings, so the command accepts either a number or its
 string form. The scrollbar must be laid out with the grid manager,
 whose ``grid_remove`` remembers its cell across the hide.
+
+<a id="wizard_tk_bridge.auto_scroll.bind_wheel"></a>
+
+#### bind\_wheel
+
+```python
+def bind_wheel(canvas: tk.Canvas) -> None
+```
+
+Let the wheel and the touchpad scroll this canvas from its content.
+
+The binding sits on the window that holds the canvas, and not on the
+canvas and the widgets inside it, because those widgets are built and
+rebuilt while the user works. The window's handler then finds the
+area from the widget the scroll reached, so a single binding per
+window serves every area in it.
+
+A touchpad is bound separately from a wheel, as Tk 9 reports the two
+as different events, and only Tk 9 knows the touchpad one at all.
 
 <a id="wizard_tk_bridge._no_text_io"></a>
 

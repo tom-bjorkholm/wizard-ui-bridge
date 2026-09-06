@@ -125,7 +125,7 @@ run.
 
 ## Test summary
 
-- Test result: 1054 passed, 9 deselected in 37s
+- Test result: 1084 passed, 9 deselected in 43s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.

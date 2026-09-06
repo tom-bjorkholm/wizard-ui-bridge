@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from tkinter import ttk
 from typing import Optional, Sequence, TypeVar
 from wizard_ui_bridge import PartialCheck, TableCell, TableColumn
-from wizard_tk_bridge.auto_scroll import auto_hide
+from wizard_tk_bridge.auto_scroll import auto_hide, bind_wheel
 from wizard_tk_bridge.gui_style import style_input
 
 WRAP_LENGTH = 520
@@ -148,7 +148,8 @@ class TableEditor:
         Every table scrolls horizontally through an auto-hiding scrollbar
         so a table wider than the window stays reachable. A variable table
         also scrolls vertically within a fixed height, while a fixed table
-        grows to show all of its rows.
+        grows to show all of its rows. The mouse wheel scrolls the area
+        from over the cells too, sideways with shift held.
         """
         box = tk.Frame(parent)
         self._pack_box(box)
@@ -157,6 +158,7 @@ class TableEditor:
         canvas.configure(xscrollcommand=auto_hide(hbar))
         canvas.grid(row=0, column=0, sticky='nsew')
         hbar.grid(row=1, column=0, sticky='ew')
+        bind_wheel(canvas)
         self._add_vertical(box, canvas)
         box.rowconfigure(0, weight=1)
         box.columnconfigure(0, weight=1)

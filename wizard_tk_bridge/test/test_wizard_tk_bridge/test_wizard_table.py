@@ -9,9 +9,10 @@ from tkinter import ttk
 from typing import Optional
 import pytest
 from wizard_ui_bridge import TableCell, TableColumn
+from wizard_tk_bridge.auto_scroll import _wheel_area
 from wizard_tk_bridge.wizard_table import TableEditor, _new_row_template, \
     _uniform
-from .gui_test_helpers import gui_root
+from .gui_test_helpers import find_widgets, gui_root
 
 
 def test_uniform() -> None:
@@ -233,3 +234,14 @@ def test_table_feedback() -> None:
         # pylint: disable-next=protected-access
         assert editor._status.cget('text') == ''
         assert (0, 1) in seen and (0, 0) in seen
+
+
+def test_table_wheel_area() -> None:
+    """Test a cell of the table sits in the wheel-scrolling area."""
+    with gui_root() as root:
+        columns = [TableColumn(header='X')]
+        cells = [[TableCell(value='v')]]
+        editor = TableEditor(tk.Frame(root), columns, cells, None)
+        entry = find_widgets(root, tk.Entry)[0]
+        # pylint: disable-next=protected-access
+        assert _wheel_area(entry) is editor._canvas

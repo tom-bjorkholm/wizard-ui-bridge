@@ -35,7 +35,7 @@ from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
 from wizard_ui_bridge.form_helpers import valid_prefills
-from wizard_tk_bridge.auto_scroll import auto_hide
+from wizard_tk_bridge.auto_scroll import auto_hide, bind_wheel
 from wizard_tk_bridge.gui_style import style_input
 from wizard_tk_bridge.wizard_path import PathRow
 from wizard_tk_bridge.wizard_pick_row import HintEntry, PickRow, TypedInput
@@ -491,7 +491,9 @@ class FormEditor:
         A tall form (many rows) would overflow the fixed-size wizard
         window, so the labelled rows sit in a frame inside a vertically
         scrolling canvas whose scrollbar appears only when it is needed.
-        The status line stays below the scroll area so it is always shown.
+        The mouse wheel scrolls the area from over the rows as well, which
+        Tk gives the scrollbar alone. The status line stays below the
+        scroll area so it is always shown.
         """
         outer = tk.Frame(parent)
         outer.pack(fill='both', expand=True, pady=6)
@@ -502,6 +504,7 @@ class FormEditor:
         canvas.configure(yscrollcommand=auto_hide(vbar))
         canvas.grid(row=0, column=0, sticky='nsew')
         vbar.grid(row=0, column=1, sticky='ns')
+        bind_wheel(canvas)
         grid = tk.Frame(canvas)
         canvas.create_window((0, 0), window=grid, anchor='nw')
         grid.bind('<Configure>', lambda _event: canvas.configure(

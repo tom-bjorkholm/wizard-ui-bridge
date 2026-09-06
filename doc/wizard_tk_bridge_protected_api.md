@@ -2,6 +2,18 @@
 
 * [wizard\_tk\_bridge.auto\_scroll](#wizard_tk_bridge.auto_scroll)
   * [auto\_hide](#wizard_tk_bridge.auto_scroll.auto_hide)
+  * [bind\_wheel](#wizard_tk_bridge.auto_scroll.bind_wheel)
+  * [\_wheel\_events](#wizard_tk_bridge.auto_scroll._wheel_events)
+  * [\_on\_wheel](#wizard_tk_bridge.auto_scroll._on_wheel)
+  * [\_on\_touchpad](#wizard_tk_bridge.auto_scroll._on_touchpad)
+  * [\_event\_area](#wizard_tk_bridge.auto_scroll._event_area)
+  * [\_scroll\_widget](#wizard_tk_bridge.auto_scroll._scroll_widget)
+  * [\_wheel\_area](#wizard_tk_bridge.auto_scroll._wheel_area)
+  * [\_own\_wheel](#wizard_tk_bridge.auto_scroll._own_wheel)
+  * [\_wheel\_delta](#wizard_tk_bridge.auto_scroll._wheel_delta)
+  * [\_touchpad\_steps](#wizard_tk_bridge.auto_scroll._touchpad_steps)
+  * [\_scroll](#wizard_tk_bridge.auto_scroll._scroll)
+  * [\_wheel\_amount](#wizard_tk_bridge.auto_scroll._wheel_amount)
 * [wizard\_tk\_bridge.\_no\_text\_io](#wizard_tk_bridge._no_text_io)
   * [NoTextIO](#wizard_tk_bridge._no_text_io.NoTextIO)
     * [write](#wizard_tk_bridge._no_text_io.NoTextIO.write)
@@ -238,7 +250,7 @@
 
 # wizard\_tk\_bridge.auto\_scroll
 
-A scroll command that shows a scrollbar only while it can scroll.
+Scroll commands and wheel and touchpad support for an area.
 
 A table that fits its area needs no scrollbar, and a scrollbar that is
 always shown wastes space and hints at hidden content that is not there.
@@ -247,6 +259,12 @@ command hides the scrollbar while the whole range is visible and shows it
 again once the widget grows past its area. It works for any widget that
 reports its position through an ``xscrollcommand`` or ``yscrollcommand``,
 so a wizard table's canvas and any other scrolling widget can share it.
+
+Tk binds the mouse wheel and, from Tk 9 on, the touchpad on each of its
+scrolling widgets, but binds neither on a canvas. A scrolling area built
+from a canvas therefore answers a scroll only while the pointer is over
+its scrollbar. :func:`bind_wheel` gives the area both over its content
+as well.
 
 <a id="wizard_tk_bridge.auto_scroll.auto_hide"></a>
 
@@ -265,6 +283,180 @@ The result is used as a widget's ``xscrollcommand`` or
 passes as strings, so the command accepts either a number or its
 string form. The scrollbar must be laid out with the grid manager,
 whose ``grid_remove`` remembers its cell across the hide.
+
+<a id="wizard_tk_bridge.auto_scroll.bind_wheel"></a>
+
+#### bind\_wheel
+
+```python
+def bind_wheel(canvas: tk.Canvas) -> None
+```
+
+Let the wheel and the touchpad scroll this canvas from its content.
+
+The binding sits on the window that holds the canvas, and not on the
+canvas and the widgets inside it, because those widgets are built and
+rebuilt while the user works. The window's handler then finds the
+area from the widget the scroll reached, so a single binding per
+window serves every area in it.
+
+A touchpad is bound separately from a wheel, as Tk 9 reports the two
+as different events, and only Tk 9 knows the touchpad one at all.
+
+<a id="wizard_tk_bridge.auto_scroll._wheel_events"></a>
+
+#### \_wheel\_events
+
+```python
+def _wheel_events(window: tk.Misc) -> dict[str, str]
+```
+
+Return the wheel sequences to bind, each with the axis it moves.
+
+X11 with Tk 8.6 has no wheel event: it presses button 4 and button 5
+instead, and the same buttons with shift held for the sideways
+wheel. Every other windowing system, and Tk 9 on all of them, sends
+a MouseWheel event, and binding those buttons there would answer the
+side buttons of a mouse instead.
+
+<a id="wizard_tk_bridge.auto_scroll._on_wheel"></a>
+
+#### \_on\_wheel
+
+```python
+def _on_wheel(window: tk.Misc, axis: str, event: 'tk.Event[tk.Misc]') -> None
+```
+
+Scroll the area the wheel belongs to along the event's axis.
+
+<a id="wizard_tk_bridge.auto_scroll._on_touchpad"></a>
+
+#### \_on\_touchpad
+
+```python
+def _on_touchpad(window: tk.Misc, event: 'tk.Event[tk.Misc]') -> None
+```
+
+Scroll the area a touchpad gesture belongs to, both ways at once.
+
+A touchpad gesture moves the view whichever way the fingers went, so
+its event carries a sideways and a downward step together and needs
+no shift key for the sideways one. The steps are pixels, which the
+canvas moves by the same way it does under a dragging hand.
+
+<a id="wizard_tk_bridge.auto_scroll._event_area"></a>
+
+#### \_event\_area
+
+```python
+def _event_area(window: tk.Misc, event: 'tk.Event[tk.Misc]',
+                axis: str) -> Optional[tk.Canvas]
+```
+
+Return the area one scroll event moves along the axis, if any.
+
+<a id="wizard_tk_bridge.auto_scroll._scroll_widget"></a>
+
+#### \_scroll\_widget
+
+```python
+def _scroll_widget(window: tk.Misc,
+                   event: 'tk.Event[tk.Misc]') -> Optional[tk.Misc]
+```
+
+Return the widget one scroll event belongs to, if it is in an area.
+
+Tk sends the event to the widget under the pointer, which is what
+every scrolling widget of its own goes by, so the widget the event
+reached is tried first. Tk 8.6 on Windows instead sends the wheel to
+the focused widget, and looking the pointer position up then catches
+the case where the focus is outside every area.
+
+<a id="wizard_tk_bridge.auto_scroll._wheel_area"></a>
+
+#### \_wheel\_area
+
+```python
+def _wheel_area(widget: tk.Misc) -> Optional[tk.Canvas]
+```
+
+Return the scrolling area the widget is in, if it is in one.
+
+<a id="wizard_tk_bridge.auto_scroll._own_wheel"></a>
+
+#### \_own\_wheel
+
+```python
+def _own_wheel(widget: tk.Misc, axis: str) -> bool
+```
+
+Return whether the widget answers the mouse wheel itself.
+
+A combobox steps through its values on the wheel, and a list or a
+text scrolls its own view while it holds more than it shows. The
+wheel then belongs to the widget and not to the area around it, and
+a list that shows all it holds leaves the wheel to the area.
+
+<a id="wizard_tk_bridge.auto_scroll._wheel_delta"></a>
+
+#### \_wheel\_delta
+
+```python
+def _wheel_delta(event: 'tk.Event[tk.Misc]') -> int
+```
+
+Return the wheel delta, also for X11's wheel button presses.
+
+X11 with Tk 8.6 has no delta to report: it presses button 4 for one
+notch up and button 5 for one notch down, which the delta of a whole
+notch stands for here. A wheel event carries no button number at
+all, which is why the number is looked up rather than tested.
+
+<a id="wizard_tk_bridge.auto_scroll._touchpad_steps"></a>
+
+#### \_touchpad\_steps
+
+```python
+def _touchpad_steps(widget: tk.Misc, delta: int) -> tuple[int, int]
+```
+
+Return the sideways and downward pixels of one touchpad event.
+
+Tk packs both steps of the gesture into the one delta a scroll event
+carries, the sideways step in its high half and the downward one, as
+a signed number, in its low half. The steps are points, which Tk's
+own scrolling widgets turn into pixels for the display in use, and
+``tk::ScaleNum`` is the very conversion those widgets apply.
+
+<a id="wizard_tk_bridge.auto_scroll._scroll"></a>
+
+#### \_scroll
+
+```python
+def _scroll(area: tk.Canvas, axis: str, delta: int) -> None
+```
+
+Scroll the area one wheel step along the axis.
+
+From Tk 9 on the step can be a fraction of a unit, which the finer
+steps of a trackpad give, so the amount goes to Tk as it is instead
+of through the whole-unit ``xview_scroll`` and ``yview_scroll``.
+
+<a id="wizard_tk_bridge.auto_scroll._wheel_amount"></a>
+
+#### \_wheel\_amount
+
+```python
+def _wheel_amount(widget: tk.Misc, delta: int) -> float
+```
+
+Return the units one wheel event scrolls, as a scrollbar does.
+
+From Tk 9 on every windowing system reports 120 for one notch of the
+wheel, and Tk's own scrollbars scroll three units for it, taking a
+fraction of a unit for the finer steps of a trackpad. Tk 8.6 scrolls
+one whole unit per notch, and reports that notch as 1 on macOS and
+as 120 on the other windowing systems.
 
 <a id="wizard_tk_bridge._no_text_io"></a>
 
@@ -1351,7 +1543,8 @@ Build a scrolling area and return its inner grid frame.
 Every table scrolls horizontally through an auto-hiding scrollbar
 so a table wider than the window stays reachable. A variable table
 also scrolls vertically within a fixed height, while a fixed table
-grows to show all of its rows.
+grows to show all of its rows. The mouse wheel scrolls the area
+from over the cells too, sideways with shift held.
 
 <a id="wizard_tk_bridge.wizard_table.TableEditor._pack_box"></a>
 
@@ -1984,7 +2177,9 @@ Build the scrolling field area, returning the frame for the rows.
 A tall form (many rows) would overflow the fixed-size wizard
 window, so the labelled rows sit in a frame inside a vertically
 scrolling canvas whose scrollbar appears only when it is needed.
-The status line stays below the scroll area so it is always shown.
+The mouse wheel scrolls the area from over the rows as well, which
+Tk gives the scrollbar alone. The status line stays below the
+scroll area so it is always shown.
 
 <a id="wizard_tk_bridge.wizard_form.FormEditor._apply_initial"></a>
 
