@@ -125,10 +125,10 @@ run.
 
 ## Test summary
 
-- Test result: 1115 passed, 9 skipped, 9 deselected in 43s
+- Test result: 1115 passed, 9 skipped, 9 deselected in 44s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
 - No python layout warnings.
 - Built version(s): 1.5
-- Build and test using Python 3.12.10
+- Build and test using Python 3.13.17
