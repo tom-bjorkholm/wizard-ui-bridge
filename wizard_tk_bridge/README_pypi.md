@@ -156,11 +156,6 @@ real, such as an open log file.
 repository and released together, so a version of this package requires
 the matching version of `wizard-ui-bridge`, or newer.
 
-This Tk bridge started out inside one application that used
-`wizard-ui-bridge`. It was moved into a package of its own so that it
-can be developed alongside `wizard-ui-bridge` and used by any other
-application.
-
 ## Documentation
 
 - Teaching examples and walkthroughs: [wizard_tk_bridge/example/src/wizard_tk_example/README.md](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/README.md)
@@ -177,10 +172,10 @@ MIT
 
 ## Test summary
 
-- Test result: 1084 passed, 9 deselected in 43s
+- Test result: 1124 passed, 9 deselected in 42s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
 - No python layout warnings.
-- Built version(s): 1.4.1
-- Build and test using Python 3.14.7
+- Built version(s): 1.5
+- Build and test using Python 3.15.1

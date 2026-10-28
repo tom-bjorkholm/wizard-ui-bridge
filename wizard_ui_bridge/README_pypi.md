@@ -135,24 +135,6 @@ asking methods. The modules `wizard_ui_bridge.bridge_helpers` and
 to interpret raw answers and to build form answers, so that a bridge of
 your own behaves the same way.
 
-## History
-
-The low-level `WizardUiBridge.ask()` method was **removed** in version
-1.2, together with the fallbacks that let a bridge which only overrode
-`ask()` keep working by rerouting the typed `ask_*()` calls through it.
-Version 1.1 was the last version that supported it. A bridge implements
-the typed methods directly: `ask_text()`, `ask_choice()`, `ask_multi()`,
-`ask_yes_no()` and `ask_table()`, together with `show()`. A typed method
-a bridge does not implement raises `NotImplementedError`. See *Writing
-your own bridge* above.
-
-### Relation to tableio-cfg-json
-
-This package used to be part of
-[tableio-cfg-json](https://pypi.org/project/tableio-cfg-json/). It was
-split out so that a wizard that has nothing to do with TableIO does not
-have to install TableIO and everything TableIO depends on.
-
 ### Source code repo history
 
 The two git repos
@@ -179,10 +161,10 @@ MIT
 
 ## Test summary
 
-- Test result: 1084 passed, 9 deselected in 43s
+- Test result: 1124 passed, 9 deselected in 42s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.
 - No python layout warnings.
-- Built version(s): 1.4.1
-- Build and test using Python 3.14.7
+- Built version(s): 1.5
+- Build and test using Python 3.15.1
