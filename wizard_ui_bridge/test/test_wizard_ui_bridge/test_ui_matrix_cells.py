@@ -10,7 +10,7 @@ argument order.
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from dataclasses import fields
+from dataclasses import MISSING, fields
 from datetime import date, datetime, time, timedelta
 from typing import TypeAliasType, get_args
 
@@ -112,7 +112,25 @@ def test_choice_nullable() -> None:
 
 
 def test_label_cell() -> None:
-    """A label cell holds help text and the displayed text."""
-    label = AskLabelCell('tip', 'Name')
+    """A label cell holds the displayed text and keyword-only help text."""
+    label = AskLabelCell('Name', help_text='tip')
     assert isinstance(label, AskCellCommon)
     assert (label.help_text, label.text) == ('tip', 'Name')
+    assert AskLabelCell('Name').help_text is None
+
+
+def test_label_help_kw_only() -> None:
+    """Help text of a label cannot be given positionally."""
+    with pytest.raises(TypeError):
+        AskLabelCell('Name', 'tip')  # type: ignore[call-arg]
+
+
+@pytest.mark.parametrize('cell_type', [
+    cell_type for cell_type in ALL_ASK_CELL_TYPES
+    if cell_type is not AskLabelCell])
+def test_input_help_required(cell_type: type) -> None:
+    """Only a label defaults help_text; an input cell still requires it."""
+    help_field = next(cell_field for cell_field in fields(cell_type)
+                      if cell_field.name == 'help_text')
+    assert help_field.default is MISSING
+    assert not help_field.kw_only

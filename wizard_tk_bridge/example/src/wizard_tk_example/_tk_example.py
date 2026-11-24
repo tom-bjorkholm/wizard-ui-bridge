@@ -4,9 +4,11 @@
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from typing import Callable, Optional, TextIO
-from wizard_ui_bridge import AnswerFields, WizardNavigation, WizardUiBridge
+from typing import Callable, Optional, TextIO, TypeVar
+from wizard_ui_bridge import WizardNavigation, WizardUiBridge
 from wizard_tk_bridge import WizardUiBridgeTk
+
+_AnswersT = TypeVar('_AnswersT')
 
 
 def run_tk_example(ask: Callable[[WizardUiBridge], Optional[str]]) \
@@ -35,9 +37,13 @@ def run_tk_example(ask: Callable[[WizardUiBridge], Optional[str]]) \
 
 
 def run_form_example(
-        ask: Callable[[WizardUiBridge, TextIO], Optional[AnswerFields]],
-        summarize: Callable[[AnswerFields], str]) -> Optional[str]:
-    """Run one shared form example through the Tk bridge."""
+        ask: Callable[[WizardUiBridge, TextIO], Optional[_AnswersT]],
+        summarize: Callable[[_AnswersT], str]) -> Optional[str]:
+    """Run one shared form or matrix form example through the Tk bridge.
+
+    ask returns the answers of the form, or None when the user cancelled,
+    and summarize turns the answers into the summary shown at the end.
+    """
     def _ask_form(bridge: WizardUiBridge) -> Optional[str]:
         """Ask the form and convert its typed answers to a summary."""
         answers = ask(bridge, bridge.error_file())

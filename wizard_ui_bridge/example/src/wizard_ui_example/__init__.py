@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from . import e01_one_question, e02_question_kinds, e05_ask_form, \
-        e06_typed_form
+        e06_typed_form, e08_matrix_form, e09_resizable_matrix
 
 __all__ = ['e01_one_question', 'e02_question_kinds', 'e05_ask_form',
-           'e06_typed_form']
+           'e06_typed_form', 'e08_matrix_form', 'e09_resizable_matrix']

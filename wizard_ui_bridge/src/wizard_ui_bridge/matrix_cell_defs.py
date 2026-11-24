@@ -29,7 +29,7 @@ module matrix_defs.
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Generic, Optional, Protocol, Sequence, TypeVar, Union
 from pathlib import Path
 from datetime import datetime, date, time, timedelta
@@ -98,11 +98,18 @@ class AskLabelCell(AskCellCommon):
     can be placed anywhere in the grid. It gives no answer, so its
     position in the answers of a matrix form holds None.
 
+    Help text is seldom needed on a label, so unlike the input cells a
+    label cell defaults help_text to None. It is keyword-only, so the
+    text comes first: AskLabelCell('Name') or
+    AskLabelCell('Name', help_text='...').
+
     Attributes:
         text: The text displayed in the cell.
+        help_text: Optional help text, as for any cell; None by default.
     """
 
     text: str
+    help_text: Optional[str] = field(default=None, kw_only=True)
 
 
 @dataclass

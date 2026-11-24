@@ -26,7 +26,8 @@ rows or columns keeps those labels from being deleted.
 # MIT License
 
 from dataclasses import dataclass
-from typing import Callable, NamedTuple, Optional, Sequence, Union
+from typing import Callable, NamedTuple, Optional, Self, Sequence, \
+    Union
 from wizard_ui_bridge.matrix_cell_defs import AskCell, AnswerCell, \
     PrefillValueType
 
@@ -76,7 +77,8 @@ class MatrixDimension:
 class MatrixDimensions:
     """The minimum, maximum and default dimensions of a matrix form.
 
-    When min and max are equal the matrix has a fixed shape. Otherwise the
+    When min and max are equal the matrix has a fixed shape, which
+    MatrixDimensions.fixed(rows, columns) builds directly. Otherwise the
     user may append or delete the last row or column within the bounds.
     An appended row or column normally shows cells the MatrixCellSpec
     already gives for its position; see MatrixCellSpec for when a cell
@@ -99,6 +101,15 @@ class MatrixDimensions:
             if low.rows > high.rows or low.columns > high.columns:
                 raise ValueError('matrix dimensions need min <= default <= '
                                  'max for both rows and columns')
+
+    @classmethod
+    def fixed(cls, rows: int, columns: int) -> Self:
+        """Return the dimensions of a matrix the user cannot resize.
+
+        The minimum, maximum and default dimensions are all rows x columns.
+        """
+        shape = MatrixDimension(rows, columns)
+        return cls(shape, shape, shape)
 
 
 type PrefillCellValues = tuple[tuple[CellPosition, PrefillValueType], ...]

@@ -46,6 +46,21 @@ def test_ordered_dimensions(low: MatrixDimension, default: MatrixDimension,
     assert (dims.min, dims.max, dims.default) == (low, high, default)
 
 
+@pytest.mark.parametrize('rows, columns', [(0, 0), (1, 1), (4, 6)])
+def test_fixed_dimensions(rows: int, columns: int) -> None:
+    """Fixed dimensions have the same min, max and default shape."""
+    dims = MatrixDimensions.fixed(rows, columns)
+    shape = MatrixDimension(rows, columns)
+    assert (dims.min, dims.max, dims.default) == (shape, shape, shape)
+
+
+@pytest.mark.parametrize('rows, columns', [(-1, 0), (0, -1)])
+def test_fixed_negative(rows: int, columns: int) -> None:
+    """A negative fixed size is rejected like any other dimension."""
+    with pytest.raises(ValueError):
+        MatrixDimensions.fixed(rows, columns)
+
+
 def test_dimension_frozen() -> None:
     """A dimension cannot be changed after it was validated."""
     dim = MatrixDimension(1, 2)

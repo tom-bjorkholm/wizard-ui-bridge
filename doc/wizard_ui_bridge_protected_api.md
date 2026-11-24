@@ -118,6 +118,7 @@
     * [\_\_post\_init\_\_](#wizard_ui_bridge.matrix_defs.MatrixDimension.__post_init__)
   * [MatrixDimensions](#wizard_ui_bridge.matrix_defs.MatrixDimensions)
     * [\_\_post\_init\_\_](#wizard_ui_bridge.matrix_defs.MatrixDimensions.__post_init__)
+    * [fixed](#wizard_ui_bridge.matrix_defs.MatrixDimensions.fixed)
   * [PartMatrixValidationRes](#wizard_ui_bridge.matrix_defs.PartMatrixValidationRes)
   * [MatrixConsoleQuestion](#wizard_ui_bridge.matrix_defs.MatrixConsoleQuestion)
   * [MatrixRequest](#wizard_ui_bridge.matrix_defs.MatrixRequest)
@@ -1452,9 +1453,15 @@ A label cell typically names a row or a column of the matrix, but it
 can be placed anywhere in the grid. It gives no answer, so its
 position in the answers of a matrix form holds None.
 
+Help text is seldom needed on a label, so unlike the input cells a
+label cell defaults help_text to None. It is keyword-only, so the
+text comes first: AskLabelCell('Name') or
+AskLabelCell('Name', help_text='...').
+
 **Attributes**:
 
 - `text` - The text displayed in the cell.
+- `help_text` - Optional help text, as for any cell; None by default.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskTextCell"></a>
 
@@ -2074,12 +2081,19 @@ messages from a partial validator. The cell types are defined in module
 matrix_cell_defs.
 
 The number of rows and columns may vary at run time between the minimum
-and maximum dimensions of the request. Label rows and label columns count
-like any other row or column. Rows and columns are only appended after
-the last row or column, and only the last row or column is deleted, so
-the position of a remaining cell never changes. A minimum dimension
-larger than the number of leading label rows or columns therefore keeps
-those labels from being deleted.
+and maximum dimensions of the request. Rows and columns with only labels
+still count like any other row or column. Rows and columns are only
+appended after the last row or column, and only the last row or column
+is deleted, so the position of a remaining cell never changes.
+
+Labels can be used to provide context at any position in the matrix.
+There is no requirement for any position to have a label;
+labels are optional and can be placed wherever needed.
+
+Sometimes the client chooses a design with leading label rows
+or columns that provide context for the rest of the matrix.
+A minimum dimension larger than the number of leading label
+rows or columns keeps those labels from being deleted.
 
 <a id="wizard_ui_bridge.matrix_defs.CellPosition"></a>
 
@@ -2135,7 +2149,8 @@ class MatrixDimensions()
 
 The minimum, maximum and default dimensions of a matrix form.
 
-When min and max are equal the matrix has a fixed shape. Otherwise the
+When min and max are equal the matrix has a fixed shape, which
+MatrixDimensions.fixed(rows, columns) builds directly. Otherwise the
 user may append or delete the last row or column within the bounds.
 An appended row or column normally shows cells the MatrixCellSpec
 already gives for its position; see MatrixCellSpec for when a cell
@@ -2157,6 +2172,19 @@ def __post_init__() -> None
 ```
 
 Check that min <= default <= max for both rows and columns.
+
+<a id="wizard_ui_bridge.matrix_defs.MatrixDimensions.fixed"></a>
+
+#### fixed
+
+```python
+@classmethod
+def fixed(cls, rows: int, columns: int) -> Self
+```
+
+Return the dimensions of a matrix the user cannot resize.
+
+The minimum, maximum and default dimensions are all rows x columns.
 
 <a id="wizard_ui_bridge.matrix_defs.PartMatrixValidationRes"></a>
 
