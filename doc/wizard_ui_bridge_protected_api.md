@@ -24,30 +24,19 @@
     * [action\_cancel](#wizard_ui_bridge._path._PickerScreen.action_cancel)
     * [\_confirm](#wizard_ui_bridge._path._PickerScreen._confirm)
 * [wizard\_ui\_bridge.form\_defs](#wizard_ui_bridge.form_defs)
-  * [\_OrderedValue](#wizard_ui_bridge.form_defs._OrderedValue)
-    * [\_\_lt\_\_](#wizard_ui_bridge.form_defs._OrderedValue.__lt__)
-    * [\_\_gt\_\_](#wizard_ui_bridge.form_defs._OrderedValue.__gt__)
   * [value\_out\_of\_range](#wizard_ui_bridge.form_defs.value_out_of_range)
-  * [\_check\_bounds](#wizard_ui_bridge.form_defs._check_bounds)
   * [AskFieldCommon](#wizard_ui_bridge.form_defs.AskFieldCommon)
   * [AskTextField](#wizard_ui_bridge.form_defs.AskTextField)
-    * [\_\_post\_init\_\_](#wizard_ui_bridge.form_defs.AskTextField.__post_init__)
   * [AskIntField](#wizard_ui_bridge.form_defs.AskIntField)
-    * [\_\_post\_init\_\_](#wizard_ui_bridge.form_defs.AskIntField.__post_init__)
   * [AskPathField](#wizard_ui_bridge.form_defs.AskPathField)
   * [AskYesNoField](#wizard_ui_bridge.form_defs.AskYesNoField)
   * [AskChoiceField](#wizard_ui_bridge.form_defs.AskChoiceField)
   * [AskMultiChoiceField](#wizard_ui_bridge.form_defs.AskMultiChoiceField)
   * [AskFloatField](#wizard_ui_bridge.form_defs.AskFloatField)
-    * [\_\_post\_init\_\_](#wizard_ui_bridge.form_defs.AskFloatField.__post_init__)
   * [AskDateField](#wizard_ui_bridge.form_defs.AskDateField)
-    * [\_\_post\_init\_\_](#wizard_ui_bridge.form_defs.AskDateField.__post_init__)
   * [AskTimeField](#wizard_ui_bridge.form_defs.AskTimeField)
-    * [\_\_post\_init\_\_](#wizard_ui_bridge.form_defs.AskTimeField.__post_init__)
   * [AskDateTimeField](#wizard_ui_bridge.form_defs.AskDateTimeField)
-    * [\_\_post\_init\_\_](#wizard_ui_bridge.form_defs.AskDateTimeField.__post_init__)
   * [AskDurationField](#wizard_ui_bridge.form_defs.AskDurationField)
-    * [\_\_post\_init\_\_](#wizard_ui_bridge.form_defs.AskDurationField.__post_init__)
   * [ALL\_ASK\_FIELD\_TYPES](#wizard_ui_bridge.form_defs.ALL_ASK_FIELD_TYPES)
   * [AnswerTextField](#wizard_ui_bridge.form_defs.AnswerTextField)
   * [AnswerIntField](#wizard_ui_bridge.form_defs.AnswerIntField)
@@ -80,6 +69,40 @@
   * [\_to\_index](#wizard_ui_bridge.console._to_index)
   * [\_menu\_lines](#wizard_ui_bridge.console._menu_lines)
   * [\_multi\_question](#wizard_ui_bridge.console._multi_question)
+* [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
+  * [\_OrderedValue](#wizard_ui_bridge.matrix_cell_defs._OrderedValue)
+    * [\_\_lt\_\_](#wizard_ui_bridge.matrix_cell_defs._OrderedValue.__lt__)
+    * [\_\_gt\_\_](#wizard_ui_bridge.matrix_cell_defs._OrderedValue.__gt__)
+  * [value\_out\_of\_range](#wizard_ui_bridge.matrix_cell_defs.value_out_of_range)
+  * [\_check\_bounds](#wizard_ui_bridge.matrix_cell_defs._check_bounds)
+  * [AskCellCommon](#wizard_ui_bridge.matrix_cell_defs.AskCellCommon)
+  * [AskLabelCell](#wizard_ui_bridge.matrix_cell_defs.AskLabelCell)
+  * [AskTextCell](#wizard_ui_bridge.matrix_cell_defs.AskTextCell)
+    * [\_\_post\_init\_\_](#wizard_ui_bridge.matrix_cell_defs.AskTextCell.__post_init__)
+  * [AskRangeCell](#wizard_ui_bridge.matrix_cell_defs.AskRangeCell)
+    * [\_\_post\_init\_\_](#wizard_ui_bridge.matrix_cell_defs.AskRangeCell.__post_init__)
+  * [AskIntCell](#wizard_ui_bridge.matrix_cell_defs.AskIntCell)
+  * [AskPathCell](#wizard_ui_bridge.matrix_cell_defs.AskPathCell)
+  * [AskYesNoCell](#wizard_ui_bridge.matrix_cell_defs.AskYesNoCell)
+  * [AskChoiceCell](#wizard_ui_bridge.matrix_cell_defs.AskChoiceCell)
+  * [AskMultiChoiceCell](#wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell)
+  * [AskFloatCell](#wizard_ui_bridge.matrix_cell_defs.AskFloatCell)
+  * [AskDateCell](#wizard_ui_bridge.matrix_cell_defs.AskDateCell)
+  * [AskTimeCell](#wizard_ui_bridge.matrix_cell_defs.AskTimeCell)
+  * [AskDateTimeCell](#wizard_ui_bridge.matrix_cell_defs.AskDateTimeCell)
+  * [AskDurationCell](#wizard_ui_bridge.matrix_cell_defs.AskDurationCell)
+  * [ALL\_ASK\_CELL\_TYPES](#wizard_ui_bridge.matrix_cell_defs.ALL_ASK_CELL_TYPES)
+  * [AnswerTextCell](#wizard_ui_bridge.matrix_cell_defs.AnswerTextCell)
+  * [AnswerIntCell](#wizard_ui_bridge.matrix_cell_defs.AnswerIntCell)
+  * [AnswerPathCell](#wizard_ui_bridge.matrix_cell_defs.AnswerPathCell)
+  * [AnswerYesNoCell](#wizard_ui_bridge.matrix_cell_defs.AnswerYesNoCell)
+  * [AnswerChoiceCell](#wizard_ui_bridge.matrix_cell_defs.AnswerChoiceCell)
+  * [AnswerMultiChoiceCell](#wizard_ui_bridge.matrix_cell_defs.AnswerMultiChoiceCell)
+  * [AnswerFloatCell](#wizard_ui_bridge.matrix_cell_defs.AnswerFloatCell)
+  * [AnswerDateCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDateCell)
+  * [AnswerTimeCell](#wizard_ui_bridge.matrix_cell_defs.AnswerTimeCell)
+  * [AnswerDateTimeCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDateTimeCell)
+  * [AnswerDurationCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDurationCell)
 * [wizard\_ui\_bridge.arg\_types](#wizard_ui_bridge.arg_types)
   * [WizardNavigation](#wizard_ui_bridge.arg_types.WizardNavigation)
   * [WizardBack](#wizard_ui_bridge.arg_types.WizardBack)
@@ -648,67 +671,20 @@ or instruction, that explains to the user what the form is about. Below the
 grid there are typically buttons for submitting the form, canceling the form,
 and possibly for going back to a previous form step in a multi-step wizard.
 
+A variant is the matrix form, described in module matrix_cell_defs. Each
+Ask*Field of a form derives from the corresponding Ask*Cell of a matrix
+form, adding the short question, and each Answer*Field derives from the
+corresponding Answer*Cell.
+
 This file defines the data types used to describe the questions and answers of
 a form, and the validation callback function that is used to validate the
 answers of a partly filled form.
-
-<a id="wizard_ui_bridge.form_defs._OrderedValue"></a>
-
-## \_OrderedValue Objects
-
-```python
-class _OrderedValue(Protocol)
-```
-
-A value comparable to values of its own type with < and >.
-
-Float, date, time, datetime and timedelta all satisfy this, so a
-single helper can range-check every ordered form field. The other
-operand is Any because each concrete type only compares with itself,
-which is exactly how the standard library types are annotated.
-
-<a id="wizard_ui_bridge.form_defs._OrderedValue.__lt__"></a>
-
-#### \_\_lt\_\_
-
-```python
-def __lt__(other: Any) -> bool
-```
-
-Return whether this value sorts before other.
-
-<a id="wizard_ui_bridge.form_defs._OrderedValue.__gt__"></a>
-
-#### \_\_gt\_\_
-
-```python
-def __gt__(other: Any) -> bool
-```
-
-Return whether this value sorts after other.
 
 <a id="wizard_ui_bridge.form_defs.value_out_of_range"></a>
 
 #### value\_out\_of\_range
 
-```python
-def value_out_of_range(value: _OrderedT, minimum: Optional[_OrderedT],
-                       maximum: Optional[_OrderedT]) -> bool
-```
-
-Return whether value lies outside the inclusive bounds.
-
-<a id="wizard_ui_bridge.form_defs._check_bounds"></a>
-
-#### \_check\_bounds
-
-```python
-def _check_bounds(minimum: Optional[_OrderedValue],
-                  maximum: Optional[_OrderedValue],
-                  default: Optional[_OrderedValue]) -> None
-```
-
-Raise ValueError when ordered bounds or the default disagree.
+Kept for compatibility, see matrix_cell_defs.value_out_of_range.
 
 <a id="wizard_ui_bridge.form_defs.AskFieldCommon"></a>
 
@@ -725,6 +701,11 @@ Each concrete field is one of the Ask*Field subclasses, so its Python
 type already tells the bridge which kind of input to show. There is no
 separate kind attribute to keep in sync.
 
+Each Ask*Field derives from its Ask*Cell first and from this class
+last, so the constructor arguments start with short_question and
+help_text. help_text is declared both here and in AskCellCommon, so
+a field type derived only from this class still has it.
+
 **Attributes**:
 
 - `short_question` - A short question to be displayed to the user.
@@ -732,7 +713,7 @@ separate kind attribute to keep in sync.
   as a label in a left column next to the input field.
 - `help_text` - Optional help text to be displayed to the user. Could be
   used as tooltip text in a GUI implementation, or as a
-  popup message in a in response to a help button click
+  popup message in response to a help button click
   or similar user action.
 
 <a id="wizard_ui_bridge.form_defs.AskTextField"></a>
@@ -741,33 +722,10 @@ separate kind attribute to keep in sync.
 
 ```python
 @dataclass
-class AskTextField(AskFieldCommon)
+class AskTextField(AskTextCell, AskFieldCommon)
 ```
 
-A text field in a form.
-
-**Attributes**:
-
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default is
-  the empty string.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `sensitive` - True when the bridge must avoid echoing the entered text,
-  such as for passwords. A default is not allowed for a
-  sensitive question.
-
-<a id="wizard_ui_bridge.form_defs.AskTextField.__post_init__"></a>
-
-#### \_\_post\_init\_\_
-
-```python
-def __post_init__() -> None
-```
-
-Check that the text field arguments are valid.
+A text field in a form, see AskFieldCommon and AskTextCell.
 
 <a id="wizard_ui_bridge.form_defs.AskIntField"></a>
 
@@ -775,32 +733,10 @@ Check that the text field arguments are valid.
 
 ```python
 @dataclass
-class AskIntField(AskFieldCommon)
+class AskIntField(AskIntCell, AskFieldCommon)
 ```
 
-An integer field in a form.
-
-**Attributes**:
-
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default will
-  be re-asked until the user fills in a valid integer.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `min_value` - The minimum allowed value, or None for no minimum.
-- `max_value` - The maximum allowed value, or None for no maximum.
-
-<a id="wizard_ui_bridge.form_defs.AskIntField.__post_init__"></a>
-
-#### \_\_post\_init\_\_
-
-```python
-def __post_init__() -> None
-```
-
-Check that the integer bounds and default agree.
+An integer field in a form, see AskFieldCommon and AskIntCell.
 
 <a id="wizard_ui_bridge.form_defs.AskPathField"></a>
 
@@ -808,19 +744,10 @@ Check that the integer bounds and default agree.
 
 ```python
 @dataclass
-class AskPathField(AskFieldCommon)
+class AskPathField(AskPathCell, AskFieldCommon)
 ```
 
-A path field in a form.
-
-In a GUI implementation this is typically displayed as a text input field
-with a button next to it that opens a file/directory chooser dialog.
-
-**Attributes**:
-
-- `path_options` - Options for how the path question is asked, including
-  whether the path must exist, whether it must be a file
-  or a directory.
+A path field in a form, see AskFieldCommon and AskPathCell.
 
 <a id="wizard_ui_bridge.form_defs.AskYesNoField"></a>
 
@@ -828,20 +755,10 @@ with a button next to it that opens a file/directory chooser dialog.
 
 ```python
 @dataclass
-class AskYesNoField(AskFieldCommon)
+class AskYesNoField(AskYesNoCell, AskFieldCommon)
 ```
 
-A yes/no field in a form.
-
-In a GUI implementation this is typically displayed as a checkbox or a
-toggle button.
-
-**Attributes**:
-
-- `default` - The boolean value used when the user makes no explicit
-  choice. In a GUI implementation this is typically shown as
-  the starting value in the checkbox or toggle, and the user
-  can change it.
+A yes/no field in a form, see AskFieldCommon and AskYesNoCell.
 
 <a id="wizard_ui_bridge.form_defs.AskChoiceField"></a>
 
@@ -849,21 +766,10 @@ toggle button.
 
 ```python
 @dataclass
-class AskChoiceField(AskFieldCommon)
+class AskChoiceField(AskChoiceCell, AskFieldCommon)
 ```
 
-A choice field in a form.
-
-In a GUI implementation this is typically displayed as a dropdown list
-or a set of radio buttons.
-
-**Attributes**:
-
-- `choices` - The allowed choices for the answer.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
+A choice field in a form, see AskFieldCommon and AskChoiceCell.
 
 <a id="wizard_ui_bridge.form_defs.AskMultiChoiceField"></a>
 
@@ -871,24 +777,12 @@ or a set of radio buttons.
 
 ```python
 @dataclass
-class AskMultiChoiceField(AskFieldCommon)
+class AskMultiChoiceField(AskMultiChoiceCell, AskFieldCommon)
 ```
 
 A multi-choice field in a form.
 
-In a GUI implementation this is typically displayed as a list of checkboxes
-or a list of items with multiple selection enabled.
-
-**Attributes**:
-
-- `choices` - The allowed choices for the answer.
-- `default` - The values returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `min_select` - The minimum number of choices that must be selected.
-- `max_select` - The maximum number of choices that can be selected,
-  or None for no maximum.
+See AskFieldCommon and AskMultiChoiceCell for the attributes.
 
 <a id="wizard_ui_bridge.form_defs.AskFloatField"></a>
 
@@ -896,34 +790,10 @@ or a list of items with multiple selection enabled.
 
 ```python
 @dataclass
-class AskFloatField(AskFieldCommon)
+class AskFloatField(AskFloatCell, AskFieldCommon)
 ```
 
-A float field in a form.
-
-**Attributes**:
-
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default will
-  be re-asked until the user fills in a valid number.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `min_value` - The minimum allowed value, or None for no minimum.
-  The min value is inclusive.
-- `max_value` - The maximum allowed value, or None for no maximum.
-  The max value is inclusive.
-
-<a id="wizard_ui_bridge.form_defs.AskFloatField.__post_init__"></a>
-
-#### \_\_post\_init\_\_
-
-```python
-def __post_init__() -> None
-```
-
-Check that the float bounds and default agree.
+A float field in a form, see AskFieldCommon and AskFloatCell.
 
 <a id="wizard_ui_bridge.form_defs.AskDateField"></a>
 
@@ -931,37 +801,10 @@ Check that the float bounds and default agree.
 
 ```python
 @dataclass
-class AskDateField(AskFieldCommon)
+class AskDateField(AskDateCell, AskFieldCommon)
 ```
 
-A date field in a form.
-
-In a GUI implementation this is typically displayed as a text input field
-with a button next to it that opens a date chooser dialog.
-
-**Attributes**:
-
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default will
-  be re-asked until the user fills in a valid date.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `min_value` - The minimum allowed value, or None for no minimum.
-  The min value is inclusive.
-- `max_value` - The maximum allowed value, or None for no maximum.
-  The max value is inclusive.
-
-<a id="wizard_ui_bridge.form_defs.AskDateField.__post_init__"></a>
-
-#### \_\_post\_init\_\_
-
-```python
-def __post_init__() -> None
-```
-
-Check that the date bounds and default agree.
+A date field in a form, see AskFieldCommon and AskDateCell.
 
 <a id="wizard_ui_bridge.form_defs.AskTimeField"></a>
 
@@ -969,34 +812,10 @@ Check that the date bounds and default agree.
 
 ```python
 @dataclass
-class AskTimeField(AskFieldCommon)
+class AskTimeField(AskTimeCell, AskFieldCommon)
 ```
 
-A time field in a form.
-
-**Attributes**:
-
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default will
-  be re-asked until the user fills in a valid time.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `min_value` - The minimum allowed value, or None for no minimum.
-  The min value is inclusive.
-- `max_value` - The maximum allowed value, or None for no maximum.
-  The max value is inclusive.
-
-<a id="wizard_ui_bridge.form_defs.AskTimeField.__post_init__"></a>
-
-#### \_\_post\_init\_\_
-
-```python
-def __post_init__() -> None
-```
-
-Check that the time bounds and default agree.
+A time field in a form, see AskFieldCommon and AskTimeCell.
 
 <a id="wizard_ui_bridge.form_defs.AskDateTimeField"></a>
 
@@ -1004,38 +823,12 @@ Check that the time bounds and default agree.
 
 ```python
 @dataclass
-class AskDateTimeField(AskFieldCommon)
+class AskDateTimeField(AskDateTimeCell, AskFieldCommon)
 ```
 
 A date-time field in a form.
 
-In a GUI implementation this is typically displayed as a text input field
-with a button next to it that opens a date-time chooser dialog for the
-date part.
-
-**Attributes**:
-
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default will
-  be re-asked until the user fills in a valid date-time.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `min_value` - The minimum allowed value, or None for no minimum.
-  The min value is inclusive.
-- `max_value` - The maximum allowed value, or None for no maximum.
-  The max value is inclusive.
-
-<a id="wizard_ui_bridge.form_defs.AskDateTimeField.__post_init__"></a>
-
-#### \_\_post\_init\_\_
-
-```python
-def __post_init__() -> None
-```
-
-Check that the date-time bounds and default agree.
+See AskFieldCommon and AskDateTimeCell for the attributes.
 
 <a id="wizard_ui_bridge.form_defs.AskDurationField"></a>
 
@@ -1043,34 +836,10 @@ Check that the date-time bounds and default agree.
 
 ```python
 @dataclass
-class AskDurationField(AskFieldCommon)
+class AskDurationField(AskDurationCell, AskFieldCommon)
 ```
 
-A duration field in a form.
-
-**Attributes**:
-
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default will
-  be re-asked until the user fills in a valid duration.
-- `default` - The value returned when user fills in nothing, or None for
-  no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
-- `min_value` - The minimum allowed value, or None for no minimum.
-  The min value is inclusive.
-- `max_value` - The maximum allowed value, or None for no maximum.
-  The max value is inclusive.
-
-<a id="wizard_ui_bridge.form_defs.AskDurationField.__post_init__"></a>
-
-#### \_\_post\_init\_\_
-
-```python
-def __post_init__() -> None
-```
-
-Check that the duration bounds and default agree.
+A duration field in a form, see AskFieldCommon and AskDurationCell.
 
 <a id="wizard_ui_bridge.form_defs.ALL_ASK_FIELD_TYPES"></a>
 
@@ -1088,7 +857,7 @@ unsupported until this tuple and the bridge are extended together.
 
 ```python
 @dataclass
-class AnswerTextField()
+class AnswerTextField(AnswerTextCell)
 ```
 
 An answer to a text field in a form.
@@ -1097,8 +866,6 @@ An answer to a text field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.AnswerIntField"></a>
 
@@ -1106,7 +873,7 @@ An answer to a text field in a form.
 
 ```python
 @dataclass
-class AnswerIntField()
+class AnswerIntField(AnswerIntCell)
 ```
 
 An answer to an integer field in a form.
@@ -1115,8 +882,6 @@ An answer to an integer field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.AnswerPathField"></a>
 
@@ -1124,7 +889,7 @@ An answer to an integer field in a form.
 
 ```python
 @dataclass
-class AnswerPathField()
+class AnswerPathField(AnswerPathCell)
 ```
 
 An answer to a path field in a form.
@@ -1133,8 +898,6 @@ An answer to a path field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.AnswerYesNoField"></a>
 
@@ -1142,7 +905,7 @@ An answer to a path field in a form.
 
 ```python
 @dataclass
-class AnswerYesNoField()
+class AnswerYesNoField(AnswerYesNoCell)
 ```
 
 An answer to a yes/no field in a form.
@@ -1151,7 +914,6 @@ An answer to a yes/no field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer.
 
 <a id="wizard_ui_bridge.form_defs.AnswerChoiceField"></a>
 
@@ -1159,7 +921,7 @@ An answer to a yes/no field in a form.
 
 ```python
 @dataclass
-class AnswerChoiceField()
+class AnswerChoiceField(AnswerChoiceCell)
 ```
 
 An answer to a choice field in a form.
@@ -1168,13 +930,6 @@ An answer to a choice field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The chosen value, one of the choices. It is None only to
-  tell a partial validator that a choice with no default has
-  not been answered yet. A bridge never returns None as a final
-  choice answer: it makes sure a choice with no default is
-  answered before the form is submitted for final validation,
-  unless the choice is disabled by a partial validator because
-  it is irrelevant given the current state of the form.
 
 <a id="wizard_ui_bridge.form_defs.AnswerMultiChoiceField"></a>
 
@@ -1182,7 +937,7 @@ An answer to a choice field in a form.
 
 ```python
 @dataclass
-class AnswerMultiChoiceField()
+class AnswerMultiChoiceField(AnswerMultiChoiceCell)
 ```
 
 An answer to a multi-choice field in a form.
@@ -1191,7 +946,6 @@ An answer to a multi-choice field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The values of the answer.
 
 <a id="wizard_ui_bridge.form_defs.AnswerFloatField"></a>
 
@@ -1199,7 +953,7 @@ An answer to a multi-choice field in a form.
 
 ```python
 @dataclass
-class AnswerFloatField()
+class AnswerFloatField(AnswerFloatCell)
 ```
 
 An answer to a float field in a form.
@@ -1208,8 +962,6 @@ An answer to a float field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.AnswerDateField"></a>
 
@@ -1217,7 +969,7 @@ An answer to a float field in a form.
 
 ```python
 @dataclass
-class AnswerDateField()
+class AnswerDateField(AnswerDateCell)
 ```
 
 An answer to a date field in a form.
@@ -1226,8 +978,6 @@ An answer to a date field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.AnswerTimeField"></a>
 
@@ -1235,7 +985,7 @@ An answer to a date field in a form.
 
 ```python
 @dataclass
-class AnswerTimeField()
+class AnswerTimeField(AnswerTimeCell)
 ```
 
 An answer to a time field in a form.
@@ -1244,8 +994,6 @@ An answer to a time field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.AnswerDateTimeField"></a>
 
@@ -1253,7 +1001,7 @@ An answer to a time field in a form.
 
 ```python
 @dataclass
-class AnswerDateTimeField()
+class AnswerDateTimeField(AnswerDateTimeCell)
 ```
 
 An answer to a date-time field in a form.
@@ -1262,8 +1010,6 @@ An answer to a date-time field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.AnswerDurationField"></a>
 
@@ -1271,7 +1017,7 @@ An answer to a date-time field in a form.
 
 ```python
 @dataclass
-class AnswerDurationField()
+class AnswerDurationField(AnswerDurationCell)
 ```
 
 An answer to a duration field in a form.
@@ -1280,8 +1026,6 @@ An answer to a duration field in a form.
 
 - `asking` - How the question was asked, including the question text, help
   text, and other attributes of the question.
-- `value` - The value of the answer, or None when the user did not fill in
-  anything and the field is nullable.
 
 <a id="wizard_ui_bridge.form_defs.PartFormValidationResult"></a>
 
@@ -1572,6 +1316,577 @@ def _multi_question(question: str) -> str
 ```
 
 Return the multi-choice question with an entry hint appended.
+
+<a id="wizard_ui_bridge.matrix_cell_defs"></a>
+
+# wizard\_ui\_bridge.matrix\_cell\_defs
+
+Definitions of cell types for wizard UI bridge matrix forms.
+
+A matrix form asks a single context setting question on the top of the
+screen, followed by a matrix of cells. Each cell typically represents a
+single input field for a validated input. However, a cell may also be a
+label that is only text displayed with no input. Typically the label cells
+are used to name the rows and columns of the matrix, but they are not
+limited to the edges; they can appear anywhere in the grid to provide
+context or labels for the input cells. The matrix form also has a
+feed-back area, typically below the grid, where validation messages or
+other contextual information can be displayed to the user.
+
+One example of a matrix form is a list of contractors, one contractor
+per row in the matrix, with a column containing the name,
+another column the start date as date picker, yet another column the
+end date as date picker, the last column the file name of the contract
+as file picker.
+
+An Ask*Cell is like the corresponding Ask*Field of a form, except that
+no question is asked per cell. Each Ask*Field derives from its Ask*Cell,
+so code written for a cell also handles the corresponding form field.
+Likewise each Answer*Field derives from its Answer*Cell.
+
+<a id="wizard_ui_bridge.matrix_cell_defs._OrderedValue"></a>
+
+## \_OrderedValue Objects
+
+```python
+class _OrderedValue(Protocol)
+```
+
+A value comparable to values of its own type with < and >.
+
+Int, float, date, time, datetime and timedelta all satisfy this, so a
+single helper can range-check every ordered cell. The other operand
+is Any because each concrete type only compares with itself, which is
+exactly how the standard library types are annotated.
+
+<a id="wizard_ui_bridge.matrix_cell_defs._OrderedValue.__lt__"></a>
+
+#### \_\_lt\_\_
+
+```python
+def __lt__(other: Any) -> bool
+```
+
+Return whether this value sorts before other.
+
+<a id="wizard_ui_bridge.matrix_cell_defs._OrderedValue.__gt__"></a>
+
+#### \_\_gt\_\_
+
+```python
+def __gt__(other: Any) -> bool
+```
+
+Return whether this value sorts after other.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.value_out_of_range"></a>
+
+#### value\_out\_of\_range
+
+```python
+def value_out_of_range(value: _OrderedT, minimum: Optional[_OrderedT],
+                       maximum: Optional[_OrderedT]) -> bool
+```
+
+Return whether value lies outside the inclusive bounds.
+
+<a id="wizard_ui_bridge.matrix_cell_defs._check_bounds"></a>
+
+#### \_check\_bounds
+
+```python
+def _check_bounds(minimum: Optional[_OrderedValue],
+                  maximum: Optional[_OrderedValue],
+                  default: Optional[_OrderedValue]) -> None
+```
+
+Raise ValueError when ordered bounds or the default disagree.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskCellCommon"></a>
+
+## AskCellCommon Objects
+
+```python
+@dataclass
+class AskCellCommon()
+```
+
+Common attributes of a cell in a matrix form.
+
+Each concrete cell is one of the Ask*Cell subclasses, so its Python
+type already tells the bridge which kind of input to show.
+
+**Attributes**:
+
+- `help_text` - Optional help text to be displayed to the user. Could be
+  used as tooltip text in a GUI implementation, or as a
+  popup message in response to a help button click
+  or similar user action.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskLabelCell"></a>
+
+## AskLabelCell Objects
+
+```python
+@dataclass
+class AskLabelCell(AskCellCommon)
+```
+
+A label cell in a matrix form, only text with no input.
+
+A label cell typically names a row or a column of the matrix, but it
+can be placed anywhere in the grid. It gives no answer, so its
+position in the answers of a matrix form holds None.
+
+**Attributes**:
+
+- `text` - The text displayed in the cell.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskTextCell"></a>
+
+## AskTextCell Objects
+
+```python
+@dataclass
+class AskTextCell(AskCellCommon)
+```
+
+A text cell in a matrix form.
+
+**Attributes**:
+
+- `nullable` - When True an empty answer with no default is reported
+  as None. When False an empty answer with no default is
+  the empty string.
+- `default` - The value returned when user fills in nothing, or None for
+  no default. In a GUI implementation this is typically shown
+  as the starting value in the input field, and the user can
+  change it.
+- `sensitive` - True when the bridge must avoid echoing the entered text,
+  such as for passwords. A default is not allowed for a
+  sensitive question.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskTextCell.__post_init__"></a>
+
+#### \_\_post\_init\_\_
+
+```python
+def __post_init__() -> None
+```
+
+Check that the text cell arguments are valid.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskRangeCell"></a>
+
+## AskRangeCell Objects
+
+```python
+@dataclass
+class AskRangeCell(AskCellCommon, Generic[_OrderedT])
+```
+
+A cell in a matrix form for an ordered value with optional bounds.
+
+This is the common base of the integer, float, date, time, date-time
+and duration cells, so a bridge can handle their shared attributes
+once.
+
+**Attributes**:
+
+- `nullable` - When True an empty answer with no default is reported
+  as None. When False an empty answer with no default will
+  be re-asked until the user fills in a valid value.
+- `default` - The value returned when user fills in nothing, or None for
+  no default. In a GUI implementation this is typically shown
+  as the starting value in the input field, and the user can
+  change it.
+- `min_value` - The minimum allowed value, or None for no minimum.
+  The min value is inclusive.
+- `max_value` - The maximum allowed value, or None for no maximum.
+  The max value is inclusive.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskRangeCell.__post_init__"></a>
+
+#### \_\_post\_init\_\_
+
+```python
+def __post_init__() -> None
+```
+
+Check that the bounds and the default agree.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskIntCell"></a>
+
+## AskIntCell Objects
+
+```python
+@dataclass
+class AskIntCell(AskRangeCell[int])
+```
+
+An integer cell in a matrix form.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskPathCell"></a>
+
+## AskPathCell Objects
+
+```python
+@dataclass
+class AskPathCell(AskCellCommon)
+```
+
+A path cell in a matrix form.
+
+In a GUI implementation this is typically displayed as a text input field
+with a button next to it that opens a file/directory chooser dialog.
+
+**Attributes**:
+
+- `path_options` - Options for how the path question is asked, including
+  whether the path must exist, whether it must be a file
+  or a directory.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskYesNoCell"></a>
+
+## AskYesNoCell Objects
+
+```python
+@dataclass
+class AskYesNoCell(AskCellCommon)
+```
+
+A yes/no cell in a matrix form.
+
+In a GUI implementation this is typically displayed as a checkbox or a
+toggle button.
+
+**Attributes**:
+
+- `default` - The boolean value used when the user makes no explicit
+  choice. In a GUI implementation this is typically shown as
+  the starting value in the checkbox or toggle, and the user
+  can change it.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskChoiceCell"></a>
+
+## AskChoiceCell Objects
+
+```python
+@dataclass
+class AskChoiceCell(AskCellCommon)
+```
+
+A choice cell in a matrix form.
+
+In a GUI implementation this is typically displayed as a dropdown list
+or a set of radio buttons.
+
+**Attributes**:
+
+- `choices` - The allowed choices for the answer.
+- `default` - The value returned when user fills in nothing, or None for
+  no default. In a GUI implementation this is typically shown
+  as the starting value in the input field, and the user can
+  change it.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell"></a>
+
+## AskMultiChoiceCell Objects
+
+```python
+@dataclass
+class AskMultiChoiceCell(AskCellCommon)
+```
+
+A multi-choice cell in a matrix form.
+
+In a GUI implementation this is typically displayed as a list of checkboxes
+or a list of items with multiple selection enabled.
+
+**Attributes**:
+
+- `choices` - The allowed choices for the answer.
+- `default` - The values returned when user fills in nothing, or None for
+  no default. In a GUI implementation this is typically shown
+  as the starting value in the input field, and the user can
+  change it.
+- `min_select` - The minimum number of choices that must be selected.
+- `max_select` - The maximum number of choices that can be selected,
+  or None for no maximum.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskFloatCell"></a>
+
+## AskFloatCell Objects
+
+```python
+@dataclass
+class AskFloatCell(AskRangeCell[float])
+```
+
+A float cell in a matrix form.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskDateCell"></a>
+
+## AskDateCell Objects
+
+```python
+@dataclass
+class AskDateCell(AskRangeCell[date])
+```
+
+A date cell in a matrix form.
+
+In a GUI implementation this is typically displayed as a text input field
+with a button next to it that opens a date chooser dialog.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskTimeCell"></a>
+
+## AskTimeCell Objects
+
+```python
+@dataclass
+class AskTimeCell(AskRangeCell[time])
+```
+
+A time cell in a matrix form.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskDateTimeCell"></a>
+
+## AskDateTimeCell Objects
+
+```python
+@dataclass
+class AskDateTimeCell(AskRangeCell[datetime])
+```
+
+A date-time cell in a matrix form.
+
+In a GUI implementation this is typically displayed as a text input field
+with a button next to it that opens a date-time chooser dialog for the
+date part.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskDurationCell"></a>
+
+## AskDurationCell Objects
+
+```python
+@dataclass
+class AskDurationCell(AskRangeCell[timedelta])
+```
+
+A duration cell in a matrix form.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.ALL_ASK_CELL_TYPES"></a>
+
+#### ALL\_ASK\_CELL\_TYPES
+
+Every concrete AskCell class, in the order of the AskCell union.
+
+A bridge that shows all cell types checks membership against this tuple,
+so a cell type added later is reported as unsupported until this tuple
+and the bridge are extended together. Since every Ask*Field derives from
+its Ask*Cell, an isinstance check against this tuple also accepts fields.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerTextCell"></a>
+
+## AnswerTextCell Objects
+
+```python
+@dataclass
+class AnswerTextCell()
+```
+
+An answer to a text cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerIntCell"></a>
+
+## AnswerIntCell Objects
+
+```python
+@dataclass
+class AnswerIntCell()
+```
+
+An answer to an integer cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerPathCell"></a>
+
+## AnswerPathCell Objects
+
+```python
+@dataclass
+class AnswerPathCell()
+```
+
+An answer to a path cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerYesNoCell"></a>
+
+## AnswerYesNoCell Objects
+
+```python
+@dataclass
+class AnswerYesNoCell()
+```
+
+An answer to a yes/no cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerChoiceCell"></a>
+
+## AnswerChoiceCell Objects
+
+```python
+@dataclass
+class AnswerChoiceCell()
+```
+
+An answer to a choice cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The chosen value, one of the choices. It is None only to
+  tell a partial validator that a choice with no default has
+  not been answered yet. A bridge never returns None as a final
+  choice answer: it makes sure a choice with no default is
+  answered before the form is submitted for final validation,
+  unless the choice is disabled by a partial validator because
+  it is irrelevant given the current state of the form.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerMultiChoiceCell"></a>
+
+## AnswerMultiChoiceCell Objects
+
+```python
+@dataclass
+class AnswerMultiChoiceCell()
+```
+
+An answer to a multi-choice cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The values of the answer.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerFloatCell"></a>
+
+## AnswerFloatCell Objects
+
+```python
+@dataclass
+class AnswerFloatCell()
+```
+
+An answer to a float cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerDateCell"></a>
+
+## AnswerDateCell Objects
+
+```python
+@dataclass
+class AnswerDateCell()
+```
+
+An answer to a date cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerTimeCell"></a>
+
+## AnswerTimeCell Objects
+
+```python
+@dataclass
+class AnswerTimeCell()
+```
+
+An answer to a time cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerDateTimeCell"></a>
+
+## AnswerDateTimeCell Objects
+
+```python
+@dataclass
+class AnswerDateTimeCell()
+```
+
+An answer to a date-time cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AnswerDurationCell"></a>
+
+## AnswerDurationCell Objects
+
+```python
+@dataclass
+class AnswerDurationCell()
+```
+
+An answer to a duration cell in a matrix form.
+
+**Attributes**:
+
+- `asking` - How the cell was asked, including the help text and other
+  attributes of the cell.
+- `value` - The value of the answer, or None when the user did not fill in
+  anything and the cell is nullable.
 
 <a id="wizard_ui_bridge.arg_types"></a>
 
