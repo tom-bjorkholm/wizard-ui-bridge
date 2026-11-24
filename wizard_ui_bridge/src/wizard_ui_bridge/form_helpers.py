@@ -9,6 +9,7 @@ from dataclasses import replace
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Iterator, NoReturn, Optional
+from wizard_ui_bridge.matrix_cell_defs import PrefillValueType
 from wizard_ui_bridge.form_defs import AskField, \
     AnswerField, AskTextField, AskIntField, AskPathField, AskYesNoField, \
     AskChoiceField, AskMultiChoiceField, AskFloatField, AskDateField, \
@@ -16,9 +17,19 @@ from wizard_ui_bridge.form_defs import AskField, \
     AnswerIntField, AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField, \
     AnswerTimeField, AnswerDateTimeField, AnswerDurationField, \
-    PrefillValueType, PrefillValues
+    PrefillValues
 _ORDERED_FIELDS = (AskIntField, AskFloatField, AskDateField, AskTimeField,
                    AskDateTimeField, AskDurationField)
+
+
+def nullable_choice(field: AskField) -> bool:
+    """Return whether field is a nullable choice field.
+
+    No form bridge supports a nullable choice field yet, so each bridge's
+    supports_form_field() rejects one instead of silently ignoring the
+    nullable attribute.
+    """
+    return isinstance(field, AskChoiceField) and field.nullable
 
 
 def initial_answer(field: AskField) -> AnswerField:

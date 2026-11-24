@@ -18,7 +18,8 @@ import pytest
 
 from wizard_ui_bridge import AskField, AskFloatField, AskDateField, \
     AskTimeField, AskDateTimeField, AskDurationField, WizardUiBridgeConsole
-from .form_field_support import all_ask_fields, unknown_field
+from .form_field_support import all_ask_fields, unknown_field, \
+    nullable_choice_field
 
 
 def _run(lines: str, fields: list[AskField]) -> tuple[list[object], str, str]:
@@ -112,3 +113,4 @@ def test_supports_fields() -> None:
     bridge = WizardUiBridgeConsole(StringIO(), StringIO(), StringIO())
     assert all(bridge.supports_form_field(f) for f in all_ask_fields())
     assert not bridge.supports_form_field(unknown_field())
+    assert not bridge.supports_form_field(nullable_choice_field())

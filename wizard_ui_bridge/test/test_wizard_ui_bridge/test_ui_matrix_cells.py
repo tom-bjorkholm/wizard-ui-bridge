@@ -21,7 +21,7 @@ from wizard_ui_bridge.form_defs import ALL_ASK_FIELD_TYPES, AnswerField, \
 from wizard_ui_bridge.matrix_cell_defs import ALL_ASK_CELL_TYPES, AskCell, \
     AnswerCell, AskRangeCell, AskIntCell, AskFloatCell, AskDateCell, \
     AskTimeCell, AskDateTimeCell, AskDurationCell, AskTextCell, \
-    AskLabelCell, AskCellCommon, _OrderedValue
+    AskLabelCell, AskCellCommon, AskChoiceCell, _OrderedValue
 
 
 def _members(alias: TypeAliasType) -> tuple[type, ...]:
@@ -103,6 +103,12 @@ def test_text_secret_default() -> None:
     """A sensitive text cell cannot carry a default."""
     with pytest.raises(ValueError, match='default'):
         AskTextCell(None, default='x', sensitive=True)
+
+
+def test_choice_nullable() -> None:
+    """A choice cell is not nullable by default; nullable is its last arg."""
+    assert AskChoiceCell(None, ('a', 'b')).nullable is False
+    assert _names(AskChoiceCell)[-1] == 'nullable'
 
 
 def test_label_cell() -> None:

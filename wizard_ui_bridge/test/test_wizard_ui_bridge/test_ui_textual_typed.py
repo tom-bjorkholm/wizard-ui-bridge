@@ -26,7 +26,8 @@ from wizard_ui_bridge.textual_bridge import _FormApp
 from wizard_ui_bridge._calendar import _CalendarScreen, _shift
 from .ui_textual_support import drive, _submitted, focused_day, \
     disabled_after
-from .form_field_support import all_ask_fields, unknown_field
+from .form_field_support import all_ask_fields, unknown_field, \
+    nullable_choice_field
 
 
 def _typed_form() -> list[AskField]:
@@ -344,3 +345,4 @@ def test_supports_fields() -> None:
     bridge = WizardUiBridgeTextual()
     assert all(bridge.supports_form_field(f) for f in all_ask_fields())
     assert not bridge.supports_form_field(unknown_field())
+    assert not bridge.supports_form_field(nullable_choice_field())

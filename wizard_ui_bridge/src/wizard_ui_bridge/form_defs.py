@@ -30,8 +30,6 @@ answers of a partly filled form.
 
 from dataclasses import dataclass
 from typing import Callable, NamedTuple, Optional, Sequence, Union
-from pathlib import Path
-from datetime import datetime, date, time, timedelta
 from wizard_ui_bridge import matrix_cell_defs
 from wizard_ui_bridge.matrix_cell_defs import AskTextCell, AskIntCell, \
     AskPathCell, AskYesNoCell, AskChoiceCell, AskMultiChoiceCell, \
@@ -39,7 +37,7 @@ from wizard_ui_bridge.matrix_cell_defs import AskTextCell, AskIntCell, \
     AskDurationCell, AnswerTextCell, AnswerIntCell, AnswerPathCell, \
     AnswerYesNoCell, AnswerChoiceCell, AnswerMultiChoiceCell, \
     AnswerFloatCell, AnswerDateCell, AnswerTimeCell, AnswerDateTimeCell, \
-    AnswerDurationCell
+    AnswerDurationCell, PrefillValueType
 
 value_out_of_range = matrix_cell_defs.value_out_of_range
 """Kept for compatibility, see matrix_cell_defs.value_out_of_range."""
@@ -310,18 +308,6 @@ type AnswerFields = Sequence[AnswerField]
    """
 
 
-type PrefillValueType = Union[str, int, Path, bool, Sequence[str], float, date,
-                              time, datetime, timedelta]
-"""The type of a value a partial validator may prefill into a field.
-
-The value must match the answer type of the target field: a str for a
-text or choice field, an int for an integer field, a Path for a path
-field, a bool for a yes/no field, a sequence of str for a multi-choice
-field, a float for a float field, and a date, time, datetime or
-timedelta for a date, time, date-time or duration field respectively.
-"""
-
-
 type PrefillValues = tuple[tuple[int, PrefillValueType], ...]
 """Prefill requests returned by a partial form validator.
 
@@ -341,7 +327,7 @@ class PartFormValidationResult(NamedTuple):
                  form is not valid. Empty string when the form is valid.
         disable_row_idxs: A tuple of row indexes that should be disabled in the
                           form, because what has been filled in so far makes
-                          these rows irrelevant. For example if ouput format
+                          these rows irrelevant. For example if output format
                           is set to some binary format, then the row(s) that
                           ask for character encoding can be disabled, because
                           they are irrelevant for the chosen output format.

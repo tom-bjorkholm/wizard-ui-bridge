@@ -16,7 +16,8 @@ from textual.dom import DOMNode
 from textual.widgets import Checkbox, Input, Select, SelectionList
 from wizard_ui_bridge.form_defs import AskField, \
     AskTextField, AskIntField, AskPathField, AskYesNoField, AskChoiceField, \
-    AskMultiChoiceField, PrefillValues, PrefillValueType
+    AskMultiChoiceField, PrefillValues
+from wizard_ui_bridge.matrix_cell_defs import PrefillValueType
 from wizard_ui_bridge.form_helpers import valid_prefills
 from wizard_ui_bridge._parse import NEW_FIELD_TYPES, \
     format_new_value

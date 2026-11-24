@@ -23,7 +23,8 @@ same text.
 from typing import Optional, Protocol
 from wizard_ui_bridge.form_defs import AskField, AskFields, \
     AnswerField, AnswerFields, AnswerTextField, PartialFormValidator, \
-    PartFormValidationResult, PrefillValues, PrefillValueType
+    PartFormValidationResult, PrefillValues
+from wizard_ui_bridge.matrix_cell_defs import PrefillValueType
 from wizard_ui_bridge._parse import NEW_FIELD_TYPES, \
     fake_field, format_new_value, new_answer, resolve_new
 

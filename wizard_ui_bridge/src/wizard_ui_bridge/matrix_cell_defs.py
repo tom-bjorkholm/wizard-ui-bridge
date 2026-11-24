@@ -21,6 +21,9 @@ An Ask*Cell is like the corresponding Ask*Field of a form, except that
 no question is asked per cell. Each Ask*Field derives from its Ask*Cell,
 so code written for a cell also handles the corresponding form field.
 Likewise each Answer*Field derives from its Answer*Cell.
+
+The request, dimensions and validator of a matrix form are defined in
+module matrix_defs.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -212,10 +215,16 @@ class AskChoiceCell(AskCellCommon):
                  no default. In a GUI implementation this is typically shown
                  as the starting value in the input field, and the user can
                  change it.
+        nullable: When True the user may leave the choice empty, which is
+                  reported as None. When False an empty choice with no
+                  default is not a valid final answer. No form bridge
+                  supports a nullable choice field yet, so each bridge's
+                  supports_form_field() returns False for one.
     """
 
     choices: Sequence[str]
     default: Optional[str] = None
+    nullable: bool = False
 
 
 @dataclass
@@ -367,13 +376,14 @@ class AnswerChoiceCell:
     Attributes:
         asking: How the cell was asked, including the help text and other
                 attributes of the cell.
-        value: The chosen value, one of the choices. It is None only to
-               tell a partial validator that a choice with no default has
-               not been answered yet. A bridge never returns None as a final
-               choice answer: it makes sure a choice with no default is
-               answered before the form is submitted for final validation,
-               unless the choice is disabled by a partial validator because
-               it is irrelevant given the current state of the form.
+        value: The chosen value, one of the choices, or None. A final
+               answer is None only when the choice is nullable and left
+               empty, or when the choice is disabled by a partial validator
+               because it is irrelevant given the current state of the form.
+               Otherwise None only tells a partial validator that a choice
+               with no default has not been answered yet: a bridge makes
+               sure such a choice is answered before the form is submitted
+               for final validation.
     """
 
     asking: AskChoiceCell
@@ -480,4 +490,16 @@ type AnswerCell = Union[AnswerTextCell, AnswerIntCell, AnswerPathCell,
    answer value, and the AskCell that was asked. A label cell gives no
    answer, so there is no AnswerCell for it. Every Answer*Field of a form is
    also an instance of the corresponding Answer*Cell.
+"""
+
+
+type PrefillValueType = Union[str, int, Path, bool, Sequence[str], float, date,
+                              time, datetime, timedelta]
+"""The type of a value a partial validator may prefill into a field or cell.
+
+The value must match the answer type of the target field or cell: a str
+for a text or choice, an int for an integer, a Path for a path, a bool
+for a yes/no, a sequence of str for a multi-choice, a float for a float,
+and a date, time, datetime or timedelta for a date, time, date-time or
+duration field or cell respectively.
 """

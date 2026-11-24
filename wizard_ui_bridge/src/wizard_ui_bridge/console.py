@@ -17,6 +17,7 @@ from wizard_ui_bridge.arg_types import PartialCheck, \
 from wizard_ui_bridge.bridge import WizardUiBridge
 from wizard_ui_bridge.form_defs import AskField, \
     ALL_ASK_FIELD_TYPES
+from wizard_ui_bridge.form_helpers import nullable_choice
 from wizard_ui_bridge.bridge_helpers import check_text_args, \
     text_answer, ask_yes_no, ask_one, ask_many, run_table, int_text, \
     question_with_default
@@ -63,7 +64,8 @@ class WizardUiBridgeConsole(WizardUiBridge):
         methods, so the console form handles the typed float, date, time,
         date-time and duration fields as well as the original kinds.
         """
-        return isinstance(field, ALL_ASK_FIELD_TYPES)
+        return isinstance(field, ALL_ASK_FIELD_TYPES) \
+            and not nullable_choice(field)
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None) -> bool:

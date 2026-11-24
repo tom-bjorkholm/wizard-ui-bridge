@@ -28,13 +28,24 @@ from wizard_ui_bridge.arg_types import PartialCheck, TableCell, \
 from wizard_ui_bridge.console import WizardUiBridgeConsole
 from wizard_ui_bridge.form_defs import AskField, AskFields, AnswerField, \
     AnswerFields, PartialFormValidator, PartFormValidationResult, \
-    PrefillValues, PrefillValueType, AskTextField, AskIntField, \
+    PrefillValues, AskTextField, AskIntField, \
     AskPathField, AskYesNoField, AskChoiceField, AskMultiChoiceField, \
     AskFloatField, AskDateField, AskTimeField, AskDateTimeField, \
     AskDurationField, AnswerTextField, AnswerIntField, AnswerPathField, \
     AnswerYesNoField, AnswerChoiceField, AnswerMultiChoiceField, \
     AnswerFloatField, AnswerDateField, AnswerTimeField, AnswerDateTimeField, \
     AnswerDurationField
+from wizard_ui_bridge.matrix_cell_defs import AskCell, AnswerCell, \
+    PrefillValueType, AskLabelCell, AskTextCell, AskIntCell, AskPathCell, \
+    AskYesNoCell, AskChoiceCell, AskMultiChoiceCell, AskFloatCell, \
+    AskDateCell, AskTimeCell, AskDateTimeCell, AskDurationCell, \
+    AnswerTextCell, AnswerIntCell, AnswerPathCell, AnswerYesNoCell, \
+    AnswerChoiceCell, AnswerMultiChoiceCell, AnswerFloatCell, \
+    AnswerDateCell, AnswerTimeCell, AnswerDateTimeCell, AnswerDurationCell
+from wizard_ui_bridge.matrix_defs import AnswerCells, CellPosition, \
+    MatrixDimension, MatrixDimensions, PrefillCellValues, \
+    PartMatrixValidationRes, PartialMatrixValidator, AskCellGenerator, \
+    MatrixCellSpec, MatrixConsoleQuestion, MatrixRequest
 from wizard_ui_bridge.factory import make_text_ui_bridge, UiBridgeType, \
     textual_installed, load_textual_bridge
 if TYPE_CHECKING:
@@ -68,4 +79,15 @@ __all__ = ['WizardUiBridge', 'WizardUiBridgeConsole', 'WizardUiBridgeTextual',
            'AnswerIntField', 'AnswerPathField', 'AnswerYesNoField',
            'AnswerChoiceField', 'AnswerMultiChoiceField', 'AnswerFloatField',
            'AnswerDateField', 'AnswerTimeField', 'AnswerDateTimeField',
-           'AnswerDurationField']
+           'AnswerDurationField', 'AskCell', 'AnswerCell', 'AskLabelCell',
+           'AskTextCell', 'AskIntCell', 'AskPathCell', 'AskYesNoCell',
+           'AskChoiceCell', 'AskMultiChoiceCell', 'AskFloatCell',
+           'AskDateCell', 'AskTimeCell', 'AskDateTimeCell', 'AskDurationCell',
+           'AnswerTextCell', 'AnswerIntCell', 'AnswerPathCell',
+           'AnswerYesNoCell', 'AnswerChoiceCell', 'AnswerMultiChoiceCell',
+           'AnswerFloatCell', 'AnswerDateCell', 'AnswerTimeCell',
+           'AnswerDateTimeCell', 'AnswerDurationCell', 'AnswerCells',
+           'CellPosition', 'MatrixDimension', 'MatrixDimensions',
+           'PrefillCellValues', 'PartMatrixValidationRes',
+           'PartialMatrixValidator', 'AskCellGenerator', 'MatrixCellSpec',
+           'MatrixConsoleQuestion', 'MatrixRequest']

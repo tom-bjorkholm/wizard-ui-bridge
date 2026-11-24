@@ -33,7 +33,7 @@ from wizard_ui_bridge.arg_types import PartialCheck, \
 from wizard_ui_bridge.bridge_helpers import int_text, \
     out_of_range, range_error, path_answer, INT_ERROR
 from wizard_ui_bridge.form_helpers import initial_answer, \
-    valid_prefills, prefilled_field
+    valid_prefills, prefilled_field, nullable_choice
 from wizard_ui_bridge._parse import ask_typed, parse_float, \
     parse_date, parse_time, parse_datetime, parse_duration, FLOAT_HINT, \
     DATE_HINT, TIME_HINT, DATETIME_HINT, DURATION_HINT
@@ -45,8 +45,9 @@ from wizard_ui_bridge.form_defs import AskField, AskFields, \
     AskDateTimeField, AskDurationField, AnswerTextField, AnswerIntField, \
     AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField, \
-    AnswerTimeField, AnswerDateTimeField, AnswerDurationField, \
-    PrefillValueType
+    AnswerTimeField, AnswerDateTimeField, AnswerDurationField
+from wizard_ui_bridge.matrix_cell_defs import PrefillValueType
+from wizard_ui_bridge.matrix_defs import MatrixRequest, AnswerCells
 
 
 class WizardUiBridge:
@@ -415,7 +416,7 @@ class WizardUiBridge:
         show the given field, and False when it cannot. The base implementation
         returns True only for the field types that oldest form bridges support,
         so a bridge that overrides ask_form() should override this method as
-        well.
+        well. No bridge supports a nullable choice field yet.
 
         Args:
             field: The form field to check.
@@ -424,7 +425,8 @@ class WizardUiBridge:
         """
         return isinstance(field, (AskTextField, AskIntField, AskPathField,
                                   AskYesNoField, AskChoiceField,
-                                  AskMultiChoiceField))
+                                  AskMultiChoiceField)) \
+            and not nullable_choice(field)
 
     def ask_form_w_fake(self, long_question: str, ask_fields: AskFields, *,
                         re_ask_reason: Optional[str] = None,
@@ -466,6 +468,55 @@ class WizardUiBridge:
         return ask_form_faking(self, long_question, ask_fields,
                                re_ask_reason=re_ask_reason,
                                partial_validator=partial_validator)
+
+    def ask_matrix_form(self, request: MatrixRequest, *,
+                        re_ask_reason: Optional[str] = None) -> AnswerCells:
+        """Ask the user to fill in values in the cells of a matrix form.
+
+        The bridge shows a matrix shaped form whose cells are described
+        by request.ask_cells, in the shape request.dimensions.default.
+        When the minimum and maximum dimensions differ, the user may
+        append or delete the last row or column within those bounds.
+
+        The base implementation is not written yet and raises RuntimeError.
+        It is deliberately not NotImplementedError, since a derived class
+        need not override this method. When written the base implementation
+        will be permanent and suitable for a console text interface: it will
+        show request.long_question, then ask each input cell in turn with the
+        typed ask methods, guided by request.console_question.
+
+        Any serious application or library using GUI, textual, curses or
+        web interfaces should override this method to show the whole matrix
+        form at once, so the user sees all the cells together and answers them
+        in any order. In such an implementation ask_matrix_form is typically a
+        window with request.long_question and re_ask_reason shown above a
+        grid of rows x columns cells, where each cell shows the AskCell at
+        its position. The window also has a feed-back area for messages
+        from request.partial_validator.
+
+        See wizard_ui_bridge.matrix_cell_defs for the cell types and
+        wizard_ui_bridge.matrix_defs for the request and its validator.
+
+        Args:
+            request: The MatrixRequest object containing all the details for
+                the matrix form.
+            re_ask_reason: The reason for re-asking, for instance how a
+                           value failed validation.
+
+        Returns:
+            The answers in the final shape of the matrix, one row per
+            matrix row: an AnswerCell for each input cell, and None for
+            each label cell (AskLabelCell).
+
+        Raises:
+            RuntimeError: The base implementation is not written yet.
+            WizardBack: The user asked to return to the previous question.
+            WizardCancelLevel: The user cancelled the current level.
+            WizardAbort: The user abandoned the whole wizard.
+        """
+        _ = (request, re_ask_reason)
+        raise RuntimeError('ask_matrix_form() base implementation is not '
+                           'written yet')
 
     def _fill_form(self, ask_fields: AskFields, answers: list[AnswerField],
                    validator: Optional[PartialFormValidator]) -> None:

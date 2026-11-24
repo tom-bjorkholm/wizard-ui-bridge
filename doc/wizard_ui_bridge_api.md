@@ -75,7 +75,15 @@
   * [PathAskOptions](#wizard_ui_bridge.arg_types.PathAskOptions)
   * [TableColumn](#wizard_ui_bridge.arg_types.TableColumn)
   * [TableCell](#wizard_ui_bridge.arg_types.TableCell)
+* [wizard\_ui\_bridge.matrix\_defs](#wizard_ui_bridge.matrix_defs)
+  * [CellPosition](#wizard_ui_bridge.matrix_defs.CellPosition)
+  * [MatrixDimension](#wizard_ui_bridge.matrix_defs.MatrixDimension)
+  * [MatrixDimensions](#wizard_ui_bridge.matrix_defs.MatrixDimensions)
+  * [PartMatrixValidationRes](#wizard_ui_bridge.matrix_defs.PartMatrixValidationRes)
+  * [MatrixConsoleQuestion](#wizard_ui_bridge.matrix_defs.MatrixConsoleQuestion)
+  * [MatrixRequest](#wizard_ui_bridge.matrix_defs.MatrixRequest)
 * [wizard\_ui\_bridge.form\_helpers](#wizard_ui_bridge.form_helpers)
+  * [nullable\_choice](#wizard_ui_bridge.form_helpers.nullable_choice)
   * [initial\_answer](#wizard_ui_bridge.form_helpers.initial_answer)
   * [valid\_prefills](#wizard_ui_bridge.form_helpers.valid_prefills)
   * [prefilled\_field](#wizard_ui_bridge.form_helpers.prefilled_field)
@@ -91,6 +99,7 @@
     * [ask\_form](#wizard_ui_bridge.bridge.WizardUiBridge.ask_form)
     * [supports\_form\_field](#wizard_ui_bridge.bridge.WizardUiBridge.supports_form_field)
     * [ask\_form\_w\_fake](#wizard_ui_bridge.bridge.WizardUiBridge.ask_form_w_fake)
+    * [ask\_matrix\_form](#wizard_ui_bridge.bridge.WizardUiBridge.ask_matrix_form)
     * [error\_file](#wizard_ui_bridge.bridge.WizardUiBridge.error_file)
     * [show](#wizard_ui_bridge.bridge.WizardUiBridge.show)
 * [wizard\_ui\_bridge.factory](#wizard_ui_bridge.factory)
@@ -543,7 +552,7 @@ Result of validating a partly filled form.
   form is not valid. Empty string when the form is valid.
 - `disable_row_idxs` - A tuple of row indexes that should be disabled in the
   form, because what has been filled in so far makes
-  these rows irrelevant. For example if ouput format
+  these rows irrelevant. For example if output format
   is set to some binary format, then the row(s) that
   ask for character encoding can be disabled, because
   they are irrelevant for the chosen output format.
@@ -755,6 +764,9 @@ no question is asked per cell. Each Ask*Field derives from its Ask*Cell,
 so code written for a cell also handles the corresponding form field.
 Likewise each Answer*Field derives from its Answer*Cell.
 
+The request, dimensions and validator of a matrix form are defined in
+module matrix_defs.
+
 <a id="wizard_ui_bridge.matrix_cell_defs.value_out_of_range"></a>
 
 #### value\_out\_of\_range
@@ -932,6 +944,11 @@ or a set of radio buttons.
   no default. In a GUI implementation this is typically shown
   as the starting value in the input field, and the user can
   change it.
+- `nullable` - When True the user may leave the choice empty, which is
+  reported as None. When False an empty choice with no
+  default is not a valid final answer. No form bridge
+  supports a nullable choice field yet, so each bridge's
+  supports_form_field() returns False for one.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell"></a>
 
@@ -1117,13 +1134,14 @@ An answer to a choice cell in a matrix form.
 
 - `asking` - How the cell was asked, including the help text and other
   attributes of the cell.
-- `value` - The chosen value, one of the choices. It is None only to
-  tell a partial validator that a choice with no default has
-  not been answered yet. A bridge never returns None as a final
-  choice answer: it makes sure a choice with no default is
-  answered before the form is submitted for final validation,
-  unless the choice is disabled by a partial validator because
-  it is irrelevant given the current state of the form.
+- `value` - The chosen value, one of the choices, or None. A final
+  answer is None only when the choice is nullable and left
+  empty, or when the choice is disabled by a partial validator
+  because it is irrelevant given the current state of the form.
+  Otherwise None only tells a partial validator that a choice
+  with no default has not been answered yet: a bridge makes
+  sure such a choice is answered before the form is submitted
+  for final validation.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AnswerMultiChoiceCell"></a>
 
@@ -1386,11 +1404,206 @@ different values, such as one settings row per named option.
   and with choices given an empty editable cell is not yet
   a valid final value.
 
+<a id="wizard_ui_bridge.matrix_defs"></a>
+
+# wizard\_ui\_bridge.matrix\_defs
+
+Definitions of the request and validator types of a matrix form.
+
+A matrix form asks a single context setting question on the top of the
+screen, followed by a matrix of cells, and has a feed-back area for
+messages from a partial validator. The cell types are defined in module
+matrix_cell_defs.
+
+The number of rows and columns may vary at run time between the minimum
+and maximum dimensions of the request. Label rows and label columns count
+like any other row or column. Rows and columns are only appended after
+the last row or column, and only the last row or column is deleted, so
+the position of a remaining cell never changes. A minimum dimension
+larger than the number of leading label rows or columns therefore keeps
+those labels from being deleted.
+
+<a id="wizard_ui_bridge.matrix_defs.CellPosition"></a>
+
+## CellPosition Objects
+
+```python
+class CellPosition(NamedTuple)
+```
+
+The position of a cell in a matrix form, both indexes 0-based.
+
+**Attributes**:
+
+- `row` - The row index of the cell.
+- `column` - The column index of the cell.
+
+<a id="wizard_ui_bridge.matrix_defs.MatrixDimension"></a>
+
+## MatrixDimension Objects
+
+```python
+@dataclass(frozen=True)
+class MatrixDimension()
+```
+
+The number of rows and columns of a matrix form.
+
+Label rows and label columns count like any other row or column.
+
+**Attributes**:
+
+- `rows` - The number of rows in the matrix.
+- `columns` - The number of columns in the matrix.
+
+<a id="wizard_ui_bridge.matrix_defs.MatrixDimensions"></a>
+
+## MatrixDimensions Objects
+
+```python
+@dataclass(frozen=True)
+class MatrixDimensions()
+```
+
+The minimum, maximum and default dimensions of a matrix form.
+
+When min and max are equal the matrix has a fixed shape. Otherwise the
+user may append or delete the last row or column within the bounds.
+An appended row or column normally shows cells the MatrixCellSpec
+already gives for its position; see MatrixCellSpec for when a cell
+is repeated instead.
+
+**Attributes**:
+
+- `min` - The minimum dimensions of the matrix.
+- `max` - The maximum dimensions of the matrix.
+- `default` - The default dimensions of the matrix.
+  What is first shown before the user resizes the matrix.
+
+<a id="wizard_ui_bridge.matrix_defs.PartMatrixValidationRes"></a>
+
+## PartMatrixValidationRes Objects
+
+```python
+class PartMatrixValidationRes(NamedTuple)
+```
+
+Result of validating a partly filled matrix form.
+
+**Attributes**:
+
+- `is_valid` - True when the form is valid, False when it is not valid.
+- `message` - A message to be displayed to the user, explaining why the
+  form is not valid. Empty string when the form is valid.
+- `disable_cells` - A tuple of positions that should be disabled in the
+  matrix, because what has been filled in so far makes
+  these cells irrelevant. For example if output format
+  is set to some binary format, then the cell(s) that
+  ask for character encoding can be disabled, because
+  they are irrelevant for the chosen output format.
+  Each result replaces the disabled cells of the
+  previous one. Actually disabling these cells is not
+  strictly necessary, but it is a good user experience
+  to do so.
+- `prefill_values` - Values the validator asks the bridge to place into
+  other cells' inputs, as a tuple of
+  (cell_position, value) pairs. Each value must match
+  the answer type of the cell in that position. A bridge
+  applies each request during live editing as if the
+  user had typed the value; setting a value equal to
+  the one already there is a no-op, so a validator
+  that emits a stable value does not loop. The validator
+  owns idempotency: it should emit a prefill only when
+  it means to fill or overwrite the target. A prefill
+  aimed at the cell that just changed is ignored, so
+  writing back never fights the user's current edit.
+  A prefill aimed at a disabled cell is still applied,
+  so the value shows in the greyed cell and takes effect
+  if the cell is later enabled. A cell position outside
+  the matrix, a label cell, or a value whose type does
+  not match the cell, raises an exception, since all
+  are validator bugs. A choice or multi-choice value not
+  among the cell's choices, and any prefill of a
+  sensitive cell, are ignored. prefill_values is a
+  live-editing convenience only and is ignored when the
+  form is submitted, so an application must still apply
+  the same default on submit.
+
+<a id="wizard_ui_bridge.matrix_defs.MatrixConsoleQuestion"></a>
+
+## MatrixConsoleQuestion Objects
+
+```python
+class MatrixConsoleQuestion(NamedTuple)
+```
+
+How to ask for cells in a matrix form in a console.
+
+The matrix form is not well-suited for console input, so this class
+provides guidance on how to ask for cells in a console environment.
+
+**Attributes**:
+
+- `use_help_text` - Whether to display the help text for each cell
+  when asking for input in the console without requiring
+  the user to explicitly request help. If this is True,
+  the help text should be displayed immediately before
+  expecting input for that cell. If this is False, the help text
+  should only be displayed in response to an explicit request
+  from the user.
+- `show_horizontal_label` - If this is True, the label closest to
+  the left of the cell asked for in the same row is displayed
+  for each cell asked for in the console.
+  If this is False, the horizontal label should not be displayed.
+- `show_vertical_label` - If this is True, the label closest above
+  the cell asked for in the same column is displayed for each
+  cell asked for in the console.
+  If this is False, the vertical label should not be displayed.
+- `row_order` - If this is True, the cells should be asked for in
+  row-major order, meaning that all cells in a row are asked for
+  before moving on to the next row. If False, column-major order
+  should be used, meaning that all cells in a column are asked for
+  before moving on to the next column.
+
+<a id="wizard_ui_bridge.matrix_defs.MatrixRequest"></a>
+
+## MatrixRequest Objects
+
+```python
+class MatrixRequest(NamedTuple)
+```
+
+Request for a matrix form.
+
+**Attributes**:
+
+- `long_question` - The main question or instruction to display above the
+  matrix form. It may be a long string that the UI bridge is
+  responsible for wrapping and displaying nicely.
+- `ask_cells` - The specification for the cells in the matrix form.
+- `dimensions` - The minimum, maximum and default dimensions of the matrix.
+- `console_question` - How a console bridge asks for the cells.
+- `partial_validator` - Optional callback for early per-cell feedback.
+
 <a id="wizard_ui_bridge.form_helpers"></a>
 
 # wizard\_ui\_bridge.form\_helpers
 
 Helpers shared by the WizardUiBridge form question.
+
+<a id="wizard_ui_bridge.form_helpers.nullable_choice"></a>
+
+#### nullable\_choice
+
+```python
+def nullable_choice(field: AskField) -> bool
+```
+
+Return whether field is a nullable choice field.
+
+No form bridge supports a nullable choice field yet, so each bridge's
+supports_form_field() rejects one instead of silently ignoring the
+nullable attribute.
 
 <a id="wizard_ui_bridge.form_helpers.initial_answer"></a>
 
@@ -1915,7 +2128,7 @@ the AskField types. This method returns True when the bridge can
 show the given field, and False when it cannot. The base implementation
 returns True only for the field types that oldest form bridges support,
 so a bridge that overrides ask_form() should override this method as
-well.
+well. No bridge supports a nullable choice field yet.
 
 **Arguments**:
 
@@ -1976,6 +2189,64 @@ back to the original field types before returning.
 - `RuntimeError` - The bridge cannot show any field type that would
   allow the requested field types to be faked, so
   the form cannot be shown at all.
+
+<a id="wizard_ui_bridge.bridge.WizardUiBridge.ask_matrix_form"></a>
+
+#### ask\_matrix\_form
+
+```python
+def ask_matrix_form(request: MatrixRequest,
+                    *,
+                    re_ask_reason: Optional[str] = None) -> AnswerCells
+```
+
+Ask the user to fill in values in the cells of a matrix form.
+
+The bridge shows a matrix shaped form whose cells are described
+by request.ask_cells, in the shape request.dimensions.default.
+When the minimum and maximum dimensions differ, the user may
+append or delete the last row or column within those bounds.
+
+The base implementation is not written yet and raises RuntimeError.
+It is deliberately not NotImplementedError, since a derived class
+need not override this method. When written the base implementation
+will be permanent and suitable for a console text interface: it will
+show request.long_question, then ask each input cell in turn with the
+typed ask methods, guided by request.console_question.
+
+Any serious application or library using GUI, textual, curses or
+web interfaces should override this method to show the whole matrix
+form at once, so the user sees all the cells together and answers them
+in any order. In such an implementation ask_matrix_form is typically a
+window with request.long_question and re_ask_reason shown above a
+grid of rows x columns cells, where each cell shows the AskCell at
+its position. The window also has a feed-back area for messages
+from request.partial_validator.
+
+See wizard_ui_bridge.matrix_cell_defs for the cell types and
+wizard_ui_bridge.matrix_defs for the request and its validator.
+
+**Arguments**:
+
+- `request` - The MatrixRequest object containing all the details for
+  the matrix form.
+- `re_ask_reason` - The reason for re-asking, for instance how a
+  value failed validation.
+  
+
+**Returns**:
+
+  The answers in the final shape of the matrix, one row per
+  matrix row: an AnswerCell for each input cell, and None for
+  each label cell (AskLabelCell).
+  
+
+**Raises**:
+
+- `RuntimeError` - The base implementation is not written yet.
+- `WizardBack` - The user asked to return to the previous question.
+- `WizardCancelLevel` - The user cancelled the current level.
+- `WizardAbort` - The user abandoned the whole wizard.
 
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.error_file"></a>
 

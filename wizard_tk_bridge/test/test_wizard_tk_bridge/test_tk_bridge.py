@@ -8,8 +8,8 @@ from io import StringIO
 from pathlib import Path
 import tkinter as tk
 import pytest
-from wizard_ui_bridge import AskFloatField, AskTextField, PathAskOptions, \
-    TableCell, TableColumn, WizardPathKind
+from wizard_ui_bridge import AskChoiceField, AskFloatField, AskTextField, \
+    PathAskOptions, TableCell, TableColumn, WizardPathKind
 from wizard_tk_bridge import WizardUiBridgeTk
 from wizard_tk_bridge._no_text_io import NoTextIO
 from wizard_tk_bridge.wizard_window import WizardWindow
@@ -87,6 +87,8 @@ def test_supports_form_field() -> None:
     with gui_root() as root:
         bridge = WizardUiBridgeTk(root)
         assert bridge.supports_form_field(AskFloatField('n', None)) is True
+        nullable = AskChoiceField('c', None, choices=('a',), nullable=True)
+        assert bridge.supports_form_field(nullable) is False
         bridge.close()
 
 

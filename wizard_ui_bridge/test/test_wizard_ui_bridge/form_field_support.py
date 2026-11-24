@@ -1,9 +1,10 @@
 #! /usr/bin/env python3
 """Shared helpers for the supports_form_field bridge tests.
 
-These build one instance of every supported form field type and a
-throwaway field type that no bridge supports, so the console and Textual
-support tests share the same field samples.
+These build one instance of every supported form field type, a
+throwaway field type that no bridge supports, and a nullable choice field
+that no bridge supports yet, so the console and Textual support tests
+share the same field samples.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -43,3 +44,8 @@ def unknown_field() -> AskField:
     runtime rejection path of supports_form_field().
     """
     return cast(AskField, UnknownField('x', None))
+
+
+def nullable_choice_field() -> AskField:
+    """Return a nullable choice field, which no form bridge supports yet."""
+    return AskChoiceField('One', None, choices=('a', 'b'), nullable=True)

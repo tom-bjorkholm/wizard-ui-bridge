@@ -34,7 +34,7 @@ from wizard_ui_bridge import AskField, AnswerField, PartialFormValidator, \
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
-from wizard_ui_bridge.form_helpers import valid_prefills
+from wizard_ui_bridge.form_helpers import nullable_choice, valid_prefills
 from wizard_tk_bridge.auto_scroll import auto_hide, bind_wheel
 from wizard_tk_bridge.gui_style import style_input
 from wizard_tk_bridge.wizard_path import PathRow
@@ -59,7 +59,7 @@ _HANDLED = (AskTextField, AskIntField, AskPathField, AskYesNoField,
 
 def handles_field(field: AskField) -> bool:
     """Return whether the Tk form can show the given field type."""
-    return isinstance(field, _HANDLED)
+    return isinstance(field, _HANDLED) and not nullable_choice(field)
 
 
 # pylint: disable-next=too-many-arguments

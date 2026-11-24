@@ -17,9 +17,10 @@ from typing import Optional, Sequence
 import pytest
 
 from wizard_ui_bridge import AskField, AskFields, AskFloatField, \
-    AskDateField, AskTextField, AnswerField, AnswerFields, AnswerFloatField, \
-    AnswerDateField, AnswerTextField, PartFormValidationResult, \
-    PartialFormValidator, PrefillValues, WizardUiBridge
+    AskDateField, AskTextField, AskChoiceField, AnswerField, AnswerFields, \
+    AnswerFloatField, AnswerDateField, AnswerTextField, \
+    PartFormValidationResult, PartialFormValidator, PrefillValues, \
+    WizardUiBridge
 from wizard_ui_bridge.form_helpers import initial_answer
 
 
@@ -195,6 +196,14 @@ def test_fake_unsupported() -> None:
     bridge = _NoSupportBridge({})
     with pytest.raises(RuntimeError, match='cannot show'):
         bridge.ask_form_w_fake('Q', [AskTextField('T', None)])
+
+
+def test_fake_nullable_choice() -> None:
+    """The base bridge rejects a nullable choice, which cannot be faked."""
+    bridge = _FakeBridge({})
+    field = AskChoiceField('C', None, choices=('a',), nullable=True)
+    with pytest.raises(RuntimeError, match='cannot show'):
+        bridge.ask_form_w_fake('Q', [field])
 
 
 def test_fake_caller_invalid() -> None:

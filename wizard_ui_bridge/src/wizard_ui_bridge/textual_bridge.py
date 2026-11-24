@@ -37,7 +37,7 @@ from wizard_ui_bridge.bridge import WizardUiBridge
 from wizard_ui_bridge.bridge_helpers import check_text_args, INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
-from wizard_ui_bridge.form_helpers import initial_answer
+from wizard_ui_bridge.form_helpers import initial_answer, nullable_choice
 from wizard_ui_bridge._form_prefill import apply_prefills
 from wizard_ui_bridge._parse import NEW_FIELD_TYPES, \
     value_from_text, error_from_text, new_answer
@@ -906,7 +906,8 @@ class WizardUiBridgeTextual(WizardUiBridge):
         text input for float, time and duration fields and a text input
         with a calendar Pick button for date and date-time fields.
         """
-        return isinstance(field, ALL_ASK_FIELD_TYPES)
+        return isinstance(field, ALL_ASK_FIELD_TYPES) \
+            and not nullable_choice(field)
 
     def _run(self, app: _NavApp[_T]) -> _T:
         """Run one screen and translate its outcome.
