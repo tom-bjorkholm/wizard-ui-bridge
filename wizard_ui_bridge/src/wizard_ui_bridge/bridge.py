@@ -27,9 +27,9 @@ text and validates the path.
 
 import sys
 from pathlib import Path
-from typing import Optional, Sequence, TextIO
+from typing import Literal, Optional, Sequence, TextIO, overload
 from wizard_ui_bridge.arg_types import PartialCheck, \
-    PathAskOptions, TableColumn, TableCell, WizardBack
+    PathAskOptions, TableColumn, TableCell, WizardBack, check_nullable
 from wizard_ui_bridge.bridge_helpers import int_text, \
     out_of_range, range_error, path_answer, INT_ERROR
 from wizard_ui_bridge.form_helpers import initial_answer, \
@@ -82,11 +82,11 @@ class WizardUiBridge:
             question: The question to ask the user.
             re_ask_reason: The reason for re-asking the question, for
                            instance that the user's answer was invalid.
-            nullable: When True an empty answer with no default is
-                      reported as None. When False an empty answer with
-                      no default is the empty string.
+            nullable: When True an empty answer is reported as None.
+                      When False an empty answer with no default is the
+                      empty string.
             default: The value returned by an empty answer, or None for
-                     no default.
+                     no default. Not allowed together with nullable.
             sensitive: True when the bridge must avoid echoing the
                        entered text, such as for passwords. A default is
                        not allowed for a sensitive question.
@@ -95,7 +95,8 @@ class WizardUiBridge:
             The entered text, default for an empty answer with a default,
             or None for an empty answer when nullable.
         Raises:
-            ValueError: default is given together with sensitive.
+            ValueError: default is given together with sensitive or
+                        nullable.
             NotImplementedError: The bridge does not implement ask_text().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
@@ -118,21 +119,21 @@ class WizardUiBridge:
             question: The question to ask the user.
             re_ask_reason: The reason for re-asking the question, for
                            instance that the user's answer was invalid.
-            nullable: When True an empty answer is reported as None, so
-                      the caller can treat it as a request to use the
-                      default. When False an empty answer will be re-asked
-                      until a valid answer is entered.
+            nullable: When True an empty answer is reported as None.
+                      When False an empty answer with no default will be
+                      re-asked until a valid answer is entered.
             min_value: The minimum allowed value, or None for no lower bound.
                        The min value is inclusive.
             max_value: The maximum allowed value, or None for no upper bound.
                        The max value is inclusive.
             default: The value returned by an empty answer, or None for
-                     no default.
+                     no default. Not allowed together with nullable.
 
         Returns:
             The entered integer, default for an empty answer with a
             default, or None for an empty answer when nullable.
         Raises:
+            ValueError: default is given together with nullable.
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
@@ -141,6 +142,7 @@ class WizardUiBridge:
                 or min_value <= max_value)
         assert default is None or not out_of_range(default, min_value,
                                                    max_value)
+        check_nullable(nullable, default is not None)
         reason = re_ask_reason
         default_text = None if default is None else str(default)
         while True:
@@ -171,6 +173,7 @@ class WizardUiBridge:
 
         Returns:
             The accepted path, a default path, or None when nullable.
+            PathAskOptions does not allow both a default and nullable.
         Raises:
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
@@ -214,32 +217,54 @@ class WizardUiBridge:
         """
         raise NotImplementedError('ask_yes_no() not implemented')
 
+    @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None) -> str:
+                   re_ask_reason: Optional[str] = None,
+                   nullable: Literal[False] = False) -> str: ...
+
+    @overload
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool) -> Optional[str]: ...
+
+    # pylint: disable-next=too-many-arguments
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool = False) -> Optional[str]:
         """Ask the user to pick exactly one of choices and return it.
 
-        The return value is always one of choices. An empty answer
-        selects default, so default must name one of choices; when
-        default is None an empty answer counts as no choice and the
-        question is re-asked.
+        The return value is one of choices, or None for no choice when
+        nullable. An empty answer selects default, so default must name
+        one of choices; when default is None an empty answer counts as no
+        choice, which is None when nullable and is re-asked otherwise.
+        The overloads type the result as str when nullable is left out
+        or False, so existing callers need no None check.
 
         The application is responsible for implementing this method with
         a real single-choice control, such as a drop-down or a set of
-        radio buttons in a graphical bridge. The base class has no
-        implementation.
+        radio buttons in a graphical bridge, that offers an explicit
+        empty entry when nullable. A derived bridge repeats the two
+        overloads on its override. The base class has no implementation.
 
         Args:
             question: The question to ask the user.
             choices: The choices to offer, in display order.
             default: The choice selected by an empty answer, or None to
-                     require an explicit choice.
+                     require an explicit choice. Not allowed together
+                     with nullable.
             re_ask_reason: The reason for re-asking, shown before the
                            first question when not None.
+            nullable: When True the user may select no choice, which is
+                      reported as None.
 
         Returns:
-            The chosen value, one of choices.
+            The chosen value, one of choices, or None for no choice when
+            nullable.
         Raises:
+            ValueError: default is given together with nullable.
             NotImplementedError: The bridge does not implement ask_choice().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
@@ -416,7 +441,10 @@ class WizardUiBridge:
         show the given field, and False when it cannot. The base implementation
         returns True only for the field types that oldest form bridges support,
         so a bridge that overrides ask_form() should override this method as
-        well. No bridge supports a nullable choice field yet.
+        well. The base implementation returns False for a nullable choice
+        field, since a bridge written before ask_choice() took nullable
+        cannot ask one; a bridge whose ask_choice() supports nullable
+        overrides this method to accept it.
 
         Args:
             field: The form field to check.
@@ -630,13 +658,23 @@ class WizardUiBridge:
             return AnswerYesNoField(field, self.ask_yes_no(
                 field.short_question, field.default))
         if isinstance(field, AskChoiceField):
-            return AnswerChoiceField(field, self.ask_choice(
-                field.short_question, choices=field.choices,
-                default=field.default))
+            return AnswerChoiceField(field, self._ask_choice_field(field))
         assert isinstance(field, AskMultiChoiceField)
         return AnswerMultiChoiceField(field, self.ask_multi(
             field.short_question, choices=field.choices, default=field.default,
             min_select=field.min_select, max_select=field.max_select))
+
+    def _ask_choice_field(self, field: AskChoiceField) -> Optional[str]:
+        """Ask a choice field, passing nullable only when it is set.
+
+        A bridge whose ask_choice() predates the nullable parameter still
+        asks a non-nullable choice field this way.
+        """
+        if field.nullable:
+            return self.ask_choice(field.short_question, choices=field.choices,
+                                   nullable=True)
+        return self.ask_choice(field.short_question, choices=field.choices,
+                               default=field.default)
 
     def error_file(self) -> TextIO:
         """Return the stream used for validation diagnostics."""

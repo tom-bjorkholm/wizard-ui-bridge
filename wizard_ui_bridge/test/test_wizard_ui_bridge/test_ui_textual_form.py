@@ -96,6 +96,23 @@ def test_form_blank_choice() -> None:
     assert driven.return_value is None
 
 
+def test_form_null_choice() -> None:
+    """A nullable choice left blank submits None."""
+    fields: list[AskField] = [
+        AskChoiceField('C', None, choices=('x', 'y'), nullable=True)]
+    driven = drive(_FormApp('H', fields, [], None), ['#submit'])
+    assert _submitted(driven)[0].value is None
+
+
+def test_form_null_reblank() -> None:
+    """A picked nullable choice can be emptied again to None."""
+    fields: list[AskField] = [
+        AskChoiceField('C', None, choices=('x', 'y'), nullable=True)]
+    steps = ['enter', 'down', 'enter', 'enter', 'up', 'enter', 'ctrl+s']
+    driven = drive(_FormApp('H', fields, [], None), steps)
+    assert _submitted(driven)[0].value is None
+
+
 def test_form_int_range() -> None:
     """An integer outside the field bounds refuses to submit."""
     fields: list[AskField] = [

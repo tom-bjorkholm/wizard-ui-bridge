@@ -4,9 +4,11 @@
 Editable input widgets blend into the window background on some
 platforms, so the user cannot tell an entry, drop-down or list from the
 surrounding window. :func:`style_input` gives such a widget a white
-field and a thin border so it stands out. :func:`focus_first_input`
-puts the keyboard focus on the first editable widget of a window, so the
-user can start typing as soon as the window opens.
+field and a thin border so it stands out. :func:`choice_combo` builds a
+styled read-only drop-down that a nullable choice can empty again.
+:func:`focus_first_input` puts the keyboard focus on the first editable
+widget of a window, so the user can start typing as soon as the window
+opens.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -14,7 +16,7 @@ user can start typing as soon as the window opens.
 
 import tkinter as tk
 from tkinter import ttk
-from typing import Optional
+from typing import Optional, Sequence
 
 INPUT_BG = 'white'
 INPUT_STYLE = 'Input.TCombobox'
@@ -35,6 +37,20 @@ def style_input(widget: tk.Widget) -> None:
         return
     if isinstance(widget, (tk.Entry, tk.Text, tk.Listbox)):
         widget.configure(background=INPUT_BG, relief='solid', borderwidth=1)
+
+
+def choice_combo(parent: tk.Misc, choices: Sequence[str], nullable: bool,
+                 width: int) -> ttk.Combobox:
+    """Return a styled read-only drop-down offering choices.
+
+    A read-only drop-down cannot be emptied by typing once a value is
+    picked, so a nullable drop-down leads its list with a blank entry
+    that empties it again. The drop-down starts empty.
+    """
+    values = ['', *choices] if nullable else list(choices)
+    box = ttk.Combobox(parent, values=values, state='readonly', width=width)
+    style_input(box)
+    return box
 
 
 def _style_combobox(widget: ttk.Combobox) -> None:

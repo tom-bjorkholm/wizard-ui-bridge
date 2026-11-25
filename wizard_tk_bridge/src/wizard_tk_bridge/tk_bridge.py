@@ -33,12 +33,14 @@ its other content should stay usable while the wizard runs.
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from typing import Optional, Sequence, TextIO
+from typing import Literal, Optional, Sequence, TextIO, overload
 from pathlib import Path
 import tkinter as tk
 from wizard_ui_bridge import AnswerFields, AskField, AskFields, PartialCheck, \
     PartialFormValidator, PathAskOptions, TableCell, TableColumn, \
     WizardUiBridge
+from wizard_ui_bridge.arg_types import check_nullable
+from wizard_ui_bridge.bridge_helpers import check_text_args
 from wizard_tk_bridge._no_text_io import NoTextIO
 from wizard_tk_bridge.wizard_form import handles_field
 from wizard_tk_bridge.wizard_window import WizardWindow
@@ -82,8 +84,7 @@ class WizardUiBridgeTk(WizardUiBridge):
                  nullable: bool = False, *, default: Optional[str] = None,
                  sensitive: bool = False) -> Optional[str]:
         """Ask for free text; see WizardUiBridge.ask_text."""
-        if sensitive and default is not None:
-            raise ValueError('default is not allowed for sensitive input')
+        check_text_args(default, sensitive, nullable)
         return self._window_obj().ask_text(question, re_ask_reason, nullable,
                                            default, sensitive)
 
@@ -93,6 +94,7 @@ class WizardUiBridgeTk(WizardUiBridge):
                 max_value: Optional[int] = None,
                 default: Optional[int] = None) -> Optional[int]:
         """Ask for an integer within optional bounds; see ask_int."""
+        check_nullable(nullable, default is not None)
         return self._window_obj().ask_int(question, re_ask_reason, nullable,
                                           min_value, max_value, default)
 
@@ -108,12 +110,30 @@ class WizardUiBridgeTk(WizardUiBridge):
         """Ask a yes/no question with dedicated yes and no buttons."""
         return self._window_obj().ask_yes_no(question, default, re_ask_reason)
 
+    @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None) -> str:
-        """Ask the user to pick one choice from a single-selection list."""
+                   re_ask_reason: Optional[str] = None,
+                   nullable: Literal[False] = False) -> str: ...
+
+    @overload
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool) -> Optional[str]: ...
+
+    # pylint: disable-next=too-many-arguments
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool = False) -> Optional[str]:
+        """Ask the user to pick one choice from a single-selection list.
+
+        A nullable choice is offered with a leading '(none)' entry.
+        """
+        check_nullable(nullable, default is not None)
         return self._window_obj().ask_choice(question, choices, default,
-                                             re_ask_reason)
+                                             re_ask_reason, nullable)
 
     # pylint: disable-next=too-many-arguments
     def ask_multi(self, question: str, *, choices: Sequence[str],
@@ -152,7 +172,11 @@ class WizardUiBridgeTk(WizardUiBridge):
                                            re_ask_reason, partial_validator)
 
     def supports_form_field(self, field: AskField) -> bool:
-        """Report that the Tk form shows every current field type."""
+        """Report that the Tk form shows every current field type.
+
+        This includes a nullable choice field, whose drop-down has a
+        blank entry that empties it.
+        """
         return handles_field(field)
 
     def show(self, message: str) -> None:

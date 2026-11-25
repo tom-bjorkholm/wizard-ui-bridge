@@ -12,11 +12,11 @@ is not accepted.
 
 from io import StringIO
 from pathlib import Path
-from typing import Callable, Optional, Sequence
+from typing import Callable, Literal, Optional, Sequence, overload
 from config_as_json import InvalidConfiguration, string_best_match
 from wizard_ui_bridge.arg_types import PartialCheck, \
     AskReader, WizardBack, WizardPathKind, PathAskOptions, TableColumn, \
-    TableCell
+    TableCell, check_nullable
 
 
 _ERASE_TOKEN = ':e'  # empties an editable cell in a one-cell-at-a-time table
@@ -24,12 +24,19 @@ CHOICE_ERROR = 'Please enter one of the listed choices.'
 INT_ERROR = 'Please enter an integer.'
 _PATH_REQUIRED = 'Please enter a path.'
 _VALUE_REQUIRED = 'Please enter a value.'
+NO_CHOICE = '(none)'  # the entry that selects no choice when nullable
 
 
-def check_text_args(default: Optional[str], sensitive: bool) -> None:
-    """Raise when text-question arguments are inconsistent."""
+def check_text_args(default: Optional[str], sensitive: bool,
+                    nullable: bool = False) -> None:
+    """Raise ValueError when text-question arguments are inconsistent.
+
+    A default is allowed neither for sensitive input nor together with
+    nullable, see arg_types.check_nullable.
+    """
     if sensitive and default is not None:
         raise ValueError('default is not allowed for sensitive input')
+    check_nullable(nullable, default is not None)
 
 
 def question_with_default(question: str, default: Optional[str]) -> str:
@@ -356,16 +363,56 @@ def range_error(min_value: Optional[int], max_value: Optional[int]) -> str:
     return f'Please enter an integer between {min_value} and {max_value}.'
 
 
+@overload
 def ask_one(reader: Callable[[Optional[str]], str | int],
             choices: Sequence[str], default: Optional[str],
-            re_ask_reason: Optional[str]) -> str:
-    """Re-ask through reader until one valid choice is selected."""
+            re_ask_reason: Optional[str], *,
+            nullable: Literal[False] = False) -> str: ...
+
+
+@overload
+def ask_one(reader: Callable[[Optional[str]], str | int],
+            choices: Sequence[str], default: Optional[str],
+            re_ask_reason: Optional[str], *,
+            nullable: bool) -> Optional[str]: ...
+
+
+def ask_one(reader: Callable[[Optional[str]], str | int],
+            choices: Sequence[str], default: Optional[str],
+            re_ask_reason: Optional[str], *,
+            nullable: bool = False) -> Optional[str]:
+    """Re-ask through reader until one valid choice is selected.
+
+    When nullable an empty answer selects no choice, which is reported
+    as None. Otherwise an empty answer selects default, or is re-asked
+    when default is None.
+
+    Raises:
+        ValueError: nullable is combined with a default.
+    """
+    check_nullable(nullable, default is not None)
     reason = re_ask_reason
     while True:
-        chosen = _resolve_choice(reader(reason), choices, default)
+        answer = reader(reason)
+        if nullable and answer == '':
+            return None
+        chosen = _resolve_choice(answer, choices, default)
         if chosen is not None:
             return chosen
         reason = CHOICE_ERROR
+
+
+def offered_choices(choices: Sequence[str], nullable: bool
+                    ) -> list[tuple[str, Optional[str]]]:
+    """Return the (label, answer) entries a single-choice list offers.
+
+    The entries are in display order. A nullable choice is led by the
+    entry (NO_CHOICE, None) that selects no choice, so a list control
+    offers it like any other entry and maps a picked row to its answer
+    by position, even if one of choices is itself named NO_CHOICE.
+    """
+    entries: list[tuple[str, Optional[str]]] = [(c, c) for c in choices]
+    return [(NO_CHOICE, None), *entries] if nullable else entries
 
 
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments

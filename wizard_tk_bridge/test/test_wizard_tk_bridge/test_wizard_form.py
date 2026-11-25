@@ -158,6 +158,33 @@ def test_form_choice_required() -> None:
         assert editor._status.cget('text') != ''
 
 
+def test_form_null_choice() -> None:
+    """Test a blank nullable choice submits None, its list led by blank."""
+    with gui_root() as root:
+        field = AskChoiceField('Pick', None, choices=('a', 'b'), nullable=True)
+        editor, recorded = _build(root, [field])
+        # pylint: disable-next=protected-access
+        widget = editor._rows[0].widget
+        assert isinstance(widget, ttk.Combobox)
+        assert list(widget.cget('values')) == ['', 'a', 'b']
+        editor.submit()
+        assert recorded == [[AnswerChoiceField(field, None)]]
+
+
+def test_form_null_reblank() -> None:
+    """Test picking the blank entry empties a chosen nullable choice."""
+    with gui_root() as root:
+        field = AskChoiceField('Pick', None, choices=('a', 'b'), nullable=True)
+        editor, _ = _build(root, [field])
+        # pylint: disable-next=protected-access
+        widget = editor._rows[0].widget
+        assert isinstance(widget, ttk.Combobox)
+        widget.set('a')
+        assert editor.answers() == [AnswerChoiceField(field, 'a')]
+        widget.set('')
+        assert editor.answers() == [AnswerChoiceField(field, None)]
+
+
 def test_form_int_oor_blocks() -> None:
     """Test an out-of-range integer blocks submit and is reported."""
     with gui_root() as root:
@@ -457,6 +484,8 @@ def test_handles_field() -> None:
     """Test the form reports it can show the typed field kinds."""
     assert handles_field(AskFloatField('n', None)) is True
     assert handles_field(AskDateField('d', None)) is True
+    nullable = AskChoiceField('c', None, choices=('a',), nullable=True)
+    assert handles_field(nullable) is True
 
 
 def test_form_float_default() -> None:

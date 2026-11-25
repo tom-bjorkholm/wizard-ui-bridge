@@ -5,7 +5,7 @@
 # MIT License
 
 import tkinter as tk
-from typing import Iterator, Optional, Sequence
+from typing import Iterator, Literal, Optional, Sequence, overload
 from contextlib import contextmanager
 import pytest
 from wizard_tk_example import e01_cli_wizard, e02_new_window, \
@@ -41,13 +41,27 @@ class _FakeBridge(WizardUiBridge):
         assert answer is None or isinstance(answer, str)
         return answer
 
+    @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None) -> str:
+                   re_ask_reason: Optional[str] = None,
+                   nullable: Literal[False] = False) -> str: ...
+
+    @overload
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool) -> Optional[str]: ...
+
+    # pylint: disable-next=too-many-arguments
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool = False) -> Optional[str]:
         """Return the next scripted choice answer."""
         self.defaults.append(default)
         answer = self._next()
-        assert isinstance(answer, str)
+        assert answer is None or isinstance(answer, str)
         return answer
 
     def ask_yes_no(self, question: str, default: bool,

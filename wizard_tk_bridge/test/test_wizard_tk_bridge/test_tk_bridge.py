@@ -88,7 +88,7 @@ def test_supports_form_field() -> None:
         bridge = WizardUiBridgeTk(root)
         assert bridge.supports_form_field(AskFloatField('n', None)) is True
         nullable = AskChoiceField('c', None, choices=('a',), nullable=True)
-        assert bridge.supports_form_field(nullable) is False
+        assert bridge.supports_form_field(nullable) is True
         bridge.close()
 
 
@@ -194,6 +194,29 @@ def test_ask_choice_delegates() -> None:
         bridge = WizardUiBridgeTk(root)
         root.after(0, lambda: answer_list(_window_of(bridge), [1]))
         assert bridge.ask_choice('Pick?', choices=['a', 'b']) == 'b'
+        bridge.close()
+
+
+def test_null_choice_reaches() -> None:
+    """Test a nullable ask_choice reaches the window and can return None."""
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: answer_list(_window_of(bridge), [0]))
+        assert bridge.ask_choice('Pick?', choices=['a'], nullable=True) is None
+        bridge.close()
+
+
+def test_null_default_raises() -> None:
+    """Test nullable together with a default is rejected before asking."""
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        with pytest.raises(ValueError, match='nullable'):
+            bridge.ask_choice('Pick?', choices=['a'], default='a',
+                              nullable=True)
+        with pytest.raises(ValueError, match='nullable'):
+            bridge.ask_text('Name?', nullable=True, default='x')
+        with pytest.raises(ValueError, match='nullable'):
+            bridge.ask_int('Age?', nullable=True, default=3)
         bridge.close()
 
 

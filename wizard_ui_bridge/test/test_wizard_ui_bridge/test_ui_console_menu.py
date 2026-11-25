@@ -3,8 +3,9 @@
 
 These cover how the console bridge turns a menu answer into choices: by
 number, by name and by an unambiguous prefix, what an empty answer
-selects, and the messages shown when an answer names no choice or picks
-a number of choices the question does not allow.
+selects, the no-choice line 0 of a nullable choice, and the messages
+shown when an answer names no choice or picks a number of choices the
+question does not allow.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -15,7 +16,8 @@ from typing import Optional
 
 import pytest
 
-from wizard_ui_bridge import WizardUiBridgeConsole
+from wizard_ui_bridge import WizardUiBridgeConsole, AskChoiceField, \
+    AnswerChoiceField
 from wizard_ui_bridge.bridge_helpers import CHOICE_ERROR
 
 _COLORS = ('red', 'green', 'blue')
@@ -104,3 +106,58 @@ def test_multi_count(answer: str, low: int, high: Optional[int],
                               max_select=high)
     assert chosen == ['red', 'green']
     assert reason in err_file.getvalue()
+
+
+@pytest.mark.parametrize('answer, expected', [
+    ('0', None), ('', None), ('2', 'green'), ('blue', 'blue')])
+def test_null_choice(answer: str, expected: Optional[str]) -> None:
+    """A nullable console choice reports 0 or an empty answer as None."""
+    bridge, _, _ = _menu(answer + '\n')
+    chosen = bridge.ask_choice('Color?', choices=_COLORS, nullable=True)
+    assert chosen == expected
+
+
+def test_null_choice_menu() -> None:
+    """A nullable console choice lists the no-choice line 0 first."""
+    bridge, out_file, _ = _menu('0\n')
+    bridge.ask_choice('Color?', choices=_COLORS, nullable=True)
+    assert '0: (none)\n1: red\n' in out_file.getvalue()
+
+
+def test_null_choice_reask() -> None:
+    """A nullable console choice still re-asks an unknown answer."""
+    bridge, _, err_file = _menu('4\n0\n')
+    assert bridge.ask_choice('Color?', choices=_COLORS, nullable=True) is None
+    assert CHOICE_ERROR in err_file.getvalue()
+
+
+def test_plain_choice_no_none() -> None:
+    """A console choice that is not nullable shows no line 0."""
+    bridge, out_file, _ = _menu('1\n')
+    bridge.ask_choice('Color?', choices=_COLORS)
+    assert '0: (none)' not in out_file.getvalue()
+
+
+def test_null_choice_default() -> None:
+    """A nullable console choice with a default is a programming error."""
+    bridge, _, _ = _menu('')
+    with pytest.raises(ValueError, match='nullable'):
+        bridge.ask_choice('Color?', choices=_COLORS, default='red',
+                          nullable=True)
+
+
+def test_text_null_default() -> None:
+    """A nullable console text question with a default is rejected."""
+    bridge, _, _ = _menu('')
+    with pytest.raises(ValueError, match='nullable'):
+        bridge.ask_text('Name?', nullable=True, default='x')
+
+
+@pytest.mark.parametrize('answer, expected', [('\n', None), ('3\n', 'blue')])
+def test_null_choice_form(answer: str, expected: Optional[str]) -> None:
+    """The console form asks a nullable choice field with line 0."""
+    bridge, out_file, _ = _menu(answer)
+    field = AskChoiceField('Color', None, choices=_COLORS, nullable=True)
+    answers = bridge.ask_form('Fill in', [field])
+    assert answers == [AnswerChoiceField(field, expected)]
+    assert '0: (none)' in out_file.getvalue()

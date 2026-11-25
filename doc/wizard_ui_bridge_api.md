@@ -72,6 +72,7 @@
   * [WizardCancelLevel](#wizard_ui_bridge.arg_types.WizardCancelLevel)
   * [WizardAbort](#wizard_ui_bridge.arg_types.WizardAbort)
   * [WizardPathKind](#wizard_ui_bridge.arg_types.WizardPathKind)
+  * [check\_nullable](#wizard_ui_bridge.arg_types.check_nullable)
   * [PathAskOptions](#wizard_ui_bridge.arg_types.PathAskOptions)
   * [TableColumn](#wizard_ui_bridge.arg_types.TableColumn)
   * [TableCell](#wizard_ui_bridge.arg_types.TableCell)
@@ -130,6 +131,7 @@
 * [wizard\_ui\_bridge.\_fake](#wizard_ui_bridge._fake)
   * [ask\_form\_faking](#wizard_ui_bridge._fake.ask_form_faking)
 * [wizard\_ui\_bridge.bridge\_helpers](#wizard_ui_bridge.bridge_helpers)
+  * [NO\_CHOICE](#wizard_ui_bridge.bridge_helpers.NO_CHOICE)
   * [check\_text\_args](#wizard_ui_bridge.bridge_helpers.check_text_args)
   * [question\_with\_default](#wizard_ui_bridge.bridge_helpers.question_with_default)
   * [text\_answer](#wizard_ui_bridge.bridge_helpers.text_answer)
@@ -142,6 +144,7 @@
   * [out\_of\_range](#wizard_ui_bridge.bridge_helpers.out_of_range)
   * [range\_error](#wizard_ui_bridge.bridge_helpers.range_error)
   * [ask\_one](#wizard_ui_bridge.bridge_helpers.ask_one)
+  * [offered\_choices](#wizard_ui_bridge.bridge_helpers.offered_choices)
   * [ask\_many](#wizard_ui_bridge.bridge_helpers.ask_many)
   * [match\_token](#wizard_ui_bridge.bridge_helpers.match_token)
   * [multi\_count\_error](#wizard_ui_bridge.bridge_helpers.multi_count_error)
@@ -647,7 +650,8 @@ Show every form field type; see WizardUiBridge.
 
 The inherited base ask_form() asks each field with the typed ask
 methods, so the console form handles the typed float, date, time,
-date-time and duration fields as well as the original kinds.
+date-time and duration fields as well as the original kinds, and
+a nullable choice field through ask_choice(nullable=True).
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole.ask_yes_no"></a>
 
@@ -691,10 +695,14 @@ def ask_choice(question: str,
                *,
                choices: Sequence[str],
                default: Optional[str] = None,
-               re_ask_reason: Optional[str] = None) -> str
+               re_ask_reason: Optional[str] = None,
+               nullable: bool = False) -> Optional[str]
 ```
 
 Ask one choice on the console; see WizardUiBridge.ask_choice.
+
+A nullable choice adds the menu line '0: (none)'. Answering 0, or
+giving an empty answer, then selects no choice.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole.ask_multi"></a>
 
@@ -838,9 +846,10 @@ A text cell in a matrix form.
 
 **Attributes**:
 
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default is
-  the empty string.
+- `nullable` - When True an empty answer is reported as None. When
+  False an empty answer with no default is the empty
+  string. Not allowed together with a default, which
+  raises ValueError.
 - `default` - The value returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
   as the starting value in the input field, and the user can
@@ -866,9 +875,10 @@ once.
 
 **Attributes**:
 
-- `nullable` - When True an empty answer with no default is reported
-  as None. When False an empty answer with no default will
-  be re-asked until the user fills in a valid value.
+- `nullable` - When True an empty answer is reported as None. When
+  False an empty answer with no default will be re-asked
+  until the user fills in a valid value. Not allowed
+  together with a default, which raises ValueError.
 - `default` - The value returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
   as the starting value in the input field, and the user can
@@ -953,9 +963,8 @@ or a set of radio buttons.
   change it.
 - `nullable` - When True the user may leave the choice empty, which is
   reported as None. When False an empty choice with no
-  default is not a valid final answer. No form bridge
-  supports a nullable choice field yet, so each bridge's
-  supports_form_field() returns False for one.
+  default is not a valid final answer. Not allowed
+  together with a default, which raises ValueError.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell"></a>
 
@@ -1348,6 +1357,29 @@ class WizardPathKind(Enum)
 
 Expected path type and existence for a path question.
 
+<a id="wizard_ui_bridge.arg_types.check_nullable"></a>
+
+#### check\_nullable
+
+```python
+def check_nullable(nullable: bool, has_default: bool) -> None
+```
+
+Raise ValueError when nullable is combined with a default.
+
+A None answer means that nothing is filled in or selected, while a
+default fills in a value for an empty answer, so asking for both is
+a contradiction and a programming error in the calling code.
+
+**Arguments**:
+
+- `nullable` - Whether an empty answer is reported as None.
+- `has_default` - Whether a default value is given.
+
+**Raises**:
+
+- `ValueError` - Both nullable and has_default are True.
+
 <a id="wizard_ui_bridge.arg_types.PathAskOptions"></a>
 
 ## PathAskOptions Objects
@@ -1358,6 +1390,14 @@ class PathAskOptions()
 ```
 
 Options for a path question.
+
+**Attributes**:
+
+- `kind` - The expected path type and existence.
+- `nullable` - When True an empty answer is reported as None. Not
+  allowed together with a default.
+- `default` - The path returned by an empty answer, or None for no
+  default.
 
 <a id="wizard_ui_bridge.arg_types.TableColumn"></a>
 
@@ -1629,9 +1669,9 @@ def nullable_choice(field: AskField) -> bool
 
 Return whether field is a nullable choice field.
 
-No form bridge supports a nullable choice field yet, so each bridge's
-supports_form_field() rejects one instead of silently ignoring the
-nullable attribute.
+The base WizardUiBridge.supports_form_field() rejects such a field,
+since a bridge written before ask_choice() took nullable cannot ask
+one. Each bridge in this package supports it.
 
 <a id="wizard_ui_bridge.form_helpers.initial_answer"></a>
 
@@ -1681,10 +1721,12 @@ def prefilled_field(field: AskField, prefill: PrefillValueType) -> AskField
 Return field with prefill as its default.
 
 The console bridge offers a prefill as the row's default when the row
-is asked. A prefill that cannot serve as a valid default, such as an
-integer or date outside the field's bounds, is ignored so the field
-keeps its own default. The prefill has already been checked against
-the field type by valid_prefills().
+is asked. A field may not be both nullable and have a default, so the
+returned field is not nullable: as for any default, an empty answer
+takes the prefill. A prefill that cannot serve as a valid default,
+such as an integer or date outside the field's bounds, is ignored so
+the field keeps its own default. The prefill has already been checked
+against the field type by valid_prefills().
 
 <a id="wizard_ui_bridge.bridge"></a>
 
@@ -1761,11 +1803,11 @@ a real text-entry control. The base class has no implementation.
 - `question` - The question to ask the user.
 - `re_ask_reason` - The reason for re-asking the question, for
   instance that the user's answer was invalid.
-- `nullable` - When True an empty answer with no default is
-  reported as None. When False an empty answer with
-  no default is the empty string.
+- `nullable` - When True an empty answer is reported as None.
+  When False an empty answer with no default is the
+  empty string.
 - `default` - The value returned by an empty answer, or None for
-  no default.
+  no default. Not allowed together with nullable.
 - `sensitive` - True when the bridge must avoid echoing the
   entered text, such as for passwords. A default is
   not allowed for a sensitive question.
@@ -1778,7 +1820,8 @@ a real text-entry control. The base class has no implementation.
 
 **Raises**:
 
-- `ValueError` - default is given together with sensitive.
+- `ValueError` - default is given together with sensitive or
+  nullable.
 - `NotImplementedError` - The bridge does not implement ask_text().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
@@ -1809,16 +1852,15 @@ derived bridge may override it with a direct numeric control.
 - `question` - The question to ask the user.
 - `re_ask_reason` - The reason for re-asking the question, for
   instance that the user's answer was invalid.
-- `nullable` - When True an empty answer is reported as None, so
-  the caller can treat it as a request to use the
-  default. When False an empty answer will be re-asked
-  until a valid answer is entered.
+- `nullable` - When True an empty answer is reported as None.
+  When False an empty answer with no default will be
+  re-asked until a valid answer is entered.
 - `min_value` - The minimum allowed value, or None for no lower bound.
   The min value is inclusive.
 - `max_value` - The maximum allowed value, or None for no upper bound.
   The max value is inclusive.
 - `default` - The value returned by an empty answer, or None for
-  no default.
+  no default. Not allowed together with nullable.
   
 
 **Returns**:
@@ -1828,6 +1870,7 @@ derived bridge may override it with a direct numeric control.
 
 **Raises**:
 
+- `ValueError` - default is given together with nullable.
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -1859,6 +1902,7 @@ asks for text through ask_text(), then validates the answer.
 **Returns**:
 
   The accepted path, a default path, or None when nullable.
+  PathAskOptions does not allow both a default and nullable.
 
 **Raises**:
 
@@ -1913,37 +1957,46 @@ def ask_choice(question: str,
                *,
                choices: Sequence[str],
                default: Optional[str] = None,
-               re_ask_reason: Optional[str] = None) -> str
+               re_ask_reason: Optional[str] = None,
+               nullable: bool = False) -> Optional[str]
 ```
 
 Ask the user to pick exactly one of choices and return it.
 
-The return value is always one of choices. An empty answer
-selects default, so default must name one of choices; when
-default is None an empty answer counts as no choice and the
-question is re-asked.
+The return value is one of choices, or None for no choice when
+nullable. An empty answer selects default, so default must name
+one of choices; when default is None an empty answer counts as no
+choice, which is None when nullable and is re-asked otherwise.
+The overloads type the result as str when nullable is left out
+or False, so existing callers need no None check.
 
 The application is responsible for implementing this method with
 a real single-choice control, such as a drop-down or a set of
-radio buttons in a graphical bridge. The base class has no
-implementation.
+radio buttons in a graphical bridge, that offers an explicit
+empty entry when nullable. A derived bridge repeats the two
+overloads on its override. The base class has no implementation.
 
 **Arguments**:
 
 - `question` - The question to ask the user.
 - `choices` - The choices to offer, in display order.
 - `default` - The choice selected by an empty answer, or None to
-  require an explicit choice.
+  require an explicit choice. Not allowed together
+  with nullable.
 - `re_ask_reason` - The reason for re-asking, shown before the
   first question when not None.
+- `nullable` - When True the user may select no choice, which is
+  reported as None.
   
 
 **Returns**:
 
-  The chosen value, one of choices.
+  The chosen value, one of choices, or None for no choice when
+  nullable.
 
 **Raises**:
 
+- `ValueError` - default is given together with nullable.
 - `NotImplementedError` - The bridge does not implement ask_choice().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
@@ -2156,7 +2209,10 @@ the AskField types. This method returns True when the bridge can
 show the given field, and False when it cannot. The base implementation
 returns True only for the field types that oldest form bridges support,
 so a bridge that overrides ask_form() should override this method as
-well. No bridge supports a nullable choice field yet.
+well. The base implementation returns False for a nullable choice
+field, since a bridge written before ask_choice() took nullable
+cannot ask one; a bridge whose ask_choice() supports nullable
+overrides this method to accept it.
 
 **Arguments**:
 
@@ -2681,15 +2737,26 @@ implementation can use to interpret raw user answers the same way the
 bundled bridges do, and the messages those bridges show when an answer
 is not accepted.
 
+<a id="wizard_ui_bridge.bridge_helpers.NO_CHOICE"></a>
+
+#### NO\_CHOICE
+
+the entry that selects no choice when nullable
+
 <a id="wizard_ui_bridge.bridge_helpers.check_text_args"></a>
 
 #### check\_text\_args
 
 ```python
-def check_text_args(default: Optional[str], sensitive: bool) -> None
+def check_text_args(default: Optional[str],
+                    sensitive: bool,
+                    nullable: bool = False) -> None
 ```
 
-Raise when text-question arguments are inconsistent.
+Raise ValueError when text-question arguments are inconsistent.
+
+A default is allowed neither for sensitive input nor together with
+nullable, see arg_types.check_nullable.
 
 <a id="wizard_ui_bridge.bridge_helpers.question_with_default"></a>
 
@@ -2837,12 +2904,39 @@ Return the message shown when an integer is out of range.
 #### ask\_one
 
 ```python
-def ask_one(reader: Callable[[Optional[str]],
-                             str | int], choices: Sequence[str],
-            default: Optional[str], re_ask_reason: Optional[str]) -> str
+def ask_one(reader: Callable[[Optional[str]], str | int],
+            choices: Sequence[str],
+            default: Optional[str],
+            re_ask_reason: Optional[str],
+            *,
+            nullable: bool = False) -> Optional[str]
 ```
 
 Re-ask through reader until one valid choice is selected.
+
+When nullable an empty answer selects no choice, which is reported
+as None. Otherwise an empty answer selects default, or is re-asked
+when default is None.
+
+**Raises**:
+
+- `ValueError` - nullable is combined with a default.
+
+<a id="wizard_ui_bridge.bridge_helpers.offered_choices"></a>
+
+#### offered\_choices
+
+```python
+def offered_choices(choices: Sequence[str],
+                    nullable: bool) -> list[tuple[str, Optional[str]]]
+```
+
+Return the (label, answer) entries a single-choice list offers.
+
+The entries are in display order. A nullable choice is led by the
+entry (NO_CHOICE, None) that selects no choice, so a list control
+offers it like any other entry and maps a picked row to its answer
+by position, even if one of choices is itself named NO_CHOICE.
 
 <a id="wizard_ui_bridge.bridge_helpers.ask_many"></a>
 
@@ -2992,10 +3086,14 @@ def ask_choice(question: str,
                *,
                choices: Sequence[str],
                default: Optional[str] = None,
-               re_ask_reason: Optional[str] = None) -> str
+               re_ask_reason: Optional[str] = None,
+               nullable: bool = False) -> Optional[str]
 ```
 
 Ask the user to pick one choice; see ask_choice.
+
+A nullable choice is offered with a leading, highlighted
+'(none)' option that selects no choice.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_multi"></a>
 
@@ -3058,7 +3156,8 @@ Show every form field type; see WizardUiBridge.
 
 The Textual form has a widget for each field type, including a
 text input for float, time and duration fields and a text input
-with a calendar Pick button for date and date-time fields.
+with a calendar Pick button for date and date-time fields. A
+nullable choice field has a drop-down that can be left blank.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.error_file"></a>
 

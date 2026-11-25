@@ -14,6 +14,7 @@ back to the wizard.
 import asyncio
 import os
 from pathlib import Path
+from typing import Optional
 
 import pytest
 from textual.widgets import Button, DirectoryTree, Input
@@ -262,6 +263,28 @@ def test_choice_default_idx() -> None:
     plain = without.launched[0]
     assert isinstance(plain, _ChoiceApp)
     assert plain._default_index is None
+
+
+@pytest.mark.parametrize('index, expected', [(0, None), (3, 'c')])
+def test_null_choice_map(index: int, expected: Optional[str]) -> None:
+    """A nullable ask_choice() leads with a highlighted '(none)' option."""
+    bridge = _CannedBridge([index])
+    chosen = bridge.ask_choice('q', choices=['a', 'b', 'c'], nullable=True)
+    assert chosen == expected
+    app = bridge.launched[0]
+    assert isinstance(app, _ChoiceApp)
+    assert app._choices == ['(none)', 'a', 'b', 'c']
+    assert app._default_index == 0
+
+
+def test_null_choice_default() -> None:
+    """A nullable ask_choice() or ask_text() with a default is rejected."""
+    bridge = _CannedBridge([])
+    with pytest.raises(ValueError, match='nullable'):
+        bridge.ask_choice('q', choices=['a'], default='a', nullable=True)
+    with pytest.raises(ValueError, match='nullable'):
+        bridge.ask_text('q', nullable=True, default='a')
+    assert not bridge.launched
 
 
 @pytest.mark.parametrize('nav', [WizardBack, WizardCancelLevel, WizardAbort])

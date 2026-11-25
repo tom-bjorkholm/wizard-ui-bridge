@@ -5,13 +5,15 @@
 # MIT License
 
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 import pytest
 
 from wizard_ui_bridge import PathAskOptions as PublicPathAskOptions, \
-    WizardPathKind as PublicPathKind, WizardUiBridge, TableColumn, TableCell
+    WizardPathKind as PublicPathKind, WizardUiBridge, TableColumn, \
+    TableCell, AskChoiceField
 from wizard_ui_bridge.arg_types import PathAskOptions, \
     WizardPathKind
 from wizard_ui_bridge.bridge_helpers import path_answer, INT_ERROR
@@ -109,6 +111,23 @@ def test_int_nullable() -> None:
     assert _TextBridge(['']).ask_int('How many?', nullable=True) is None
 
 
+def test_int_null_default() -> None:
+    """A nullable integer question with a default is rejected."""
+    with pytest.raises(ValueError, match='nullable'):
+        _TextBridge([]).ask_int('How many?', nullable=True, default=3)
+
+
+def test_base_null_choice() -> None:
+    """The base bridge rejects a nullable choice field.
+
+    A bridge written before ask_choice() took nullable cannot ask one, so
+    only a bridge that overrides supports_form_field() accepts it.
+    """
+    field = AskChoiceField('One', None, choices=('a',), nullable=True)
+    assert not WizardUiBridge().supports_form_field(field)
+    assert WizardUiBridge().supports_form_field(replace(field, nullable=False))
+
+
 @pytest.mark.parametrize('low, high, rejected, reason', [
     (1, 5, '9', 'Please enter an integer between 1 and 5.'),
     (1, 5, '0', 'Please enter an integer between 1 and 5.'),
@@ -190,18 +209,18 @@ def test_path_default(tmp_path: Path) -> None:
 
 
 def test_path_default_first(tmp_path: Path) -> None:
-    """A default beats nullable for an empty path answer, and is checked."""
+    """A default answers an empty path answer, and is checked."""
     paths = _path_case_paths(tmp_path)
-    options = PathAskOptions(kind=WizardPathKind.EXISTING_FILE, nullable=True,
+    options = PathAskOptions(kind=WizardPathKind.EXISTING_FILE,
                              default=paths['file'])
     assert _TextBridge(['']).ask_path('Path?', options=options) == \
         paths['file']
 
 
 def test_path_blank_default(tmp_path: Path) -> None:
-    """A blank raw answer reports the default, nullable or not."""
+    """A blank raw answer reports the default."""
     paths = _path_case_paths(tmp_path)
-    options = PathAskOptions(nullable=True, default=paths['missing_file'])
+    options = PathAskOptions(default=paths['missing_file'])
     assert path_answer('', options) == (True, paths['missing_file'], None)
 
 

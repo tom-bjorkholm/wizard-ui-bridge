@@ -18,7 +18,8 @@ import pytest
 
 from wizard_ui_bridge import TableCell, TableColumn
 from wizard_ui_bridge.bridge_helpers import ask_many, ask_one, \
-    ask_yes_no, run_table, CHOICE_ERROR
+    ask_yes_no, run_table, CHOICE_ERROR, check_text_args, offered_choices, \
+    NO_CHOICE
 
 _COLORS = ('red', 'green', 'blue')
 _NEEDED = 'Please enter a value.'
@@ -88,6 +89,46 @@ def test_one_index(answer: int, expected: str) -> None:
     """A single choice may be answered with a 0-based choice index."""
     reader = _Reader([answer])
     assert ask_one(reader.one, _COLORS, None, None) == expected
+
+
+@pytest.mark.parametrize('answers, expected', [
+    ([''], None), (['green'], 'green'), ([2], 'blue'), ([7, ''], None)])
+def test_one_nullable(answers: list[str | int],
+                      expected: Optional[str]) -> None:
+    """A nullable single choice reports an empty answer as None."""
+    reader = _Reader(answers)
+    assert ask_one(reader.one, _COLORS, None, None, nullable=True) == expected
+
+
+def test_one_null_default() -> None:
+    """A nullable single choice with a default is a programming error."""
+    with pytest.raises(ValueError, match='nullable'):
+        ask_one(_Reader([]).one, _COLORS, 'red', None, nullable=True)
+
+
+def test_offered_choices() -> None:
+    """A nullable list leads with the no-choice entry mapped to None.
+
+    The mapping is by position, so a real choice that happens to carry
+    the NO_CHOICE label keeps its own answer.
+    """
+    assert offered_choices(('a',), False) == [('a', 'a')]
+    assert offered_choices(('a', NO_CHOICE), True) == \
+        [(NO_CHOICE, None), ('a', 'a'), (NO_CHOICE, NO_CHOICE)]
+
+
+@pytest.mark.parametrize('default, sensitive, nullable', [
+    ('x', True, False), ('x', False, True)])
+def test_text_args_bad(default: str, sensitive: bool, nullable: bool) -> None:
+    """A text default is rejected with sensitive and with nullable."""
+    with pytest.raises(ValueError, match='not allowed'):
+        check_text_args(default, sensitive, nullable)
+
+
+def test_text_args_good() -> None:
+    """Nullable or sensitive without a default is accepted."""
+    check_text_args(None, True, True)
+    check_text_args('x', False)
 
 
 def test_many_bool() -> None:

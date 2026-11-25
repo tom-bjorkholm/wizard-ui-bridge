@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from typing import Any, Generic, Optional, Protocol, Sequence, TypeVar, Union
 from pathlib import Path
 from datetime import datetime, date, time, timedelta
-from wizard_ui_bridge.arg_types import PathAskOptions
+from wizard_ui_bridge.arg_types import PathAskOptions, check_nullable
 
 
 class _OrderedValue(Protocol):
@@ -117,9 +117,10 @@ class AskTextCell(AskCellCommon):
     """A text cell in a matrix form.
 
     Attributes:
-        nullable: When True an empty answer with no default is reported
-                  as None. When False an empty answer with no default is
-                  the empty string.
+        nullable: When True an empty answer is reported as None. When
+                  False an empty answer with no default is the empty
+                  string. Not allowed together with a default, which
+                  raises ValueError.
         default: The value returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
                  as the starting value in the input field, and the user can
@@ -137,6 +138,7 @@ class AskTextCell(AskCellCommon):
         """Check that the text cell arguments are valid."""
         if self.sensitive and self.default is not None:
             raise ValueError('Sensitive text field cannot have a default')
+        check_nullable(self.nullable, self.default is not None)
 
 
 @dataclass
@@ -148,9 +150,10 @@ class AskRangeCell(AskCellCommon, Generic[_OrderedT]):
     once.
 
     Attributes:
-        nullable: When True an empty answer with no default is reported
-                  as None. When False an empty answer with no default will
-                  be re-asked until the user fills in a valid value.
+        nullable: When True an empty answer is reported as None. When
+                  False an empty answer with no default will be re-asked
+                  until the user fills in a valid value. Not allowed
+                  together with a default, which raises ValueError.
         default: The value returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
                  as the starting value in the input field, and the user can
@@ -167,8 +170,9 @@ class AskRangeCell(AskCellCommon, Generic[_OrderedT]):
     max_value: Optional[_OrderedT] = None
 
     def __post_init__(self) -> None:
-        """Check that the bounds and the default agree."""
+        """Check that the bounds, the default and nullable agree."""
         _check_bounds(self.min_value, self.max_value, self.default)
+        check_nullable(self.nullable, self.default is not None)
 
 
 @dataclass
@@ -224,14 +228,17 @@ class AskChoiceCell(AskCellCommon):
                  change it.
         nullable: When True the user may leave the choice empty, which is
                   reported as None. When False an empty choice with no
-                  default is not a valid final answer. No form bridge
-                  supports a nullable choice field yet, so each bridge's
-                  supports_form_field() returns False for one.
+                  default is not a valid final answer. Not allowed
+                  together with a default, which raises ValueError.
     """
 
     choices: Sequence[str]
     default: Optional[str] = None
     nullable: bool = False
+
+    def __post_init__(self) -> None:
+        """Check that nullable is not combined with a default."""
+        check_nullable(self.nullable, self.default is not None)
 
 
 @dataclass

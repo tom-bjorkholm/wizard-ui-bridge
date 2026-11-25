@@ -20,7 +20,7 @@ from tkinter import ttk
 from typing import Optional, Sequence, TypeVar
 from wizard_ui_bridge import PartialCheck, TableCell, TableColumn
 from wizard_tk_bridge.auto_scroll import auto_hide, bind_wheel
-from wizard_tk_bridge.gui_style import style_input
+from wizard_tk_bridge.gui_style import choice_combo, style_input
 
 WRAP_LENGTH = 520
 TABLE_VIEW_HEIGHT = 210
@@ -228,13 +228,15 @@ class TableEditor:
         return Cell(widget, False, None, cell.nullable)
 
     def _editable_widget(self, cell: TableCell) -> tk.Widget:
-        """Return a drop-down for a cell with choices, else a text entry."""
+        """Return a drop-down for a cell with choices, else a text entry.
+
+        The drop-down of a nullable cell has a blank entry that empties
+        the cell, see choice_combo().
+        """
         if cell.choices is not None:
-            box = ttk.Combobox(self._grid, values=list(cell.choices),
-                               state='readonly', width=18)
+            box = choice_combo(self._grid, cell.choices, cell.nullable, 18)
             if cell.value is not None:
                 box.set(cell.value)
-            style_input(box)
             return box
         entry = tk.Entry(self._grid, width=20)
         if cell.value is not None:

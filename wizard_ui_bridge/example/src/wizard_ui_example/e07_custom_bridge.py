@@ -106,7 +106,7 @@ you can watch the folding appear only on the custom (teleprinter) bridge::
 
 import argparse
 import sys
-from typing import Optional, Sequence, TextIO
+from typing import Literal, Optional, Sequence, TextIO, overload
 
 from wizard_ui_example.e02_question_kinds import ask_export_settings, summarize
 from wizard_ui_bridge import make_text_ui_bridge, UiBridgeType, \
@@ -231,7 +231,10 @@ class TeleprinterBridge(WizardUiBridge):
         read like any other. A real bridge would suppress the echo instead;
         that is one more rung on the UX ladder.
         """
-        check_text_args(default, sensitive)
+        # check_text_args() raises ValueError for a default combined with
+        # sensitive or with nullable, the same programming errors every
+        # bundled bridge rejects.
+        check_text_args(default, sensitive, nullable)
         answer = self._ask(question_with_default(question, default),
                            re_ask_reason)
         assert isinstance(answer, str)  # no choices, so the answer is text
@@ -244,13 +247,44 @@ class TeleprinterBridge(WizardUiBridge):
             return self._ask(question, reason, ('yes', 'no'))
         return ask_yes_no(reader, default, re_ask_reason)
 
+    # The base class declares ask_choice() with two overloads, so a caller
+    # that leaves nullable out gets a plain str back while a caller passing
+    # nullable gets Optional[str]. An override must repeat both overloads,
+    # otherwise mypy reports it as incompatible with the base class.
+    @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None) -> str:
-        """Ask for one choice; see WizardUiBridge.ask_choice."""
+                   re_ask_reason: Optional[str] = None,
+                   nullable: Literal[False] = False) -> str: ...
+
+    @overload
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool) -> Optional[str]: ...
+
+    # pylint: disable-next=too-many-arguments
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool = False) -> Optional[str]:
+        """Ask for one choice; see WizardUiBridge.ask_choice.
+
+        A nullable choice may be left empty, which reports no choice (None).
+        The teleprinter says so in the question. A richer bridge would show
+        an explicit '(none)' entry instead; that is one more rung on the UX
+        ladder (see bridge_helpers.offered_choices).
+        """
+        prompt = f'{question} (empty answer for none)' if nullable \
+            else question
+
         def reader(reason: Optional[str]) -> str | int:
-            return self._ask(question, reason, choices)
-        return ask_one(reader, choices, default, re_ask_reason)
+            return self._ask(prompt, reason, choices)
+        # ask_one() re-asks until the answer is valid. With nullable=True it
+        # returns None for an empty answer, and it raises ValueError when
+        # nullable is combined with a default.
+        return ask_one(reader, choices, default, re_ask_reason,
+                       nullable=nullable)
 
     # pylint: disable-next=too-many-arguments
     def ask_multi(self, question: str, *, choices: Sequence[str],

@@ -181,6 +181,23 @@ def test_choice_keeps_default() -> None:
         assert window.ask_choice('Pick?', ['a', 'b', 'c'], 'c', None) == 'c'
 
 
+@pytest.mark.parametrize('row, expected', [(0, None), (2, 'b')])
+def test_null_choice(row: int, expected: Optional[str]) -> None:
+    """Test a nullable choice lists '(none)' first, which gives None."""
+    with prompt_window() as (root, window):
+        PromptDriver(root, window, [lambda: answer_list(window, [row])])
+        answer = window.ask_choice('Pick?', ['a', 'b'], None, None, True)
+        assert answer == expected
+
+
+def test_null_choice_keep() -> None:
+    """Test confirming an untouched nullable choice returns None."""
+    with prompt_window() as (root, window):
+        PromptDriver(root, window,
+                     [lambda: click_button(content_of(window), 'OK')])
+        assert window.ask_choice('Pick?', ['a'], None, None, True) is None
+
+
 @pytest.mark.parametrize('rows, expected', [
     ((2, 0), ['a', 'c']), ((), []), ((0, 1, 2), ['a', 'b', 'c'])])
 def test_multi_selected(rows: tuple[int, ...], expected: list[str]) -> None:

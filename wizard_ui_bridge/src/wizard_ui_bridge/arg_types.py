@@ -96,13 +96,42 @@ class WizardPathKind(Enum):
     DIR = auto()
 
 
+def check_nullable(nullable: bool, has_default: bool) -> None:
+    """Raise ValueError when nullable is combined with a default.
+
+    A None answer means that nothing is filled in or selected, while a
+    default fills in a value for an empty answer, so asking for both is
+    a contradiction and a programming error in the calling code.
+
+    Args:
+        nullable: Whether an empty answer is reported as None.
+        has_default: Whether a default value is given.
+    Raises:
+        ValueError: Both nullable and has_default are True.
+    """
+    if nullable and has_default:
+        raise ValueError('nullable is not allowed together with a default')
+
+
 @dataclass(frozen=True)
 class PathAskOptions:
-    """Options for a path question."""
+    """Options for a path question.
+
+    Attributes:
+        kind: The expected path type and existence.
+        nullable: When True an empty answer is reported as None. Not
+                  allowed together with a default.
+        default: The path returned by an empty answer, or None for no
+                 default.
+    """
 
     kind: WizardPathKind = WizardPathKind.FILE
     nullable: bool = False
     default: Optional[Path] = None
+
+    def __post_init__(self) -> None:
+        """Check that nullable is not combined with a default."""
+        check_nullable(self.nullable, self.default is not None)
 
 
 @dataclass(frozen=True)

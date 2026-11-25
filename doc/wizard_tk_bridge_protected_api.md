@@ -27,6 +27,7 @@
     * [\_\_exit\_\_](#wizard_tk_bridge._no_text_io.NoTextIO.__exit__)
 * [wizard\_tk\_bridge.gui\_style](#wizard_tk_bridge.gui_style)
   * [style\_input](#wizard_tk_bridge.gui_style.style_input)
+  * [choice\_combo](#wizard_tk_bridge.gui_style.choice_combo)
   * [\_style\_combobox](#wizard_tk_bridge.gui_style._style_combobox)
   * [focus\_first\_input](#wizard_tk_bridge.gui_style.focus_first_input)
   * [\_first\_input](#wizard_tk_bridge.gui_style._first_input)
@@ -608,9 +609,11 @@ Shared look and focus helpers for the Tkinter input windows.
 Editable input widgets blend into the window background on some
 platforms, so the user cannot tell an entry, drop-down or list from the
 surrounding window. :func:`style_input` gives such a widget a white
-field and a thin border so it stands out. :func:`focus_first_input`
-puts the keyboard focus on the first editable widget of a window, so the
-user can start typing as soon as the window opens.
+field and a thin border so it stands out. :func:`choice_combo` builds a
+styled read-only drop-down that a nullable choice can empty again.
+:func:`focus_first_input` puts the keyboard focus on the first editable
+widget of a window, so the user can start typing as soon as the window
+opens.
 
 <a id="wizard_tk_bridge.gui_style.style_input"></a>
 
@@ -627,6 +630,21 @@ solid border. A drop-down keeps its arrow but gets a white field
 through a shared ttk style. Any other widget is left unchanged. The
 ttk styling is best-effort: a native theme that ignores field colors
 leaves the drop-down as it is.
+
+<a id="wizard_tk_bridge.gui_style.choice_combo"></a>
+
+#### choice\_combo
+
+```python
+def choice_combo(parent: tk.Misc, choices: Sequence[str], nullable: bool,
+                 width: int) -> ttk.Combobox
+```
+
+Return a styled read-only drop-down offering choices.
+
+A read-only drop-down cannot be emptied by typing once a value is
+picked, so a nullable drop-down leads its list with a blank entry
+that empties it again. The drop-down starts empty.
 
 <a id="wizard_tk_bridge.gui_style._style_combobox"></a>
 
@@ -1637,6 +1655,9 @@ def _editable_widget(cell: TableCell) -> tk.Widget
 
 Return a drop-down for a cell with choices, else a text entry.
 
+The drop-down of a nullable cell has a blank entry that empties
+the cell, see choice_combo().
+
 <a id="wizard_tk_bridge.wizard_table.TableEditor._bind_change"></a>
 
 #### \_bind\_change
@@ -1859,6 +1880,8 @@ def _choice_input(grid: tk.Misc, field: AskChoiceField,
 ```
 
 Build a read-only drop-down, preselecting any default choice.
+
+A nullable choice gets a blank entry, see choice_combo().
 
 <a id="wizard_tk_bridge.wizard_form._multi_input"></a>
 
@@ -2469,10 +2492,13 @@ def ask_choice(question: str,
                *,
                choices: Sequence[str],
                default: Optional[str] = None,
-               re_ask_reason: Optional[str] = None) -> str
+               re_ask_reason: Optional[str] = None,
+               nullable: bool = False) -> Optional[str]
 ```
 
 Ask the user to pick one choice from a single-selection list.
+
+A nullable choice is offered with a leading '(none)' entry.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_multi"></a>
 
@@ -2537,6 +2563,9 @@ def supports_form_field(field: AskField) -> bool
 ```
 
 Report that the Tk form shows every current field type.
+
+This includes a nullable choice field, whose drop-down has a
+blank entry that empties it.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.show"></a>
 
@@ -2904,11 +2933,17 @@ Ask one yes/no question with dedicated buttons.
 #### ask\_choice
 
 ```python
-def ask_choice(question: str, choices: Sequence[str], default: Optional[str],
-               re_ask: Optional[str]) -> str
+def ask_choice(question: str,
+               choices: Sequence[str],
+               default: Optional[str],
+               re_ask: Optional[str],
+               nullable: bool = False) -> Optional[str]
 ```
 
 Ask the user to pick exactly one choice and return it.
+
+A nullable choice is offered with a leading, preselected '(none)'
+entry that selects no choice, reported as None.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_multi"></a>
 
@@ -2975,10 +3010,12 @@ Return the indexes to preselect from a default value or list.
 #### \_pick\_one
 
 ```python
-def _pick_one(listbox: tk.Listbox, choices: Sequence[str]) -> None
+def _pick_one(listbox: tk.Listbox, choices: Sequence[Optional[str]]) -> None
 ```
 
-Finish a single-choice question with the selected value.
+Finish a single-choice question with the selected row's answer.
+
+choices holds the answer of each list row, in row order.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow._pick_many"></a>
 

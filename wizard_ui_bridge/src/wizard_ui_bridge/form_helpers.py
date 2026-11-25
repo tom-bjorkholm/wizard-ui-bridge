@@ -25,9 +25,9 @@ _ORDERED_FIELDS = (AskIntField, AskFloatField, AskDateField, AskTimeField,
 def nullable_choice(field: AskField) -> bool:
     """Return whether field is a nullable choice field.
 
-    No form bridge supports a nullable choice field yet, so each bridge's
-    supports_form_field() rejects one instead of silently ignoring the
-    nullable attribute.
+    The base WizardUiBridge.supports_form_field() rejects such a field,
+    since a bridge written before ask_choice() took nullable cannot ask
+    one. Each bridge in this package supports it.
     """
     return isinstance(field, AskChoiceField) and field.nullable
 
@@ -190,10 +190,12 @@ def prefilled_field(field: AskField, prefill: PrefillValueType) -> AskField:
     """Return field with prefill as its default.
 
     The console bridge offers a prefill as the row's default when the row
-    is asked. A prefill that cannot serve as a valid default, such as an
-    integer or date outside the field's bounds, is ignored so the field
-    keeps its own default. The prefill has already been checked against
-    the field type by valid_prefills().
+    is asked. A field may not be both nullable and have a default, so the
+    returned field is not nullable: as for any default, an empty answer
+    takes the prefill. A prefill that cannot serve as a valid default,
+    such as an integer or date outside the field's bounds, is ignored so
+    the field keeps its own default. The prefill has already been checked
+    against the field type by valid_prefills().
     """
     try:
         result = _default_a(field, prefill)
@@ -207,20 +209,20 @@ def _default_a(field: AskField,
     """Return field with prefill as default for the first field group."""
     if isinstance(field, AskPathField):
         assert isinstance(prefill, Path)
-        options = replace(field.path_options, default=prefill)
+        options = replace(field.path_options, nullable=False, default=prefill)
         return replace(field, path_options=options)
     if isinstance(field, AskIntField):
         assert isinstance(prefill, int)
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     if isinstance(field, AskFloatField):
         assert isinstance(prefill, (int, float))
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     if isinstance(field, AskDateField):
         assert isinstance(prefill, date)
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     if isinstance(field, AskTimeField):
         assert isinstance(prefill, time)
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     return None
 
 
@@ -228,19 +230,19 @@ def _default_b(field: AskField, prefill: PrefillValueType) -> AskField:
     """Return field with prefill as default for the second field group."""
     if isinstance(field, AskDateTimeField):
         assert isinstance(prefill, datetime)
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     if isinstance(field, AskDurationField):
         assert isinstance(prefill, timedelta)
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     if isinstance(field, AskYesNoField):
         assert isinstance(prefill, bool)
         return replace(field, default=prefill)
     if isinstance(field, AskChoiceField):
         assert isinstance(prefill, str)
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     if isinstance(field, AskTextField):
         assert isinstance(prefill, str)
-        return replace(field, default=prefill)
+        return replace(field, nullable=False, default=prefill)
     assert isinstance(field, AskMultiChoiceField)
     assert isinstance(prefill, list)
     return replace(field, default=prefill)

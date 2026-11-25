@@ -6,9 +6,22 @@
 
 import tkinter as tk
 from tkinter import ttk
+import pytest
 from wizard_tk_bridge.gui_style import (
-    focus_first_input, style_input, _first_input, _is_input)
+    choice_combo, focus_first_input, style_input, _first_input, _is_input)
 from .gui_test_helpers import gui_root
+
+
+@pytest.mark.parametrize('nullable, values', [
+    (False, ['a', 'b']), (True, ['', 'a', 'b'])])
+def test_choice_combo(nullable: bool, values: list[str]) -> None:
+    """Test a choice drop-down is read-only, empty and blank-led if null."""
+    with gui_root() as root:
+        box = choice_combo(root, ('a', 'b'), nullable, 12)
+        assert list(box.cget('values')) == values
+        assert str(box.cget('state')) == 'readonly'
+        assert box.get() == ''
+        assert int(box.cget('width')) == 12
 
 
 def test_style_entry() -> None:

@@ -113,4 +113,4 @@ def test_supports_fields() -> None:
     bridge = WizardUiBridgeConsole(StringIO(), StringIO(), StringIO())
     assert all(bridge.supports_form_field(f) for f in all_ask_fields())
     assert not bridge.supports_form_field(unknown_field())
-    assert not bridge.supports_form_field(nullable_choice_field())
+    assert bridge.supports_form_field(nullable_choice_field())

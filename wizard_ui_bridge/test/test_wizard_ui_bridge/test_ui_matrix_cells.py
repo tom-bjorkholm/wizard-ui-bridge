@@ -12,12 +12,15 @@ argument order.
 
 from dataclasses import MISSING, fields
 from datetime import date, datetime, time, timedelta
-from typing import TypeAliasType, get_args
+from functools import partial
+from pathlib import Path
+from typing import Callable, TypeAliasType, get_args
 
 import pytest
 
+from wizard_ui_bridge.arg_types import PathAskOptions
 from wizard_ui_bridge.form_defs import ALL_ASK_FIELD_TYPES, AnswerField, \
-    AskFieldCommon
+    AskFieldCommon, AskChoiceField
 from wizard_ui_bridge.matrix_cell_defs import ALL_ASK_CELL_TYPES, AskCell, \
     AnswerCell, AskRangeCell, AskIntCell, AskFloatCell, AskDateCell, \
     AskTimeCell, AskDateTimeCell, AskDurationCell, AskTextCell, \
@@ -36,6 +39,13 @@ _LOW_HIGH = [(AskIntCell, 1, 2), (AskFloatCell, 1.0, 2.0),
              (AskTimeCell, time(1), time(2)),
              (AskDateTimeCell, datetime(2026, 1, 1), datetime(2026, 1, 2)),
              (AskDurationCell, timedelta(1), timedelta(2))]
+_NULL_DEFAULTS: list[Callable[[], AskCellCommon | PathAskOptions]] = [
+    *[partial(cell_type, None, nullable=True, default=low)
+      for cell_type, low, _ in _LOW_HIGH],
+    partial(AskTextCell, None, nullable=True, default='x'),
+    partial(AskChoiceCell, None, ('a',), default='a', nullable=True),
+    partial(AskChoiceField, 'Q', None, ('a',), default='a', nullable=True),
+    partial(PathAskOptions, nullable=True, default=Path('x'))]
 
 
 def _names(cls: type) -> list[str]:
@@ -103,6 +113,18 @@ def test_text_secret_default() -> None:
     """A sensitive text cell cannot carry a default."""
     with pytest.raises(ValueError, match='default'):
         AskTextCell(None, default='x', sensitive=True)
+
+
+@pytest.mark.parametrize('make', _NULL_DEFAULTS)
+def test_null_default(make: Callable[[], AskCellCommon | PathAskOptions]
+                      ) -> None:
+    """Nullable together with a default is a programming error.
+
+    None means nothing is filled in or selected, which contradicts a
+    default, so every cell type with both attributes rejects the pair.
+    """
+    with pytest.raises(ValueError, match='nullable'):
+        make()
 
 
 def test_choice_nullable() -> None:

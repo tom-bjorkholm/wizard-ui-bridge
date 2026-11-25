@@ -33,7 +33,7 @@ from wizard_ui_bridge import AnswerFields, AskFields, PartialCheck, \
     PartialFormValidator, PathAskOptions, TableCell, TableColumn, \
     WizardAbort, WizardBack, WizardCancelLevel, WizardNavigation
 from wizard_ui_bridge.bridge_helpers import multi_count_message, \
-    path_answer, text_answer
+    offered_choices, path_answer, text_answer
 from wizard_tk_bridge.close_binding import bind_close
 from wizard_tk_bridge.gui_style import focus_first_input, style_input
 from wizard_tk_bridge.wizard_form import FormEditor, int_answer
@@ -252,14 +252,25 @@ class WizardWindow:
         assert isinstance(result, bool)
         return result
 
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def ask_choice(self, question: str, choices: Sequence[str],
-                   default: Optional[str], re_ask: Optional[str]) -> str:
-        """Ask the user to pick exactly one choice and return it."""
+                   default: Optional[str], re_ask: Optional[str],
+                   nullable: bool = False) -> Optional[str]:
+        """Ask the user to pick exactly one choice and return it.
+
+        A nullable choice is offered with a leading, preselected '(none)'
+        entry that selects no choice, reported as None.
+        """
         self._begin(question, re_ask)
-        listbox = self._choice_list(choices, default, 'browse')
-        self._add_buttons(lambda: self._pick_one(listbox, choices))
+        offered = offered_choices(choices, nullable)
+        listbox = self._choice_list([label for label, _ in offered], default,
+                                    'browse')
+        if nullable:
+            listbox.selection_set(0)
+        answers = [answer for _, answer in offered]
+        self._add_buttons(lambda: self._pick_one(listbox, answers))
         result = self._wait()
-        assert isinstance(result, str)
+        assert result is None or isinstance(result, str)
         return result
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
@@ -327,8 +338,12 @@ class WizardWindow:
         return [index for index, choice in enumerate(choices)
                 if choice in wanted]
 
-    def _pick_one(self, listbox: tk.Listbox, choices: Sequence[str]) -> None:
-        """Finish a single-choice question with the selected value."""
+    def _pick_one(self, listbox: tk.Listbox,
+                  choices: Sequence[Optional[str]]) -> None:
+        """Finish a single-choice question with the selected row's answer.
+
+        choices holds the answer of each list row, in row order.
+        """
         picks = listbox.curselection()  # type: ignore[no-untyped-call]
         if picks:
             self._finish(choices[int(picks[0])])

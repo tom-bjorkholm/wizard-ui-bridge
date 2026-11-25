@@ -5,7 +5,7 @@
 # MIT License
 
 from pathlib import Path
-from typing import Optional, Sequence, cast
+from typing import Literal, Optional, Sequence, cast, overload
 
 import pytest
 
@@ -35,6 +35,7 @@ class _FormBridge(WizardUiBridge):
         self.shown: list[str] = []
         self.asked: list[str] = []
         self.defaults: list[object] = []
+        self.nullables: list[bool] = []
 
     def _next(self) -> object:
         """Return the next scripted answer, raising a scripted exception."""
@@ -87,14 +88,29 @@ class _FormBridge(WizardUiBridge):
         assert isinstance(answer, bool)
         return answer
 
+    @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None) -> str:
-        """Return the next scripted choice answer."""
+                   re_ask_reason: Optional[str] = None,
+                   nullable: Literal[False] = False) -> str: ...
+
+    @overload
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool) -> Optional[str]: ...
+
+    # pylint: disable-next=too-many-arguments
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool = False) -> Optional[str]:
+        """Return the next scripted choice answer, recording nullable."""
         self.asked.append(question)
         self.defaults.append(default)
+        self.nullables.append(nullable)
         answer = self._next()
-        assert isinstance(answer, str)
+        assert answer is None or isinstance(answer, str)
         return answer
 
     # pylint: disable-next=too-many-arguments
@@ -181,6 +197,16 @@ def test_form_in_order() -> None:
     assert [answer.value for answer in answers] == \
         ['Tom', 42, False, 'green', ['a', 'c']]
     assert [answer.asking for answer in answers] == list(fields)
+    assert bridge.nullables == [False]
+
+
+def test_form_null_choice() -> None:
+    """ask_form passes nullable on to ask_choice for a nullable choice."""
+    field = AskChoiceField('C', None, choices=('a',), nullable=True)
+    bridge = _FormBridge([None])
+    answers = bridge.ask_form('Q', [field])
+    assert answers == [AnswerChoiceField(field, None)]
+    assert bridge.nullables == [True]
 
 
 def test_form_shows_prompt() -> None:
@@ -437,6 +463,24 @@ def test_prefill_choice_bad() -> None:
     bridge = _FormBridge(['KEY', 'r'])
     bridge.ask_form('Q', fields, partial_validator=rule)
     assert bridge.defaults == [None, 'r']
+
+
+def test_prefill_nullable() -> None:
+    """A prefill seeds a nullable field's default, dropping nullable.
+
+    A field cannot be both nullable and have a default, so the console
+    asks the prefilled row as a non-nullable field with that default.
+    """
+    fields: list[AskField] = [AskTextField('A', None),
+                              AskIntField('B', None, nullable=True)]
+
+    def rule(_answers: Sequence[AnswerField],
+             changed: int) -> PartFormValidationResult:
+        prefill: PrefillValues = ((1, 5),) if changed == 0 else ()
+        return PartFormValidationResult(True, '', (), prefill)
+    bridge = _FormBridge(['KEY', 5])
+    bridge.ask_form('Q', fields, partial_validator=rule)
+    assert bridge.defaults == [None, 5]
 
 
 def test_prefill_path(tmp_path: Path) -> None:

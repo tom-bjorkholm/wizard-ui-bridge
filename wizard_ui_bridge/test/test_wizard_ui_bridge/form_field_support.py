@@ -3,8 +3,8 @@
 
 These build one instance of every supported form field type, a
 throwaway field type that no bridge supports, and a nullable choice field
-that no bridge supports yet, so the console and Textual support tests
-share the same field samples.
+that the base bridge rejects but every bundled bridge supports, so the
+console and Textual support tests share the same field samples.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -47,5 +47,5 @@ def unknown_field() -> AskField:
 
 
 def nullable_choice_field() -> AskField:
-    """Return a nullable choice field, which no form bridge supports yet."""
+    """Return a nullable choice field, rejected by the base bridge."""
     return AskChoiceField('One', None, choices=('a', 'b'), nullable=True)

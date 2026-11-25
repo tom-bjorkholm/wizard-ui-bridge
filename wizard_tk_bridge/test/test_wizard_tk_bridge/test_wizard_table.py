@@ -67,6 +67,18 @@ def test_table_editor_choice() -> None:
         assert editor.values() == [['a']]
 
 
+def test_table_null_choice() -> None:
+    """Test a nullable drop-down cell can be emptied back to None."""
+    with gui_root() as root:
+        columns = [TableColumn(header='X')]
+        cells = [[TableCell(value='a', choices=('a', 'b'), nullable=True)]]
+        editor = TableEditor(tk.Frame(root), columns, cells, None)
+        box = find_widgets(root, ttk.Combobox)[0]
+        assert list(box.cget('values')) == ['', 'a', 'b']
+        box.set('')
+        assert editor.values() == [[None]]
+
+
 def test_table_add_row() -> None:
     """Test adding a row appends an editable row from the template."""
     with gui_root() as root:

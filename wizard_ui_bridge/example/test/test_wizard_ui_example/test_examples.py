@@ -494,6 +494,18 @@ def test_e07_cancel() -> None:
     assert 'CANCELLED' in output
 
 
+@pytest.mark.parametrize('answer, expected', [('', None), ('1', 'b')])
+def test_e07_null_choice(answer: str, expected: Optional[str]) -> None:
+    """A nullable teleprinter choice reports an empty answer as None."""
+    out_file = StringIO()
+    bridge = e07_custom_bridge.TeleprinterBridge(out_file,
+                                                 StringIO(answer + '\n'),
+                                                 StringIO())
+    chosen = bridge.ask_choice('Pick', choices=('a', 'b'), nullable=True)
+    assert chosen == expected
+    assert 'PICK (EMPTY ANSWER FOR NONE)' in out_file.getvalue()
+
+
 def test_e07_table_choice() -> None:
     """The mandatory ask_table fills fixed rows, choice cells by number."""
     answers = StringIO('Anna\n1\nBo\n0\n')

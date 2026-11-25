@@ -24,7 +24,8 @@ from datetime import date
 from functools import partial
 from io import StringIO
 from pathlib import Path
-from typing import ClassVar, Iterator, Optional, Sequence, TypeVar
+from typing import ClassVar, Iterator, Literal, Optional, Sequence, \
+    TypeVar, overload
 from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import BindingType
@@ -36,8 +37,8 @@ from textual.widgets.selection_list import Selection
 from wizard_ui_bridge.bridge import WizardUiBridge
 from wizard_ui_bridge.bridge_helpers import check_text_args, INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
-    text_answer
-from wizard_ui_bridge.form_helpers import initial_answer, nullable_choice
+    text_answer, offered_choices
+from wizard_ui_bridge.form_helpers import initial_answer
 from wizard_ui_bridge._form_prefill import apply_prefills
 from wizard_ui_bridge._parse import NEW_FIELD_TYPES, \
     value_from_text, error_from_text, new_answer
@@ -51,7 +52,7 @@ from wizard_ui_bridge._path import _PathPick, \
     _PickerScreen, _start_dir, _start_value
 from wizard_ui_bridge.arg_types import PartialCheck, \
     WizardNavigation, WizardBack, WizardCancelLevel, \
-    WizardAbort, PathAskOptions, TableColumn, TableCell
+    WizardAbort, PathAskOptions, TableColumn, TableCell, check_nullable
 from wizard_ui_bridge.form_defs import AskField, AskFields, \
     ALL_ASK_FIELD_TYPES, AnswerField, AnswerFields, PartialFormValidator, \
     AskTextField, AskIntField, AskPathField, AskYesNoField, AskChoiceField, \
@@ -782,7 +783,7 @@ class _FormApp(_NavApp[list[AnswerField]]):
             return None if done else reason
         if isinstance(field, AskChoiceField):
             blank = self.query_one(widget_id, Select).is_blank()
-            return _CHOICE_REQUIRED if blank else None
+            return _CHOICE_REQUIRED if blank and not field.nullable else None
         if isinstance(field, AskMultiChoiceField):
             count = len(self.query_one(widget_id, SelectionList).selected)
             return _multi_error(count, field)
@@ -827,7 +828,7 @@ class WizardUiBridgeTextual(WizardUiBridge):
                  nullable: bool = False, *, default: Optional[str] = None,
                  sensitive: bool = False) -> Optional[str]:
         """Ask for free text; see WizardUiBridge.ask_text."""
-        check_text_args(default, sensitive)
+        check_text_args(default, sensitive, nullable)
         messages = self._collect(re_ask_reason)
         value = '' if default is None else default
         text = self._run(_TextApp(question, messages, value, sensitive))
@@ -856,15 +857,35 @@ class WizardUiBridgeTextual(WizardUiBridge):
                                       messages))
         return chosen == 0
 
+    @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None) -> str:
-        """Ask the user to pick one choice; see ask_choice."""
+                   re_ask_reason: Optional[str] = None,
+                   nullable: Literal[False] = False) -> str: ...
+
+    @overload
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool) -> Optional[str]: ...
+
+    # pylint: disable-next=too-many-arguments
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool = False) -> Optional[str]:
+        """Ask the user to pick one choice; see ask_choice.
+
+        A nullable choice is offered with a leading, highlighted
+        '(none)' option that selects no choice.
+        """
+        check_nullable(nullable, default is not None)
         messages = self._collect(re_ask_reason)
-        index = self._run(_ChoiceApp(question, list(choices),
-                                     _default_index(choices, default),
-                                     messages))
-        return choices[index]
+        offered = offered_choices(choices, nullable)
+        start = 0 if nullable else _default_index(choices, default)
+        index = self._run(_ChoiceApp(question, [lbl for lbl, _ in offered],
+                                     start, messages))
+        return offered[index][1]
 
     # pylint: disable-next=too-many-arguments
     def ask_multi(self, question: str, *, choices: Sequence[str],
@@ -904,10 +925,10 @@ class WizardUiBridgeTextual(WizardUiBridge):
 
         The Textual form has a widget for each field type, including a
         text input for float, time and duration fields and a text input
-        with a calendar Pick button for date and date-time fields.
+        with a calendar Pick button for date and date-time fields. A
+        nullable choice field has a drop-down that can be left blank.
         """
-        return isinstance(field, ALL_ASK_FIELD_TYPES) \
-            and not nullable_choice(field)
+        return isinstance(field, ALL_ASK_FIELD_TYPES)
 
     def _run(self, app: _NavApp[_T]) -> _T:
         """Run one screen and translate its outcome.

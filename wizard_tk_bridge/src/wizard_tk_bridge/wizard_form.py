@@ -34,9 +34,9 @@ from wizard_ui_bridge import AskField, AnswerField, PartialFormValidator, \
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
-from wizard_ui_bridge.form_helpers import nullable_choice, valid_prefills
+from wizard_ui_bridge.form_helpers import valid_prefills
 from wizard_tk_bridge.auto_scroll import auto_hide, bind_wheel
-from wizard_tk_bridge.gui_style import style_input
+from wizard_tk_bridge.gui_style import choice_combo, style_input
 from wizard_tk_bridge.wizard_path import PathRow
 from wizard_tk_bridge.wizard_pick_row import HintEntry, PickRow, TypedInput
 from wizard_tk_bridge.wizard_typed import default_text, field_hint, \
@@ -59,7 +59,7 @@ _HANDLED = (AskTextField, AskIntField, AskPathField, AskYesNoField,
 
 def handles_field(field: AskField) -> bool:
     """Return whether the Tk form can show the given field type."""
-    return isinstance(field, _HANDLED) and not nullable_choice(field)
+    return isinstance(field, _HANDLED)
 
 
 # pylint: disable-next=too-many-arguments
@@ -206,12 +206,13 @@ def _yes_no_input(grid: tk.Misc, field: AskYesNoField,
 
 def _choice_input(grid: tk.Misc, field: AskChoiceField,
                   change: Callable[[], None]) -> _Input:
-    """Build a read-only drop-down, preselecting any default choice."""
-    box = ttk.Combobox(grid, values=list(field.choices), state='readonly',
-                       width=CHOICE_WIDTH)
+    """Build a read-only drop-down, preselecting any default choice.
+
+    A nullable choice gets a blank entry, see choice_combo().
+    """
+    box = choice_combo(grid, field.choices, field.nullable, CHOICE_WIDTH)
     if field.default is not None:
         box.set(field.default)
-    style_input(box)
     box.bind('<<ComboboxSelected>>', lambda _event: change())
     return _Input(box, None, None)
 
@@ -444,7 +445,8 @@ def _basic_error(row: FormRow) -> Optional[str]:
         done, _, reason = path_answer(row.path.get(), field.path_options)
         return None if done else reason
     if isinstance(field, AskChoiceField):
-        return None if _choice_value(row) is not None else _CHOICE_REQUIRED
+        chosen = _choice_value(row) is not None
+        return None if chosen or field.nullable else _CHOICE_REQUIRED
     if isinstance(field, AskMultiChoiceField):
         return _multi_error(row, field)
     return None

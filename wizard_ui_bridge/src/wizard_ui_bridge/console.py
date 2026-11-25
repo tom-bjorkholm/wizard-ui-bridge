@@ -11,22 +11,22 @@ level or abandon the whole wizard.
 # MIT License
 
 import getpass
-from typing import Optional, Sequence, TextIO
+from typing import Literal, Optional, Sequence, TextIO, overload
 from wizard_ui_bridge.arg_types import PartialCheck, \
     WizardBack, WizardCancelLevel, WizardAbort, TableColumn, TableCell
 from wizard_ui_bridge.bridge import WizardUiBridge
 from wizard_ui_bridge.form_defs import AskField, \
     ALL_ASK_FIELD_TYPES
-from wizard_ui_bridge.form_helpers import nullable_choice
 from wizard_ui_bridge.bridge_helpers import check_text_args, \
     text_answer, ask_yes_no, ask_one, ask_many, run_table, int_text, \
-    question_with_default
+    question_with_default, NO_CHOICE
 from wizard_ui_bridge._table import _run_variable_table
 
 _BACK = ':b'
 _CANCEL = ':c'
 _ABORT = ':q'
 _NAV_HINT = '(:b=back  :c=cancel level  :q=abort)'
+_NONE_LINE = f'0: {NO_CHOICE}'
 
 
 class WizardUiBridgeConsole(WizardUiBridge):
@@ -50,7 +50,7 @@ class WizardUiBridgeConsole(WizardUiBridge):
                  nullable: bool = False, *, default: Optional[str] = None,
                  sensitive: bool = False) -> Optional[str]:
         """Ask for free text on the console; see WizardUiBridge.ask_text."""
-        check_text_args(default, sensitive)
+        check_text_args(default, sensitive, nullable)
         prompt = question_with_default(question, default)
         self._emit_question(prompt, re_ask_reason, [])
         text = self._read_sensitive(prompt) if sensitive \
@@ -62,10 +62,10 @@ class WizardUiBridgeConsole(WizardUiBridge):
 
         The inherited base ask_form() asks each field with the typed ask
         methods, so the console form handles the typed float, date, time,
-        date-time and duration fields as well as the original kinds.
+        date-time and duration fields as well as the original kinds, and
+        a nullable choice field through ask_choice(nullable=True).
         """
-        return isinstance(field, ALL_ASK_FIELD_TYPES) \
-            and not nullable_choice(field)
+        return isinstance(field, ALL_ASK_FIELD_TYPES)
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None) -> bool:
@@ -109,16 +109,38 @@ class WizardUiBridgeConsole(WizardUiBridge):
         text = self._read_answer(question)
         return text if choices is None else _to_index(text)
 
+    @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None) -> str:
-        """Ask one choice on the console; see WizardUiBridge.ask_choice."""
+                   re_ask_reason: Optional[str] = None,
+                   nullable: Literal[False] = False) -> str: ...
+
+    @overload
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool) -> Optional[str]: ...
+
+    # pylint: disable-next=too-many-arguments
+    def ask_choice(self, question: str, *, choices: Sequence[str],
+                   default: Optional[str] = None,
+                   re_ask_reason: Optional[str] = None,
+                   nullable: bool = False) -> Optional[str]:
+        """Ask one choice on the console; see WizardUiBridge.ask_choice.
+
+        A nullable choice adds the menu line '0: (none)'. Answering 0, or
+        giving an empty answer, then selects no choice.
+        """
         marked = None if default is None else (default,)
+        lines = _menu_lines(choices, marked)
+        if nullable:
+            lines.insert(0, _NONE_LINE)
 
         def reader(reason: Optional[str]) -> str | int:
-            self._emit_question(question, reason, _menu_lines(choices, marked))
-            return _to_index(self._read_answer(question))
-        return ask_one(reader, choices, default, re_ask_reason)
+            self._emit_question(question, reason, lines)
+            return _single_index(self._read_answer(question), nullable)
+        return ask_one(reader, choices, default, re_ask_reason,
+                       nullable=nullable)
 
     # pylint: disable-next=too-many-arguments
     def ask_multi(self, question: str, *, choices: Sequence[str],
@@ -191,6 +213,12 @@ def _to_index(text: str) -> str | int:
     """Map a numeric menu answer to a 0-based index, else keep the text."""
     index = int_text(text)
     return text if index is None else index - 1
+
+
+def _single_index(text: str, nullable: bool) -> str | int:
+    """Map a single-choice answer, reading 0 as no choice when nullable."""
+    answer = _to_index(text)
+    return '' if nullable and answer == -1 else answer
 
 
 def _menu_lines(choices: Optional[Sequence[str]],
