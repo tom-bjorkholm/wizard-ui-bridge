@@ -51,6 +51,18 @@ The file existence rule is also given to each path cell
 (WizardPathKind.EXISTING_FILE), so a bridge can enforce it as early as it
 likes, but the final verification checks it as well.
 
+Naming a cell in the bridge's own messages
+------------------------------------------
+A bridge also checks each cell on its own, for instance that 2027-14-32
+is not a date, and names the cell in its message. By default the name
+comes from the nearest labels: the header label above the cell, and here
+the row number, since there is no label column, as in 'Row 3 / Start
+date'. The cell_namer of the request names the cell by the contractor's
+name instead, as in 'Alice, start date'.
+
+The header labels ask to be shown in bold. That is only a hint, which a
+bridge that cannot show bold text ignores.
+
 Nothing is written to disk, so the reader can concentrate on
 ask_matrix_form().
 """
@@ -91,11 +103,12 @@ _MATRIX_QUESTION = (
 
 # The header row: one label per column. A label cell gives no answer, so
 # the header row of the answers holds only None. A label seldom needs help
-# text, so AskLabelCell only takes it as an optional keyword argument.
-_HEADER: tuple[AskCell, ...] = (
-    AskLabelCell('Name'), AskLabelCell('Start date'), AskLabelCell('End date'),
-    AskLabelCell('Contract 1'), AskLabelCell('Contract 2'),
-    AskLabelCell('Contract 3'))
+# text, so AskLabelCell only takes it as an optional keyword argument, like
+# the bold hint that makes the header stand out.
+_HEADER_TEXTS = ('Name', 'Start date', 'End date', 'Contract 1',
+                 'Contract 2', 'Contract 3')
+_HEADER: tuple[AskCell, ...] = tuple(AskLabelCell(text, bold=True)
+                                     for text in _HEADER_TEXTS)
 
 # The console asks one cell at a time (see e08): here row by row, one
 # contractor after the other, naming each cell by the header label above
@@ -145,7 +158,8 @@ def build_request(previous: Sequence[Contractor] = ()) -> MatrixRequest:
                          ask_cells=build_cells(previous),
                          dimensions=_dimensions(previous),
                          console_question=_CONSOLE_QUESTION,
-                         partial_validator=contractor_validator)
+                         partial_validator=contractor_validator,
+                         cell_namer=contractor_cell_name)
 
 
 def build_cells(previous: Sequence[Contractor]) -> list[list[AskCell]]:
@@ -316,6 +330,21 @@ def contractor_validator(answers: AnswerCells, changed: Optional[CellPosition]
     if problem is None:
         return PartMatrixValidationRes(True, '')
     return PartMatrixValidationRes(False, problem)
+
+
+def contractor_cell_name(answers: AnswerCells, position: CellPosition) -> str:
+    """Name a cell by its contractor and column, as in 'Alice, start date'.
+
+    A bridge calls this when it reports a problem with a single input
+    cell, such as a date that is not a valid date, passing the current
+    answers and the position of the cell. A contractor whose name is not
+    filled in yet is named by number, as in the final check.
+    """
+    name = answers[position.row][_NAME]
+    who = f'Contractor {position.row - _HEADER_ROWS + 1}'
+    if isinstance(name, AnswerTextCell) and name.value:
+        who = name.value
+    return f'{who}, {_HEADER_TEXTS[position.column].lower()}'
 
 
 def contractor_problem(contractors: Sequence[Contractor]) -> Optional[str]:

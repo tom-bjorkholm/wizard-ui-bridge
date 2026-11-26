@@ -5,6 +5,7 @@
 # MIT License
 
 import tkinter as tk
+import tkinter.font as tkfont
 from typing import Optional
 import pytest
 from wizard_ui_bridge import AnswerCells, AskCell, CellPosition, \
@@ -14,7 +15,7 @@ from wizard_ui_bridge import AnswerCells, AskCell, CellPosition, \
     PartialMatrixValidator, AskLabelCell, AskIntCell, AskTextCell, \
     AskYesNoCell, AnswerIntCell, AnswerTextCell, AnswerYesNoCell
 from wizard_tk_bridge.wizard_matrix import ADD_COLUMN, ADD_ROW, \
-    REMOVE_COLUMN, REMOVE_ROW, MatrixEditor
+    LABEL_WRAP, REMOVE_COLUMN, REMOVE_ROW, MatrixEditor
 from .gui_test_helpers import find_widgets, gui_root, set_entry
 
 _POS = CellPosition
@@ -87,6 +88,28 @@ def _change(editor: MatrixEditor, row: int, column: int) -> None:
     """React as the editor does when the user changes one cell."""
     # pylint: disable-next=protected-access
     editor._changed(_POS(row, column))
+
+
+def _record_focus(monkeypatch: pytest.MonkeyPatch) -> list[tk.Misc]:
+    """Record each widget given the keyboard focus, in order.
+
+    A window of the tests is never shown, and Tk does not record the
+    focus of a widget in a window that is not shown.
+    """
+    focused: list[tk.Misc] = []
+
+    def _focus_set(widget: tk.Misc) -> None:
+        """Record the widget instead of focusing it."""
+        focused.append(widget)
+    monkeypatch.setattr(tk.Misc, 'focus_set', _focus_set)
+    return focused
+
+
+def _focus_on(editor: MatrixEditor, widget: Optional[tk.Widget],
+              monkeypatch: pytest.MonkeyPatch) -> None:
+    """Make the editor see widget, or nothing, as the focused widget."""
+    path = '' if widget is None else str(widget)
+    monkeypatch.setattr(editor, '_focus_path', lambda: path)
 
 
 def test_matrix_answers() -> None:
@@ -178,16 +201,24 @@ def test_matrix_change_wired() -> None:
         check = _widget(editor, 0, 1)
         assert isinstance(check, tk.Checkbutton)
         check.invoke()
-        assert validator.calls == [_POS(0, 1)]
+        assert validator.calls == [None, _POS(0, 1)]
         assert editor.answers()[0][1] == AnswerYesNoCell(paid, True)
 
 
-def test_matrix_no_first_call() -> None:
-    """Test the validator is not called when the matrix is first shown."""
+def test_matrix_first_call() -> None:
+    """Test the validator is called at first show, but its message hidden.
+
+    The cells it disables start disabled, while a fresh matrix does not
+    open with a complaint.
+    """
     with gui_root() as root:
-        validator = _Validator(PartMatrixValidationRes(True, ''))
-        _build(root, _request(validator=validator))
-        assert not validator.calls
+        result = PartMatrixValidationRes(False, 'Empty.', (_POS(2, 2),))
+        validator = _Validator(result)
+        editor, _ = _build(root, _request(validator=validator))
+        assert validator.calls == [None]
+        assert _status(editor) == ''
+        assert str(_entry(editor, 2, 2).cget('state')) == 'disabled'
+        assert str(_entry(editor, 2, 1).cget('state')) == 'normal'
 
 
 def test_matrix_live_check() -> None:
@@ -196,8 +227,8 @@ def test_matrix_live_check() -> None:
         validator = _Validator(PartMatrixValidationRes(False, 'Too much.'))
         editor, _ = _build(root, _request(validator=validator))
         _change(editor, 1, 2)
-        assert validator.calls == [_POS(1, 2)]
-        assert validator.answers[0] == editor.answers()
+        assert validator.calls == [None, _POS(1, 2)]
+        assert validator.answers[1] == editor.answers()
         assert _status(editor) == 'Too much.'
 
 
@@ -208,7 +239,7 @@ def test_matrix_check_blocks() -> None:
         editor, recorded = _build(root, _request(validator=validator))
         editor.submit()
         assert not recorded
-        assert validator.calls == [None]
+        assert validator.calls == [None, None]
         assert _status(editor) == 'No.'
 
 
@@ -229,24 +260,34 @@ def test_matrix_disabled_cell() -> None:
 
 
 def test_matrix_prefills() -> None:
-    """Test a live prefill is written, except into the changed cell."""
+    """Test prefills are written at first show and after a change.
+
+    A prefill aimed at the changed cell is skipped.
+    """
     with gui_root() as root:
         result = PartMatrixValidationRes(
             True, '', prefill_values=((_POS(1, 1), 1), (_POS(1, 2), 2)))
         editor, _ = _build(root, _request(validator=_Validator(result)))
+        assert [_entry(editor, 1, 1).get(), _entry(editor, 1, 2).get()] == \
+            ['1', '2']
+        set_entry(_entry(editor, 1, 1), '5')
+        set_entry(_entry(editor, 1, 2), '7')
         _change(editor, 1, 1)
-        assert _entry(editor, 1, 1).get() == '8'
+        assert _entry(editor, 1, 1).get() == '5'
         assert _entry(editor, 1, 2).get() == '2'
 
 
 def test_matrix_bad_prefill() -> None:
-    """Test a prefill aimed at a label cell is reported as a bug."""
+    """Test a prefill aimed at a label cell is reported as a bug.
+
+    The validator runs when the matrix is first shown, so the bug shows
+    at once.
+    """
     with gui_root() as root:
         prefills: PrefillCellValues = ((_POS(0, 1), 'x'),)
         result = PartMatrixValidationRes(True, '', prefill_values=prefills)
-        editor, _ = _build(root, _request(validator=_Validator(result)))
         with pytest.raises(TypeError, match='label cell'):
-            _change(editor, 1, 1)
+            _build(root, _request(validator=_Validator(result)))
 
 
 def test_matrix_resize_rows() -> None:
@@ -267,7 +308,7 @@ def test_matrix_resize_rows() -> None:
         editor.add_row()
         assert editor.shape == MatrixDimension(4, 3)
         assert _entry(editor, 2, 1).get() == '8'
-        assert validator.calls == [None] * 3
+        assert validator.calls == [None] * 4
         assert len(editor.answers()) == 4
 
 
@@ -361,3 +402,145 @@ def test_matrix_tooltips() -> None:
         # pylint: enable=protected-access
         assert [tip.text if tip is not None else None
                 for tip in tooltips] == ['Who.', None, None, 'Hours worked.']
+
+
+def test_matrix_cell_namer() -> None:
+    """Test the cell namer of the request names a cell's own error."""
+    def _namer(answers: AnswerCells, position: CellPosition) -> str:
+        """Name the cell by its row and the number of its answer rows."""
+        return f'Row {position.row} of {len(answers)}'
+    with gui_root() as root:
+        request = _request()._replace(cell_namer=_namer)
+        editor, _ = _build(root, request)
+        set_entry(_entry(editor, 2, 2), 'x')
+        _change(editor, 2, 2)
+        assert _status(editor) == 'Row 2 of 3: Please enter an integer.'
+
+
+def test_matrix_invalid_focus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test submit moves the focus to the first invalid enabled cell."""
+    focused = _record_focus(monkeypatch)
+    with gui_root() as root:
+        validator = _Validator(PartMatrixValidationRes(True, '',
+                                                       (_POS(1, 2),)))
+        editor, recorded = _build(root, _request(validator=validator))
+        set_entry(_entry(editor, 1, 2), '25')
+        set_entry(_entry(editor, 2, 2), '25')
+        editor.submit()
+        assert not recorded
+        assert focused == [_entry(editor, 2, 2)]
+
+
+@pytest.mark.parametrize('disabled, column', [((), 1), ((_POS(3, 1),), 2)])
+def test_matrix_focus_new_row(monkeypatch: pytest.MonkeyPatch,
+                              disabled: tuple[CellPosition, ...],
+                              column: int) -> None:
+    """Test an appended row's first enabled input gets the focus."""
+    focused = _record_focus(monkeypatch)
+    with gui_root() as root:
+        validator = _Validator(PartMatrixValidationRes(True, '', disabled))
+        editor, _ = _build(root, _request(_SHEET, _RESIZABLE, validator))
+        editor.add_row()
+        assert focused == [_entry(editor, 3, column)]
+
+
+def test_matrix_focus_new_col(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test an appended column's first input, below its label, is focused."""
+    focused = _record_focus(monkeypatch)
+    with gui_root() as root:
+        editor, _ = _build(root, _request(_SHEET, _RESIZABLE))
+        editor.add_column()
+        assert focused == [_entry(editor, 1, 3)]
+
+
+def test_label_row_no_focus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test an appended row of only labels gives no input the focus."""
+    focused = _record_focus(monkeypatch)
+    with gui_root() as root:
+        cells: list[list[AskCell]] = [[AskLabelCell('Name')]]
+        dims = MatrixDimensions(MatrixDimension(1, 1), MatrixDimension(2, 1),
+                                MatrixDimension(1, 1))
+        editor, _ = _build(root, _request(cells, dims))
+        editor.add_row()
+        assert editor.shape == MatrixDimension(2, 1)
+        assert not focused
+
+
+def test_matrix_scroll_added() -> None:
+    """Test an appended row below the visible area is scrolled into view."""
+    with gui_root() as root:
+        frame = tk.Frame(root)
+        frame.pack()
+        editor = MatrixEditor(frame, _request(_SHEET, _RESIZABLE),
+                              lambda _answers: None)
+        canvas = _widget(editor, 0, 0).master.master
+        assert isinstance(canvas, tk.Canvas)
+        canvas.configure(height=40)
+        editor.add_row()
+        assert canvas.yview()[0] > 0
+
+
+@pytest.mark.parametrize('focus_row, expected', [(3, True), (1, False),
+                                                 (None, False)])
+def test_remove_row_refocus(monkeypatch: pytest.MonkeyPatch,
+                            focus_row: Optional[int], expected: bool) -> None:
+    """Test deleting the focused row moves the focus to the new last row.
+
+    The focus is left alone when it was in a row that is kept, or not in
+    the matrix at all.
+    """
+    focused = _record_focus(monkeypatch)
+    with gui_root() as root:
+        editor, _ = _build(root, _request(_SHEET, _RESIZABLE))
+        editor.add_row()
+        focused.clear()
+        was = None if focus_row is None else _entry(editor, focus_row, 1)
+        _focus_on(editor, was, monkeypatch)
+        editor.remove_row()
+        assert focused == ([_entry(editor, 2, 1)] if expected else [])
+
+
+def test_remove_col_refocus(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test deleting the focused column focuses the new last column."""
+    focused = _record_focus(monkeypatch)
+    with gui_root() as root:
+        editor, _ = _build(root, _request(_SHEET, _RESIZABLE))
+        _focus_on(editor, _entry(editor, 2, 2), monkeypatch)
+        editor.remove_column()
+        assert focused == [_entry(editor, 1, 1)]
+
+
+@pytest.mark.parametrize('bold, italic, weight, slant', [
+    (True, False, 'bold', 'roman'), (False, True, 'normal', 'italic'),
+    (True, True, 'bold', 'italic')])
+def test_matrix_label_style(bold: bool, italic: bool, weight: str,
+                            slant: str) -> None:
+    """Test a label cell asking for bold or italics gets that font."""
+    with gui_root() as root:
+        cells: list[list[AskCell]] = [
+            [AskLabelCell('Day', bold=bold, italic=italic)]]
+        editor, _ = _build(root, _request(cells, MatrixDimensions.fixed(1, 1)))
+        actual = tkfont.Font(root, _widget(editor, 0, 0).cget('font')).actual()
+        assert (actual['weight'], actual['slant']) == (weight, slant)
+
+
+def test_matrix_label_width() -> None:
+    """Test a label wraps at its width hint, in average digit widths."""
+    with gui_root() as root:
+        cells: list[list[AskCell]] = [
+            [AskLabelCell('Plain'), AskLabelCell('Narrow', width=10)]]
+        editor, _ = _build(root, _request(cells, MatrixDimensions.fixed(1, 2)))
+        plain, narrow = _widget(editor, 0, 0), _widget(editor, 0, 1)
+        digit = tkfont.Font(root, narrow.cget('font')).measure('0')
+        assert int(plain.cget('wraplength')) == LABEL_WRAP
+        assert int(narrow.cget('wraplength')) == 10 * digit
+
+
+def test_matrix_input_widths() -> None:
+    """Test inputs are compact by default, and a width hint wins."""
+    with gui_root() as root:
+        cells: list[list[AskCell]] = [
+            [_HOURS, AskIntCell(None, width=3), AskTextCell(None)]]
+        editor, _ = _build(root, _request(cells, MatrixDimensions.fixed(1, 3)))
+        assert [int(_entry(editor, 0, column).cget('width'))
+                for column in range(3)] == [8, 3, 20]

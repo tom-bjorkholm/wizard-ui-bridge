@@ -3,9 +3,10 @@
 
 A bridge builds the cells of a matrix form from the MatrixCellSpec of the
 request with cell_at(), applies the prefills of a partial validator with
-valid_cell_prefills(), and names a cell in a message with cell_name().
-The cells of the current shape are given to the last two as a grid of
-AskCells, one sequence per row.
+valid_cell_prefills(), and names a cell in its own message with
+message_name(), which uses the CellNamer of the request and falls back
+to cell_name(). The cells of the current shape are given to the last
+three as a grid of AskCells, one sequence per row.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -15,8 +16,8 @@ from typing import Iterable, Iterator, Optional, Sequence
 from wizard_ui_bridge.form_helpers import prefill_value
 from wizard_ui_bridge.matrix_cell_defs import ALL_ASK_CELL_TYPES, AskCell, \
     AskLabelCell, PrefillValueType
-from wizard_ui_bridge.matrix_defs import CellPosition, MatrixCellSpec, \
-    PrefillCellValues
+from wizard_ui_bridge.matrix_defs import AnswerCells, CellNamer, \
+    CellPosition, MatrixCellSpec, PrefillCellValues
 
 
 def cell_at(spec: MatrixCellSpec, position: CellPosition) -> AskCell:
@@ -123,12 +124,21 @@ def cell_name(cells: Sequence[Sequence[AskCell]],
     """Return a name of a cell for a message shown to the user.
 
     The name is the row label and the column label of the cell joined
-    with ' / ', such as 'Bob / Tue', or the one of them that exists. A
-    cell with neither is named by its 1-based row and column.
+    with ' / ', such as 'Bob / Tue'. Where a label is missing, the 1-based
+    row or column number takes its place, such as 'Row 2 / Start date'.
     """
-    labels = [label for label in (row_label(cells, position),
-                                  column_label(cells, position))
-              if label is not None]
-    if labels:
-        return ' / '.join(labels)
-    return f'Row {position.row + 1}, column {position.column + 1}'
+    row = row_label(cells, position) or f'Row {position.row + 1}'
+    column = column_label(cells, position) or f'Column {position.column + 1}'
+    return f'{row} / {column}'
+
+
+def message_name(namer: Optional[CellNamer], answers: AnswerCells,
+                 cells: Sequence[Sequence[AskCell]],
+                 position: CellPosition) -> str:
+    """Return the name of a cell for a message the bridge writes itself.
+
+    The CellNamer of the request names the cell when it is given and
+    returns a non-empty name; otherwise cell_name() does.
+    """
+    name = '' if namer is None else namer(answers, position)
+    return name or cell_name(cells, position)

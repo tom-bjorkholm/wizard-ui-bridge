@@ -176,18 +176,23 @@ class WizardUiBridgeTk(WizardUiBridge):
                         re_ask_reason: Optional[str] = None) -> AnswerCells:
         """Ask a whole matrix form on one screen; see ask_matrix_form.
 
-        Each AskLabelCell is shown as plain text and every other cell as
-        the input a form field of its type gets, with its help text and
-        any format hint as a hover tooltip. When the minimum and maximum
-        dimensions differ, buttons in the button row append or delete the
-        last row or column within the bounds. The partial validator is
-        called after each change of a cell, with its position, and after
-        each change of the shape, with None, but not when the matrix is
-        first shown. Its disabled cells are greyed out, its prefills are
-        written into the inputs, and its message is shown below the
-        matrix. OK first runs the partial validator, then needs every
-        enabled cell to hold a valid answer, and finally needs the
-        validator to accept the matrix.
+        Each AskLabelCell is shown as plain text, in bold or italics when
+        it asks for it, and every other cell as the input a form field of
+        its type gets, narrower unless the cell gives a width hint, with
+        its help text and any format hint as a hover tooltip. When the
+        minimum and maximum dimensions differ, buttons in the button row
+        append or delete the last row or column within the bounds; an
+        appended row or column is scrolled into view and its first input
+        gets the keyboard focus. The partial validator is called when the
+        matrix is first shown, with None, after each change of a cell,
+        with its position, and after each change of the shape, with None.
+        Its disabled cells are greyed out and its prefills are written
+        into the inputs. Its message is shown below the matrix, except
+        for the call when the matrix is first shown. OK first runs the
+        partial validator, then needs every enabled cell to hold a valid
+        answer, moving the keyboard focus to the first cell that does not
+        and naming it by the cell_namer of the request or its labels, and
+        finally needs the validator to accept the matrix.
         """
         return self._window_obj().ask_matrix_form(request, re_ask_reason)
 

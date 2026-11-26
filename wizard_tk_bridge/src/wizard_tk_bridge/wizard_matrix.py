@@ -3,38 +3,45 @@
 
 A matrix form asks a grid of cells at once. :class:`MatrixEditor` builds
 one widget per cell of the current shape: a plain label for an
-AskLabelCell, and for every other cell a
-:class:`~wizard_tk_bridge.wizard_cell.CellInput`, the same input a form
-row shows. It reads the answers of the current shape, runs the optional
-partial validator after every change of a cell and of the shape to show
-advisory feedback, disable irrelevant cells and apply prefills, and
-validates every enabled cell on submit, so a submitted matrix is always
-complete. The partial validator is not called when the matrix is first
-shown, only once the user changes it, and on submit.
+AskLabelCell, in bold or italics when the cell asks for it, and for
+every other cell a compact :class:`~wizard_tk_bridge.wizard_cell.CellInput`,
+the same input a form row shows but narrower by default. It reads the
+answers of the current shape and runs the optional partial validator
+when the matrix is first shown and after every change of a cell and of
+the shape, to disable irrelevant cells, apply prefills and show advisory
+feedback. Its message is first shown once the user changes the matrix or
+submits it, so a fresh matrix does not open with a complaint. On submit
+every enabled cell is validated, so a submitted matrix is always
+complete, and the keyboard focus moves to the first cell that fails its
+own check. Such a cell is named in the message by the CellNamer of the
+request, or else by its labels.
 
 When the minimum and maximum dimensions of a request differ,
 :meth:`MatrixEditor.add_resize_buttons` adds buttons that append or
-delete the last row or column, each greyed out at its bound. Return in an
-input submits the matrix, also in a row or column added later, since each
-input is bound when it is built.
+delete the last row or column, each greyed out at its bound. An appended
+row or column is scrolled into view and its first enabled input gets the
+keyboard focus, as does the new last row or column when the focus was in
+a deleted one. Return in an input submits the matrix, also in a row or
+column added later, since each input is bound when it is built.
 """
 
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
 import tkinter as tk
+import tkinter.font as tkfont
 from dataclasses import dataclass
 from functools import partial
 from itertools import product
-from typing import Callable, Iterator, Optional
+from typing import Callable, Iterator, Optional, Sequence
 from wizard_ui_bridge import AnswerCell, AnswerCells, AskCell, AskLabelCell, \
     CellPosition, MatrixDimension, MatrixRequest, PrefillCellValues
 from wizard_ui_bridge.form_helpers import answer_of
-from wizard_ui_bridge.matrix_helpers import cell_at, cell_name, \
+from wizard_ui_bridge.matrix_helpers import cell_at, message_name, \
     valid_cell_prefills
 from wizard_tk_bridge.gui_style import bind_submit
 from wizard_tk_bridge.wizard_cell import CellInput, HelpTooltip, \
-    build_input, scrolled_editor, tooltip_text
+    build_input, scroll_into_view, scrolled_editor, tooltip_text
 
 ADD_ROW = '+ Row'
 REMOVE_ROW = '− Row'
@@ -72,6 +79,25 @@ def _cell_tooltip(ask: AskCell, widget: tk.Widget) -> Optional[HelpTooltip]:
     return None if text is None else HelpTooltip(text, widget, (widget,))
 
 
+def _label(parent: tk.Misc, ask: AskLabelCell) -> tk.Label:
+    """Return the label of a label cell, wrapped at its width hint."""
+    label = tk.Label(parent, text=ask.text, justify='left')
+    if ask.bold or ask.italic:
+        label.configure(font=_label_font(parent, ask))
+    wrap = LABEL_WRAP if ask.width is None \
+        else tkfont.Font(parent, label.cget('font')).measure('0') * ask.width
+    label.configure(wraplength=wrap)
+    return label
+
+
+def _label_font(parent: tk.Misc, ask: AskLabelCell) -> tuple[str, int, str]:
+    """Return the default font in the bold and italic style of a label."""
+    actual = tkfont.nametofont('TkDefaultFont', parent).actual()
+    weight = 'bold' if ask.bold else 'normal'
+    slant = 'italic' if ask.italic else 'roman'
+    return actual['family'], actual['size'], f'{weight} {slant}'
+
+
 # pylint: disable-next=too-many-instance-attributes
 class MatrixEditor:
     """A grid of label and input cells that asks a whole matrix form."""
@@ -90,6 +116,7 @@ class MatrixEditor:
         self._cells: list[list[MatrixCell]] = []
         for _ in range(default.rows):
             self._append_row()
+        self._validate(None, live=True)
 
     @property
     def shape(self) -> MatrixDimension:
@@ -105,14 +132,18 @@ class MatrixEditor:
 
         The partial validator runs first, so the cells it disables are not
         checked. Every enabled cell must then pass its own check, and the
-        validator must accept the matrix.
+        first that does not gets the keyboard focus. Last the validator
+        must accept the matrix.
         """
         problem = self._validate(self._last_changed, live=False)
-        message = self._first_error() or problem
-        if message is not None:
-            self._show(message)
-            return
-        self._on_submit(self.answers())
+        invalid = self._first_invalid()
+        if invalid is not None:
+            self._reveal(invalid)
+            self._show(self._cell_error(invalid) or '')
+        elif problem is not None:
+            self._show(problem)
+        else:
+            self._on_submit(self.answers())
 
     def add_resize_buttons(self, box: tk.Frame) -> None:
         """Add the buttons that append or delete the last row or column.
@@ -136,16 +167,15 @@ class MatrixEditor:
         """Append a row of fresh cells, up to the maximum row count."""
         if self._allowed()[ADD_ROW]:
             self._append_row()
-            self._reshaped()
+            self._reshaped(self._row_line(self._shape.rows - 1), True)
 
     def remove_row(self) -> None:
         """Delete the last row, down to the minimum row count."""
         if self._allowed()[REMOVE_ROW]:
-            for cell in self._cells.pop():
-                cell.widget.destroy()
+            focused = self._destroy(self._cells.pop())
             self._shape = MatrixDimension(self._shape.rows - 1,
                                           self._shape.columns)
-            self._reshaped()
+            self._reshaped(self._row_line(self._shape.rows - 1), focused)
 
     def add_column(self) -> None:
         """Append a column of fresh cells, up to the maximum column count."""
@@ -154,16 +184,16 @@ class MatrixEditor:
             for row, cells in enumerate(self._cells):
                 cells.append(self._build_cell(CellPosition(row, column)))
             self._shape = MatrixDimension(self._shape.rows, column + 1)
-            self._reshaped()
+            self._reshaped(self._column_line(column), True)
 
     def remove_column(self) -> None:
         """Delete the last column, down to the minimum column count."""
         if self._allowed()[REMOVE_COLUMN]:
-            for cells in self._cells:
-                cells.pop().widget.destroy()
+            focused = self._destroy([cells.pop() for cells in self._cells])
             self._shape = MatrixDimension(self._shape.rows,
                                           self._shape.columns - 1)
-            self._reshaped()
+            last = self._shape.columns - 1
+            self._reshaped(self._column_line(last), focused)
 
     def _allowed(self) -> dict[str, bool]:
         """Return for each resize action whether the bounds allow it."""
@@ -187,11 +217,54 @@ class MatrixEditor:
                             for column in range(self._shape.columns)])
         self._shape = MatrixDimension(row + 1, self._shape.columns)
 
-    def _reshaped(self) -> None:
-        """Update the resize buttons and re-validate the whole matrix."""
+    def _reshaped(self, edge: Sequence[CellPosition], focus: bool) -> None:
+        """Update the resize buttons and re-validate the whole matrix.
+
+        edge is the new last row or column, which gets the keyboard focus
+        when focus is True.
+        """
         self._update_resizers()
         self._last_changed = None
         self._show(self._validate(None, live=True) or '')
+        if focus:
+            self._focus_first(edge)
+
+    def _destroy(self, cells: Sequence[MatrixCell]) -> bool:
+        """Destroy deleted cells, telling whether one of them had focus."""
+        focus = self._focus_path()
+        had_focus = any(focus == str(cell.widget)
+                        or focus.startswith(f'{cell.widget}.')
+                        for cell in cells)
+        for cell in cells:
+            cell.widget.destroy()
+        return had_focus
+
+    def _focus_path(self) -> str:
+        """Return the path name of the widget last focused in the window.
+
+        The window keeps it also while another application is active.
+        """
+        return str(self._grid.tk.call('focus', '-lastfor', self._grid))
+
+    def _focus_first(self, positions: Sequence[CellPosition]) -> None:
+        """Reveal the first enabled input, else the first of the cells."""
+        inputs = [position for position in positions
+                  if self._focusable(position)]
+        target = next(iter(inputs or positions), None)
+        if target is not None:
+            self._reveal(target)
+
+    def _focusable(self, position: CellPosition) -> bool:
+        """Return whether a cell is an enabled input."""
+        return position not in self._disabled \
+            and self._cell(position).cell_input is not None
+
+    def _reveal(self, position: CellPosition) -> None:
+        """Scroll a cell into view, focusing it when it is focusable."""
+        cell = self._cell(position)
+        scroll_into_view(self._grid, cell.widget)
+        if cell.cell_input is not None and self._focusable(position):
+            cell.cell_input.main_widget().focus_set()
 
     def _build_cell(self, position: CellPosition) -> MatrixCell:
         """Build and place the label or input of one cell."""
@@ -205,10 +278,9 @@ class MatrixEditor:
                     ) -> tuple[tk.Widget, Optional[CellInput]]:
         """Return a new label, or a new input bound to Return and change."""
         if isinstance(ask, AskLabelCell):
-            label = tk.Label(self._grid, text=ask.text, justify='left',
-                             wraplength=LABEL_WRAP)
-            return label, None
-        built = build_input(self._grid, ask, partial(self._changed, position))
+            return _label(self._grid, ask), None
+        built = build_input(self._grid, ask, partial(self._changed, position),
+                            compact=True)
         bind_submit(built.widget, self.submit)
         return built.widget, built
 
@@ -217,6 +289,16 @@ class MatrixEditor:
         for row, column in product(range(self._shape.rows),
                                    range(self._shape.columns)):
             yield CellPosition(row, column)
+
+    def _row_line(self, row: int) -> list[CellPosition]:
+        """Return the positions of one row of the current shape."""
+        return [position for position in self._positions()
+                if position.row == row]
+
+    def _column_line(self, column: int) -> list[CellPosition]:
+        """Return the positions of one column, top to bottom."""
+        return [position for position in self._positions()
+                if position.column == column]
 
     def _asks(self) -> list[list[AskCell]]:
         """Return the AskCells of the current shape, one list per row."""
@@ -263,25 +345,27 @@ class MatrixEditor:
             assert cell_input is not None
             cell_input.write(value)
 
-    def _first_error(self) -> Optional[str]:
-        """Return the first enabled cell's own error, or None."""
+    def _first_invalid(self) -> Optional[CellPosition]:
+        """Return the first enabled cell failing its own check, or None."""
         for position in self._positions():
-            if position not in self._disabled:
-                error = self._cell_error(position)
-                if error is not None:
-                    return error
+            if position not in self._disabled \
+                    and self._cell(position).error() is not None:
+                return position
         return None
 
     def _cell_error(self, position: CellPosition) -> Optional[str]:
         """Return one cell's own error, prefixed with the cell's name.
 
-        The whole matrix shares one status line, so naming the cell by
-        its labels makes clear which cell a message refers to.
+        The whole matrix shares one status line, so naming the cell, by
+        the CellNamer of the request or by its labels, makes clear which
+        cell a message refers to.
         """
         error = self._cell(position).error()
         if error is None:
             return None
-        return f'{cell_name(self._asks(), position)}: {error}'
+        name = message_name(self._request.cell_namer, self.answers(),
+                            self._asks(), position)
+        return f'{name}: {error}'
 
     def _cell(self, position: CellPosition) -> MatrixCell:
         """Return the built cell at a position of the current shape."""

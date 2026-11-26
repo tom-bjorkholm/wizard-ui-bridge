@@ -23,9 +23,13 @@
     * [value](#wizard_tk_bridge.wizard_cell.CellInput.value)
     * [error](#wizard_tk_bridge.wizard_cell.CellInput.error)
     * [write](#wizard_tk_bridge.wizard_cell.CellInput.write)
+    * [main\_widget](#wizard_tk_bridge.wizard_cell.CellInput.main_widget)
+    * [set\_width](#wizard_tk_bridge.wizard_cell.CellInput.set_width)
     * [set\_enabled](#wizard_tk_bridge.wizard_cell.CellInput.set_enabled)
   * [build\_input](#wizard_tk_bridge.wizard_cell.build_input)
   * [scrolled\_editor](#wizard_tk_bridge.wizard_cell.scrolled_editor)
+  * [scroll\_into\_view](#wizard_tk_bridge.wizard_cell.scroll_into_view)
+  * [view\_start](#wizard_tk_bridge.wizard_cell.view_start)
 * [wizard\_tk\_bridge.gui\_style](#wizard_tk_bridge.gui_style)
   * [style\_input](#wizard_tk_bridge.gui_style.style_input)
   * [choice\_combo](#wizard_tk_bridge.gui_style.choice_combo)
@@ -50,6 +54,7 @@
   * [combined\_text](#wizard_tk_bridge.wizard_typed.combined_text)
 * [wizard\_tk\_bridge.wizard\_pick\_row](#wizard_tk_bridge.wizard_pick_row)
   * [TypedInput](#wizard_tk_bridge.wizard_pick_row.TypedInput)
+    * [entry](#wizard_tk_bridge.wizard_pick_row.TypedInput.entry)
     * [text](#wizard_tk_bridge.wizard_pick_row.TypedInput.text)
     * [set\_text](#wizard_tk_bridge.wizard_pick_row.TypedInput.set_text)
     * [set\_enabled](#wizard_tk_bridge.wizard_pick_row.TypedInput.set_enabled)
@@ -60,6 +65,7 @@
     * [set\_enabled](#wizard_tk_bridge.wizard_pick_row.HintEntry.set_enabled)
   * [PickRow](#wizard_tk_bridge.wizard_pick_row.PickRow)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_pick_row.PickRow.__init__)
+    * [entry](#wizard_tk_bridge.wizard_pick_row.PickRow.entry)
     * [text](#wizard_tk_bridge.wizard_pick_row.PickRow.text)
     * [set\_text](#wizard_tk_bridge.wizard_pick_row.PickRow.set_text)
     * [set\_enabled](#wizard_tk_bridge.wizard_pick_row.PickRow.set_enabled)
@@ -106,6 +112,7 @@
   * [pick\_path](#wizard_tk_bridge.wizard_path.pick_path)
   * [PathRow](#wizard_tk_bridge.wizard_path.PathRow)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_path.PathRow.__init__)
+    * [entry](#wizard_tk_bridge.wizard_path.PathRow.entry)
     * [get](#wizard_tk_bridge.wizard_path.PathRow.get)
     * [set\_text](#wizard_tk_bridge.wizard_path.PathRow.set_text)
     * [set\_enabled](#wizard_tk_bridge.wizard_path.PathRow.set_enabled)
@@ -321,9 +328,12 @@ calendar Pick button for dates, for the typed values. :func:`build_input`
 builds the :class:`CellInput` for one Ask*Cell (every Ask*Field is one
 too), which reads the current answer value, reports the input's own
 validation error, writes a prefill into the input, and enables or
-disables it. :class:`HelpTooltip` shows a help text on hover, and
+disables it. The width hint of a cell sizes the text part of its input;
+without one a compact input, as in a matrix, gets a narrower default
+than a form row. :class:`HelpTooltip` shows a help text on hover,
 :func:`scrolled_editor` builds the scrolling area and status line shared
-by the form and matrix editors.
+by the form and matrix editors, and :func:`scroll_into_view` scrolls that
+area to show one of its widgets.
 
 Turning the raw text of an integer input into its answer is the same job
 in a cell and in a standalone question, so :func:`int_answer` lives here
@@ -462,6 +472,32 @@ Write a prefill value into the input, even when it is disabled.
 The value has been checked against the cell type, see
 wizard_ui_bridge.form_helpers.prefill_value().
 
+<a id="wizard_tk_bridge.wizard_cell.CellInput.main_widget"></a>
+
+#### main\_widget
+
+```python
+def main_widget() -> tk.Widget
+```
+
+Return the widget the user types or clicks in.
+
+That is the text entry of a path or typed input, beside its
+button, and otherwise the widget itself. It is the widget to give
+the keyboard focus to.
+
+<a id="wizard_tk_bridge.wizard_cell.CellInput.set_width"></a>
+
+#### set\_width
+
+```python
+def set_width(width: int) -> None
+```
+
+Set the width in characters of the input's text part.
+
+A check box has no text part, so it keeps its size.
+
 <a id="wizard_tk_bridge.wizard_cell.CellInput.set_enabled"></a>
 
 #### set\_enabled
@@ -477,14 +513,18 @@ Enable or disable the input, keeping a drop-down read-only.
 #### build\_input
 
 ```python
-def build_input(parent: tk.Misc, cell: AskCell,
-                change: Callable[[], None]) -> CellInput
+def build_input(parent: tk.Misc,
+                cell: AskCell,
+                change: Callable[[], None],
+                compact: bool = False) -> CellInput
 ```
 
 Build the input matching an input cell or field type.
 
 change is called whenever the user changes the input. A label cell
-has no input and must not be passed.
+has no input and must not be passed. The width hint of the cell sizes
+the text part of the input. Without one, a compact input, as in a
+matrix, gets a narrower default width than a form row.
 
 <a id="wizard_tk_bridge.wizard_cell.scrolled_editor"></a>
 
@@ -506,6 +546,33 @@ status line stays below the scroll area so it is always shown.
 **Returns**:
 
   The frame to grid the inputs into, and the status line label.
+
+<a id="wizard_tk_bridge.wizard_cell.scroll_into_view"></a>
+
+#### scroll\_into\_view
+
+```python
+def scroll_into_view(grid: tk.Frame, widget: tk.Widget) -> None
+```
+
+Scroll an editor's area as little as needed to show a widget.
+
+grid is the frame returned by scrolled_editor() and widget one that
+is gridded into it. A widget larger than the area shows its start.
+
+<a id="wizard_tk_bridge.wizard_cell.view_start"></a>
+
+#### view\_start
+
+```python
+def view_start(item: int, size: int, view: float, shown: int) -> float
+```
+
+Return the new start of a scrolled view along one axis.
+
+The view starts at view and shows shown pixels. It moves as little
+as possible to show the item, of size pixels from item, or the
+item's start when the item is larger than the view.
 
 <a id="wizard_tk_bridge.gui_style"></a>
 
@@ -791,7 +858,8 @@ calendar.
 
 :class:`HintEntry` is the placeholder entry, and :class:`PickRow` bundles
 one with the calendar button. Both satisfy :class:`TypedInput`, the small
-interface a cell input uses to read, write, and enable a typed input.
+interface a cell input uses to read, write, enable and size a typed
+input.
 
 <a id="wizard_tk_bridge.wizard_pick_row.TypedInput"></a>
 
@@ -801,7 +869,18 @@ interface a cell input uses to read, write, and enable a typed input.
 class TypedInput(Protocol)
 ```
 
-The read, write and enable interface of a typed form input.
+The read, write, enable and entry interface of a typed form input.
+
+<a id="wizard_tk_bridge.wizard_pick_row.TypedInput.entry"></a>
+
+#### entry
+
+```python
+@property
+def entry() -> tk.Entry
+```
+
+Return the text entry, for instance to set its width.
 
 <a id="wizard_tk_bridge.wizard_pick_row.TypedInput.text"></a>
 
@@ -904,6 +983,17 @@ def __init__(parent: tk.Misc, field: AskCell, hint: str, initial: str,
 ```
 
 Build the entry and Pick button inside a new frame.
+
+<a id="wizard_tk_bridge.wizard_pick_row.PickRow.entry"></a>
+
+#### entry
+
+```python
+@property
+def entry() -> tk.Entry
+```
+
+Return the text entry beside the Pick button.
 
 <a id="wizard_tk_bridge.wizard_pick_row.PickRow.text"></a>
 
@@ -1442,18 +1532,23 @@ def ask_matrix_form(request: MatrixRequest,
 
 Ask a whole matrix form on one screen; see ask_matrix_form.
 
-Each AskLabelCell is shown as plain text and every other cell as
-the input a form field of its type gets, with its help text and
-any format hint as a hover tooltip. When the minimum and maximum
-dimensions differ, buttons in the button row append or delete the
-last row or column within the bounds. The partial validator is
-called after each change of a cell, with its position, and after
-each change of the shape, with None, but not when the matrix is
-first shown. Its disabled cells are greyed out, its prefills are
-written into the inputs, and its message is shown below the
-matrix. OK first runs the partial validator, then needs every
-enabled cell to hold a valid answer, and finally needs the
-validator to accept the matrix.
+Each AskLabelCell is shown as plain text, in bold or italics when
+it asks for it, and every other cell as the input a form field of
+its type gets, narrower unless the cell gives a width hint, with
+its help text and any format hint as a hover tooltip. When the
+minimum and maximum dimensions differ, buttons in the button row
+append or delete the last row or column within the bounds; an
+appended row or column is scrolled into view and its first input
+gets the keyboard focus. The partial validator is called when the
+matrix is first shown, with None, after each change of a cell,
+with its position, and after each change of the shape, with None.
+Its disabled cells are greyed out and its prefills are written
+into the inputs. Its message is shown below the matrix, except
+for the call when the matrix is first shown. OK first runs the
+partial validator, then needs every enabled cell to hold a valid
+answer, moving the keyboard focus to the first cell that does not
+and naming it by the cell_namer of the request or its labels, and
+finally needs the validator to accept the matrix.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.supports_form_field"></a>
 
@@ -1548,6 +1643,17 @@ def __init__(parent: tk.Misc,
 
 Build the entry and Browse button inside a new frame.
 
+<a id="wizard_tk_bridge.wizard_path.PathRow.entry"></a>
+
+#### entry
+
+```python
+@property
+def entry() -> tk.Entry
+```
+
+Return the path entry beside the Browse button.
+
 <a id="wizard_tk_bridge.wizard_path.PathRow.get"></a>
 
 #### get
@@ -1586,20 +1692,26 @@ A whole matrix form shown on one screen.
 
 A matrix form asks a grid of cells at once. :class:`MatrixEditor` builds
 one widget per cell of the current shape: a plain label for an
-AskLabelCell, and for every other cell a
-:class:`~wizard_tk_bridge.wizard_cell.CellInput`, the same input a form
-row shows. It reads the answers of the current shape, runs the optional
-partial validator after every change of a cell and of the shape to show
-advisory feedback, disable irrelevant cells and apply prefills, and
-validates every enabled cell on submit, so a submitted matrix is always
-complete. The partial validator is not called when the matrix is first
-shown, only once the user changes it, and on submit.
+AskLabelCell, in bold or italics when the cell asks for it, and for
+every other cell a compact :class:`~wizard_tk_bridge.wizard_cell.CellInput`,
+the same input a form row shows but narrower by default. It reads the
+answers of the current shape and runs the optional partial validator
+when the matrix is first shown and after every change of a cell and of
+the shape, to disable irrelevant cells, apply prefills and show advisory
+feedback. Its message is first shown once the user changes the matrix or
+submits it, so a fresh matrix does not open with a complaint. On submit
+every enabled cell is validated, so a submitted matrix is always
+complete, and the keyboard focus moves to the first cell that fails its
+own check. Such a cell is named in the message by the CellNamer of the
+request, or else by its labels.
 
 When the minimum and maximum dimensions of a request differ,
 :meth:`MatrixEditor.add_resize_buttons` adds buttons that append or
-delete the last row or column, each greyed out at its bound. Return in an
-input submits the matrix, also in a row or column added later, since each
-input is bound when it is built.
+delete the last row or column, each greyed out at its bound. An appended
+row or column is scrolled into view and its first enabled input gets the
+keyboard focus, as does the new last row or column when the focus was in
+a deleted one. Return in an input submits the matrix, also in a row or
+column added later, since each input is bound when it is built.
 
 <a id="wizard_tk_bridge.wizard_matrix.MatrixCell"></a>
 
@@ -1688,7 +1800,8 @@ Validate the whole matrix and submit its answers when valid.
 
 The partial validator runs first, so the cells it disables are not
 checked. Every enabled cell must then pass its own check, and the
-validator must accept the matrix.
+first that does not gets the keyboard focus. Last the validator
+must accept the matrix.
 
 <a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.add_resize_buttons"></a>
 

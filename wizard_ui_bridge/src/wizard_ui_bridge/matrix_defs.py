@@ -176,15 +176,36 @@ type PartialMatrixValidator = Callable[[AnswerCells, Optional[CellPosition]],
 
    The callback receives the current state of the matrix form as AnswerCells,
    and the CellPosition of the cell most recently filled in, or None when
-   the shape of the matrix changed because the user appended or deleted
-   the last row or column. After a shape change the validator should
-   re-evaluate the whole matrix from the answers.
+   no cell has changed yet or the shape of the matrix changed because the
+   user appended or deleted the last row or column. With None the
+   validator should evaluate the whole matrix from the answers.
+   A bridge that can show the whole matrix calls it when the matrix is
+   first shown, with None, to find the cells that start disabled and any
+   prefills, but does not show its message until the user has changed
+   something or tries to submit the matrix.
    It returns a PartMatrixValidationRes, which indicates whether the matrix
    form is valid, and if not valid, a message to be displayed to the user,
    a tuple of CellPosition objects that should be disabled in the matrix
    form because they are irrelevant given the current state of the matrix
    form, and any values to prefill into other cells.
    See PartMatrixValidationRes for the rules of each part.
+"""
+
+
+type CellNamer = Callable[[AnswerCells, CellPosition], str]
+"""Callback naming a cell in a message the bridge writes itself.
+
+   A bridge checks each input cell on its own, for instance that a date
+   is a valid date, and since all cells share one status line, its
+   message names the cell. By default the name is built from the nearest
+   labels to the left of and above the cell, see
+   matrix_helpers.cell_name(). A CellNamer gets the current answers and
+   the position of the cell, so the name can use what the user entered,
+   such as 'Alice, start date'. An empty string falls back to the
+   default name.
+
+   The partial validator writes its own messages, so it does not need a
+   CellNamer.
 """
 
 
@@ -270,6 +291,8 @@ class MatrixRequest(NamedTuple):
         dimensions: The minimum, maximum and default dimensions of the matrix.
         console_question: How a console bridge asks for the cells.
         partial_validator: Optional callback for early per-cell feedback.
+        cell_namer: Optional callback naming a cell in the messages the
+            bridge writes itself, see CellNamer.
     """
 
     long_question: str
@@ -277,3 +300,4 @@ class MatrixRequest(NamedTuple):
     dimensions: MatrixDimensions
     console_question: MatrixConsoleQuestion
     partial_validator: Optional[PartialMatrixValidator] = None
+    cell_namer: Optional[CellNamer] = None

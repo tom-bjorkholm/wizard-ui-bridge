@@ -15,8 +15,9 @@ from typing import Optional, cast
 
 import pytest
 
-from wizard_ui_bridge import AskCell, AnswerCell, AskField, CellPosition, \
-    MatrixCellSpec, PathAskOptions, PrefillCellValues, PrefillValueType, \
+from wizard_ui_bridge import AskCell, AnswerCell, AnswerCells, AskField, \
+    CellNamer, CellPosition, MatrixCellSpec, PathAskOptions, \
+    PrefillCellValues, PrefillValueType, \
     AskLabelCell, AskTextCell, AskIntCell, AskPathCell, AskYesNoCell, \
     AskChoiceCell, AskMultiChoiceCell, AskFloatCell, AskDateCell, \
     AskTimeCell, AskDateTimeCell, AskDurationCell, AnswerTextCell, \
@@ -27,7 +28,7 @@ from wizard_ui_bridge import AskCell, AnswerCell, AskField, CellPosition, \
     AnswerMultiChoiceField
 from wizard_ui_bridge.form_helpers import answer_of, prefill_value
 from wizard_ui_bridge.matrix_helpers import cell_at, cell_name, \
-    column_label, row_label, valid_cell_prefills
+    column_label, message_name, row_label, valid_cell_prefills
 
 _POS = CellPosition
 _CORNER = AskLabelCell('')
@@ -143,22 +144,39 @@ def test_cell_labels(position: CellPosition, left: Optional[str],
 
 
 @pytest.mark.parametrize('position, name', [
-    (_POS(1, 1), 'Alice / Mon'), (_POS(2, 2), 'Tue'), (_POS(2, 0), 'Alice')])
+    (_POS(1, 1), 'Alice / Mon'), (_POS(2, 2), 'Row 3 / Tue'),
+    (_POS(2, 0), 'Row 3 / Alice'), (_POS(0, 0), 'Row 1 / Column 1')])
 def test_cell_name(position: CellPosition, name: str) -> None:
-    """A cell is named by its labels, or by its 1-based position."""
+    """A missing label is replaced by the 1-based row or column number."""
     assert cell_name(_GRID, position) == name
-
-
-def test_cell_name_row_only() -> None:
-    """A cell with only a label to its left is named by that label."""
-    cells: list[list[AskCell]] = [[_ALICE, _HOURS]]
-    assert cell_name(cells, _POS(0, 1)) == 'Alice'
 
 
 def test_cell_name_no_label() -> None:
     """A cell with no label, or only blank ones, is named by position."""
     cells: list[list[AskCell]] = [[_CORNER, _HOURS], [_HOURS, _HOURS]]
-    assert cell_name(cells, _POS(1, 1)) == 'Row 2, column 2'
+    assert cell_name(cells, _POS(1, 1)) == 'Row 2 / Column 2'
+
+
+def test_message_name_namer() -> None:
+    """The namer gets the answers and position, and its name is used."""
+    answers: AnswerCells = [[None, AnswerIntCell(_HOURS, 3)]]
+    seen: list[tuple[AnswerCells, CellPosition]] = []
+
+    def _namer(given: AnswerCells, position: CellPosition) -> str:
+        """Record the call and name the cell by its answer."""
+        seen.append((given, position))
+        answer = given[position.row][position.column]
+        assert isinstance(answer, AnswerIntCell)
+        return f'Cell holding {answer.value}'
+    name = message_name(_namer, answers, _GRID, _POS(0, 1))
+    assert name == 'Cell holding 3'
+    assert seen == [(answers, _POS(0, 1))]
+
+
+@pytest.mark.parametrize('namer', [None, lambda _answers, _position: ''])
+def test_message_name_default(namer: Optional[CellNamer]) -> None:
+    """With no namer, or an empty name from it, the labels name the cell."""
+    assert message_name(namer, [], _GRID, _POS(1, 1)) == 'Alice / Mon'
 
 
 _PATH_CELL = AskPathCell(None, PathAskOptions())

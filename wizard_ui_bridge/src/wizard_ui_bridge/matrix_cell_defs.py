@@ -85,9 +85,25 @@ class AskCellCommon:
                    used as tooltip text in a GUI implementation, or as a
                    popup message in response to a help button click
                    or similar user action.
+        width: Optional hint for the width of the cell's input, in
+               characters, or None to let the bridge choose. It is only a
+               hint, and the shown width is approximate, depending on the
+               fonts and widgets of the UI; a UI may also ignore it, as a
+               console does. It sizes the text part of an input, not a
+               button beside it such as Browse or Pick, and the list of a
+               multi-choice cell. On a label cell it is the width at which
+               the text wraps. A yes/no check box has no text part, so it
+               ignores the hint. It is keyword-only, and must be at least
+               1, or ValueError is raised.
     """
 
     help_text: Optional[str]
+    width: Optional[int] = field(default=None, kw_only=True)
+
+    def __post_init__(self) -> None:
+        """Check that a width hint is at least one character."""
+        if self.width is not None and self.width < 1:
+            raise ValueError('width must be at least 1')
 
 
 @dataclass
@@ -106,10 +122,17 @@ class AskLabelCell(AskCellCommon):
     Attributes:
         text: The text displayed in the cell.
         help_text: Optional help text, as for any cell; None by default.
+        bold: A hint to show the text in bold, for instance to make a
+              header stand out. A UI that cannot show bold text ignores
+              it, so the look is not guaranteed. Keyword-only.
+        italic: A hint to show the text in italics, ignored like bold by
+                a UI that cannot show it. Keyword-only.
     """
 
     text: str
     help_text: Optional[str] = field(default=None, kw_only=True)
+    bold: bool = field(default=False, kw_only=True)
+    italic: bool = field(default=False, kw_only=True)
 
 
 @dataclass
@@ -136,6 +159,7 @@ class AskTextCell(AskCellCommon):
 
     def __post_init__(self) -> None:
         """Check that the text cell arguments are valid."""
+        super().__post_init__()
         if self.sensitive and self.default is not None:
             raise ValueError('Sensitive text field cannot have a default')
         check_nullable(self.nullable, self.default is not None)
@@ -171,6 +195,7 @@ class AskRangeCell(AskCellCommon, Generic[_OrderedT]):
 
     def __post_init__(self) -> None:
         """Check that the bounds, the default and nullable agree."""
+        super().__post_init__()
         _check_bounds(self.min_value, self.max_value, self.default)
         check_nullable(self.nullable, self.default is not None)
 
@@ -238,6 +263,7 @@ class AskChoiceCell(AskCellCommon):
 
     def __post_init__(self) -> None:
         """Check that nullable is not combined with a default."""
+        super().__post_init__()
         check_nullable(self.nullable, self.default is not None)
 
 

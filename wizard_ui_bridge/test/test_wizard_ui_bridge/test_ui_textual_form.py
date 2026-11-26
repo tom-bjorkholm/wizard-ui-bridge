@@ -745,3 +745,43 @@ def test_prefill_path(tmp_path: Path) -> None:
             return shown
     assert asyncio.run(scenario()) == str(target)
     assert _submitted(app)[1].value == target
+
+
+def _mounted_inputs(fields: Sequence[AskField]) -> list[tuple[int, bool]]:
+    """Return each field input's text width, and if it has a set width."""
+    app = _FormApp('H', list(fields), [], None)
+    found: list[tuple[int, bool]] = []
+
+    async def scenario() -> None:
+        """Mount the form and read the size of each field input."""
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            for index in range(len(fields)):
+                widget = app.query_one(f'#field_{index}')
+                found.append((widget.size.width,
+                              widget.styles.inline.width is not None))
+    asyncio.run(scenario())
+    return found
+
+
+def test_form_width_hint() -> None:
+    """A width hint sets the text width of an input, also beside Browse.
+
+    A check box has no text part and keeps its size, and an input with
+    no hint is not given a width of its own.
+    """
+    fields: list[AskField] = [
+        AskTextField('T', None, width=20),
+        AskPathField('P', None, PathAskOptions(), width=15),
+        AskYesNoField('Y', None, True, width=5), AskIntField('I', None)]
+    found = _mounted_inputs(fields)
+    assert found[:2] == [(20, True), (15, True)]
+    assert [has_width for _, has_width in found[2:]] == [False, False]
+
+
+def test_form_width_lists() -> None:
+    """A drop-down and a check-box list also get a width from the hint."""
+    fields: list[AskField] = [
+        AskChoiceField('C', None, ('a', 'b'), width=10),
+        AskMultiChoiceField('M', None, ('a', 'b'), width=10)]
+    assert all(has_width for _, has_width in _mounted_inputs(fields))

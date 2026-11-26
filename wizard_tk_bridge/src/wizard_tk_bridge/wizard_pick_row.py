@@ -10,7 +10,8 @@ calendar.
 
 :class:`HintEntry` is the placeholder entry, and :class:`PickRow` bundles
 one with the calendar button. Both satisfy :class:`TypedInput`, the small
-interface a cell input uses to read, write, and enable a typed input.
+interface a cell input uses to read, write, enable and size a typed
+input.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -31,7 +32,11 @@ _PICK_TOKEN = '?'
 
 
 class TypedInput(Protocol):
-    """The read, write and enable interface of a typed form input."""
+    """The read, write, enable and entry interface of a typed form input."""
+
+    @property
+    def entry(self) -> tk.Entry:
+        """Return the text entry, for instance to set its width."""
 
     def text(self) -> str:
         """Return the current text, empty when only a placeholder shows."""
@@ -119,6 +124,11 @@ class PickRow:
         self._button = tk.Button(self.frame, text='Pick…',
                                  command=self._open_calendar)
         self._button.pack(side='left', padx=6)
+
+    @property
+    def entry(self) -> tk.Entry:
+        """Return the text entry beside the Pick button."""
+        return self._input.entry
 
     def text(self) -> str:
         """Return the entered date or date-time text."""

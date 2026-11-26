@@ -44,6 +44,7 @@
   * [row\_label](#wizard_ui_bridge.matrix_helpers.row_label)
   * [column\_label](#wizard_ui_bridge.matrix_helpers.column_label)
   * [cell\_name](#wizard_ui_bridge.matrix_helpers.cell_name)
+  * [message\_name](#wizard_ui_bridge.matrix_helpers.message_name)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [value\_out\_of\_range](#wizard_ui_bridge.matrix_cell_defs.value_out_of_range)
   * [AskCellCommon](#wizard_ui_bridge.matrix_cell_defs.AskCellCommon)
@@ -225,6 +226,9 @@ Each Ask*Field derives from its Ask*Cell first and from this class
 last, so the constructor arguments start with short_question and
 help_text. help_text is declared both here and in AskCellCommon, so
 a field type derived only from this class still has it.
+
+Every field also has the keyword-only width hint of AskCellCommon,
+for instance AskTextField('Name?', None, width=20).
 
 **Attributes**:
 
@@ -762,9 +766,10 @@ Helpers shared by the bridges that show a matrix form question.
 
 A bridge builds the cells of a matrix form from the MatrixCellSpec of the
 request with cell_at(), applies the prefills of a partial validator with
-valid_cell_prefills(), and names a cell in a message with cell_name().
-The cells of the current shape are given to the last two as a grid of
-AskCells, one sequence per row.
+valid_cell_prefills(), and names a cell in its own message with
+message_name(), which uses the CellNamer of the request and falls back
+to cell_name(). The cells of the current shape are given to the last
+three as a grid of AskCells, one sequence per row.
 
 <a id="wizard_ui_bridge.matrix_helpers.cell_at"></a>
 
@@ -846,8 +851,23 @@ def cell_name(cells: Sequence[Sequence[AskCell]],
 Return a name of a cell for a message shown to the user.
 
 The name is the row label and the column label of the cell joined
-with ' / ', such as 'Bob / Tue', or the one of them that exists. A
-cell with neither is named by its 1-based row and column.
+with ' / ', such as 'Bob / Tue'. Where a label is missing, the 1-based
+row or column number takes its place, such as 'Row 2 / Start date'.
+
+<a id="wizard_ui_bridge.matrix_helpers.message_name"></a>
+
+#### message\_name
+
+```python
+def message_name(namer: Optional[CellNamer], answers: AnswerCells,
+                 cells: Sequence[Sequence[AskCell]],
+                 position: CellPosition) -> str
+```
+
+Return the name of a cell for a message the bridge writes itself.
+
+The CellNamer of the request names the cell when it is given and
+returns a non-empty name; otherwise cell_name() does.
 
 <a id="wizard_ui_bridge.matrix_cell_defs"></a>
 
@@ -910,6 +930,16 @@ type already tells the bridge which kind of input to show.
   used as tooltip text in a GUI implementation, or as a
   popup message in response to a help button click
   or similar user action.
+- `width` - Optional hint for the width of the cell's input, in
+  characters, or None to let the bridge choose. It is only a
+  hint, and the shown width is approximate, depending on the
+  fonts and widgets of the UI; a UI may also ignore it, as a
+  console does. It sizes the text part of an input, not a
+  button beside it such as Browse or Pick, and the list of a
+  multi-choice cell. On a label cell it is the width at which
+  the text wraps. A yes/no check box has no text part, so it
+  ignores the hint. It is keyword-only, and must be at least
+  1, or ValueError is raised.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskLabelCell"></a>
 
@@ -935,6 +965,11 @@ AskLabelCell('Name', help_text='...').
 
 - `text` - The text displayed in the cell.
 - `help_text` - Optional help text, as for any cell; None by default.
+- `bold` - A hint to show the text in bold, for instance to make a
+  header stand out. A UI that cannot show bold text ignores
+  it, so the look is not guaranteed. Keyword-only.
+- `italic` - A hint to show the text in italics, ignored like bold by
+  a UI that cannot show it. Keyword-only.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskTextCell"></a>
 
@@ -1755,6 +1790,8 @@ Request for a matrix form.
 - `dimensions` - The minimum, maximum and default dimensions of the matrix.
 - `console_question` - How a console bridge asks for the cells.
 - `partial_validator` - Optional callback for early per-cell feedback.
+- `cell_namer` - Optional callback naming a cell in the messages the
+  bridge writes itself, see CellNamer.
 
 <a id="wizard_ui_bridge.form_helpers"></a>
 
@@ -2445,7 +2482,12 @@ in any order. In such an implementation ask_matrix_form is typically a
 window with request.long_question and re_ask_reason shown above a
 grid of rows x columns cells, where each cell shows the AskCell at
 its position. The window also has a feed-back area for messages
-from request.partial_validator.
+from request.partial_validator, and for the bridge's own messages
+about a single cell, which name the cell with request.cell_namer
+or its labels (see wizard_ui_bridge.matrix_helpers). The partial
+validator is called when the matrix is first shown, to find the
+cells that start disabled, but its message is only shown once
+the user has changed the matrix or tried to submit it.
 
 See wizard_ui_bridge.matrix_cell_defs for the cell types and
 wizard_ui_bridge.matrix_defs for the request and its validator.

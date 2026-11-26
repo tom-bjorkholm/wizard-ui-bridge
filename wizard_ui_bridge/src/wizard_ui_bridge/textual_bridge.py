@@ -47,7 +47,7 @@ from wizard_ui_bridge._textual_widgets import \
     _header_widgets, _default_index, _preselected, _parse_cell_id, \
     _make_select, _make_field_widget, _field_index, _browse_index, \
     _pick_index, _multi_error, _calendar_setup, _combined_text, \
-    _field_message, _cell_message
+    _field_message, _cell_message, _apply_width
 from wizard_ui_bridge._path import _PathPick, \
     _PickerScreen, _start_dir, _start_value
 from wizard_ui_bridge.arg_types import PartialCheck, \
@@ -515,9 +515,15 @@ class _FormApp(_NavApp[list[AnswerField]]):
             yield widget
 
     def on_mount(self) -> None:
-        """Size the grid, keep the scroll unfocused, focus the first field."""
+        """Size the grid and inputs, focus the first field, not the scroll.
+
+        An input with a width hint keeps that width; the others fill
+        their grid column.
+        """
         self.query_one('#form_scroll').can_focus = False
         self.query_one('#form_grid', Grid).styles.grid_size_columns = 2
+        for index, field in enumerate(self._fields):
+            _apply_width(self.query_one(f'#field_{index}'), field.width)
         if self._fields:
             self.query_one('#field_0').focus()
         self._form_ready = True

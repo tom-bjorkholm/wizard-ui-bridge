@@ -81,6 +81,11 @@ class PathRow:
         if on_change is not None:
             self._entry.bind('<KeyRelease>', lambda _event: on_change())
 
+    @property
+    def entry(self) -> tk.Entry:
+        """Return the path entry beside the Browse button."""
+        return self._entry
+
     def get(self) -> str:
         """Return the current path text."""
         return self._entry.get()

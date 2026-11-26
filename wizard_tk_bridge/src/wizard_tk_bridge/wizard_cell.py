@@ -8,9 +8,12 @@ calendar Pick button for dates, for the typed values. :func:`build_input`
 builds the :class:`CellInput` for one Ask*Cell (every Ask*Field is one
 too), which reads the current answer value, reports the input's own
 validation error, writes a prefill into the input, and enables or
-disables it. :class:`HelpTooltip` shows a help text on hover, and
+disables it. The width hint of a cell sizes the text part of its input;
+without one a compact input, as in a matrix, gets a narrower default
+than a form row. :class:`HelpTooltip` shows a help text on hover,
 :func:`scrolled_editor` builds the scrolling area and status line shared
-by the form and matrix editors.
+by the form and matrix editors, and :func:`scroll_into_view` scrolls that
+area to show one of its widgets.
 
 Turning the raw text of an integer input into its answer is the same job
 in a cell and in a standalone question, so :func:`int_answer` lives here
@@ -30,7 +33,8 @@ from tkinter import ttk
 from typing import Callable, Optional, Sequence
 from wizard_ui_bridge import AskCell, PrefillValueType, AskTextCell, \
     AskIntCell, AskPathCell, AskYesNoCell, AskChoiceCell, \
-    AskMultiChoiceCell, AskFloatCell, AskTimeCell, AskDurationCell
+    AskMultiChoiceCell, AskFloatCell, AskDateCell, AskTimeCell, \
+    AskDateTimeCell, AskDurationCell
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
@@ -46,6 +50,10 @@ MULTI_HEIGHT = 6
 ENTRY_WIDTH = 34
 INT_WIDTH = 14
 CHOICE_WIDTH = 30
+_COMPACT_WIDTHS: tuple[tuple[type[AskCell], int], ...] = (
+    (AskTextCell, 20), (AskIntCell, 8), (AskFloatCell, 10),
+    (AskPathCell, 24), (AskDateCell, 12), (AskTimeCell, 10),
+    (AskDateTimeCell, 20), (AskDurationCell, 16))
 _CHOICE_REQUIRED = 'Please choose a value.'
 TOOLTIP_BG = '#ffffe0'
 TOOLTIP_WRAP = 320
@@ -202,6 +210,27 @@ class CellInput:
             assert isinstance(self.widget, tk.Listbox)
             _set_multi(self.widget, cell.choices, value)
 
+    def main_widget(self) -> tk.Widget:
+        """Return the widget the user types or clicks in.
+
+        That is the text entry of a path or typed input, beside its
+        button, and otherwise the widget itself. It is the widget to give
+        the keyboard focus to.
+        """
+        if self.typed is not None:
+            return self.typed.entry
+        if self.path is not None:
+            return self.path.entry
+        return self.widget
+
+    def set_width(self, width: int) -> None:
+        """Set the width in characters of the input's text part.
+
+        A check box has no text part, so it keeps its size.
+        """
+        if self.var is None:
+            self.main_widget()['width'] = width
+
     def set_enabled(self, enabled: bool) -> None:
         """Enable or disable the input, keeping a drop-down read-only."""
         if self.typed is not None:
@@ -332,16 +361,38 @@ def _basic_input(parent: tk.Misc, cell: AskCell,
     return _multi_input(parent, cell, change)
 
 
-def build_input(parent: tk.Misc, cell: AskCell,
-                change: Callable[[], None]) -> CellInput:
+def build_input(parent: tk.Misc, cell: AskCell, change: Callable[[], None],
+                compact: bool = False) -> CellInput:
     """Build the input matching an input cell or field type.
 
     change is called whenever the user changes the input. A label cell
-    has no input and must not be passed.
+    has no input and must not be passed. The width hint of the cell sizes
+    the text part of the input. Without one, a compact input, as in a
+    matrix, gets a narrower default width than a form row.
     """
     if is_typed(cell):
-        return _typed_input(parent, cell, change)
-    return _basic_input(parent, cell, change)
+        built = _typed_input(parent, cell, change)
+    else:
+        built = _basic_input(parent, cell, change)
+    width = cell.width if cell.width is not None or not compact \
+        else _compact_width(cell)
+    if width is not None:
+        built.set_width(width)
+    return built
+
+
+def _compact_width(cell: AskCell) -> Optional[int]:
+    """Return the default width of a compact input, None for a check box.
+
+    A typed input fits a typical value rather than its format hint, which
+    the tooltip shows as well, and a choice input fits its longest choice.
+    """
+    if isinstance(cell, (AskChoiceCell, AskMultiChoiceCell)):
+        return max((len(choice) for choice in cell.choices), default=1) + 2
+    for kind, width in _COMPACT_WIDTHS:
+        if isinstance(cell, kind):
+            return width
+    return None
 
 
 def _entry_widget(cell_input: CellInput) -> tk.Entry:
@@ -507,3 +558,35 @@ def scrolled_editor(parent: tk.Misc,
     status = tk.Label(outer, fg='red', wraplength=WRAP_LENGTH, justify='left')
     status.grid(row=2, column=0, columnspan=2, sticky='w', pady=(6, 0))
     return grid, status
+
+
+def scroll_into_view(grid: tk.Frame, widget: tk.Widget) -> None:
+    """Scroll an editor's area as little as needed to show a widget.
+
+    grid is the frame returned by scrolled_editor() and widget one that
+    is gridded into it. A widget larger than the area shows its start.
+    """
+    canvas = grid.master
+    assert isinstance(canvas, tk.Canvas)
+    canvas.update_idletasks()
+    canvas.configure(scrollregion=canvas.bbox('all'))
+    left = view_start(widget.winfo_x(), widget.winfo_reqwidth(),
+                      canvas.canvasx(0), canvas.winfo_width())
+    top = view_start(widget.winfo_y(), widget.winfo_reqheight(),
+                     canvas.canvasy(0), canvas.winfo_height())
+    canvas.xview_moveto(left / max(grid.winfo_reqwidth(), 1))
+    canvas.yview_moveto(top / max(grid.winfo_reqheight(), 1))
+
+
+def view_start(item: int, size: int, view: float, shown: int) -> float:
+    """Return the new start of a scrolled view along one axis.
+
+    The view starts at view and shows shown pixels. It moves as little
+    as possible to show the item, of size pixels from item, or the
+    item's start when the item is larger than the view.
+    """
+    if item < view:
+        return item
+    if item + size > view + shown:
+        return min(item, item + size - shown)
+    return view

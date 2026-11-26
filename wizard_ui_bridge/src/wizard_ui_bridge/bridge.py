@@ -520,7 +520,12 @@ class WizardUiBridge:
         window with request.long_question and re_ask_reason shown above a
         grid of rows x columns cells, where each cell shows the AskCell at
         its position. The window also has a feed-back area for messages
-        from request.partial_validator.
+        from request.partial_validator, and for the bridge's own messages
+        about a single cell, which name the cell with request.cell_namer
+        or its labels (see wizard_ui_bridge.matrix_helpers). The partial
+        validator is called when the matrix is first shown, to find the
+        cells that start disabled, but its message is only shown once
+        the user has changed the matrix or tried to submit it.
 
         See wizard_ui_bridge.matrix_cell_defs for the cell types and
         wizard_ui_bridge.matrix_defs for the request and its validator.

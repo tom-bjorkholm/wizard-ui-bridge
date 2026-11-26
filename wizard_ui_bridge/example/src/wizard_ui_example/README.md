@@ -41,9 +41,16 @@ python -m wizard_ui_example.e02_question_kinds --ui console
 - [`e07_custom_bridge.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e07_custom_bridge.py)
   implements a bridge of your own for an unusual device and runs an earlier
   wizard through it.
+- [`e08_matrix_form.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e08_matrix_form.py)
+  asks a fixed timesheet as one matrix form: a grid of label and input cells.
+- [`e09_resizable_matrix.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e09_resizable_matrix.py)
+  asks a contractor list as a matrix the user can resize, with live
+  validation, a final check and re-asking.
 
-The examples so far all *used* a bridge this package provides; `e07` is the
-one that *implements* one, so it comes last.
+All the examples except `e07` *use* a bridge this package provides; `e07` is
+the one that *implements* one. `e08` and `e09` come after it only because the
+matrix form was added later; they do not depend on `e07`, so read them after
+`e06` if you prefer.
 
 ## The same wizards on a graphical bridge
 
@@ -53,9 +60,9 @@ graphical bridge without a line changed. The companion package
 [teaching examples](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/README.md)
 show how to place a wizard in a command-line program, in a pop-up window, or
 in an area of a window the application already built. Its `run_e01` to
-`run_e06` examples import `e01` to `e06` from this folder and run those very
-modules through Tk, which is the easiest way to see what these questions look
-like in a real graphical interface.
+`run_e06`, `run_e08` and `run_e09` examples import the matching examples from
+this folder and run those very modules through Tk, which is the easiest way to
+see what these questions look like in a real graphical interface.
 
 ## `e01_one_question.py`: obtaining a bridge and asking
 
@@ -440,4 +447,109 @@ can watch the folding appear only on the custom bridge:
 python -m wizard_ui_example.e07_custom_bridge
 python -m wizard_ui_example.e07_custom_bridge --ui console
 python -m wizard_ui_example.e07_custom_bridge --ui textual
+```
+
+## `e08_matrix_form.py`: asking a matrix form
+
+A form asks one value per row. Some questions are naturally a *grid*: hours per
+person and weekday, or one row of facts per contractor. `ask_matrix_form()` asks
+such a grid on one screen. `e08_matrix_form.py` asks a small team timesheet:
+one row per team member and one column per weekday.
+
+```text
+         | Mon | Tue | Wed | Thu | Fri
+  Alice  |  8  |  8  |  8  |  8  |  8
+  Bob    |  8  |  8  |  8  |  8  |  8
+  Cleo   |  8  |  8  |  8  |  8  |  8
+```
+
+### How to use `ask_matrix_form()`
+
+Everything the bridge needs is one `MatrixRequest`:
+
+- `long_question`: the instruction shown above the grid;
+- `ask_cells`: one `Ask*Cell` per cell, as a list of rows;
+- `dimensions`: a `MatrixDimensions` of minimum, maximum and default shape;
+  `MatrixDimensions.fixed(rows, columns)` gives a shape the user cannot change;
+- `console_question`: how a console, which cannot show a grid, asks the cells
+  one at a time, and which labels it shows with each cell;
+- optionally `partial_validator` and `cell_namer`, shown in `e09`.
+
+The cells are the matrix counterparts of the form fields: `AskTextCell`,
+`AskIntCell`, `AskDateCell` and so on, with the same attributes except that a
+cell has no `short_question`. An `AskLabelCell` is plain text with no input,
+typically a row or column header, but it may be placed anywhere. The header
+labels of `e08` ask to be shown in bold with `AskLabelCell('Mon', bold=True)`;
+`bold` and `italic` are hints that a bridge which cannot show them ignores.
+Every cell also takes an optional `width` hint, in characters.
+
+The answers come back in the shape of the matrix: one list per row, holding the
+`Answer*Cell` for each input cell and `None` for each label cell:
+
+```python
+answers = bridge.ask_matrix_form(build_request())
+for row in answers[1:]:                 # row 0 is the header
+    hours = [cell.value for cell in row[1:]]
+```
+
+### Which bridges show a matrix
+
+A graphical bridge shows the whole grid at once; run `run_e08_matrix_form.py`
+from the
+[Tk examples](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/README.md)
+to see it. The console and Textual bridges of this package do not show a matrix
+form yet: `ask_matrix_form()` raises `RuntimeError` there, so the commands
+below fail with that error until it is written.
+
+```sh
+python -m wizard_ui_example.e08_matrix_form
+python -m wizard_ui_example.e08_matrix_form --ui console
+```
+
+## `e09_resizable_matrix.py`: a resizable, validated matrix
+
+`e09_resizable_matrix.py` builds on `e08` with what a real application usually
+needs: a contractor list with one row per contractor and the columns name,
+start date, end date and one to three contract files.
+
+**A matrix the user resizes.** When the minimum and maximum of `dimensions`
+differ, the user may append or delete the *last* row or column within those
+bounds; a graphical bridge offers buttons for that. The normal way to describe
+the cells is a grid of the *maximum* size: the matrix first shows the part
+within the default shape, and an appended row or column shows the cells already
+given at its position. That is how a re-asked matrix keeps the user's values as
+defaults in every row. (A smaller grid repeats its last row and last cell, and
+`ask_cells` may also be a function from `CellPosition` to `AskCell`.)
+
+**Validation in two layers.** As in `e04` and `e05`, a `partial_validator` gives
+live feedback while the matrix is edited and blocks submitting it while a start
+date is not before its end date. It gets the current answers and the
+`CellPosition` that changed, or `None` when nothing has changed yet or the
+shape changed. Its `PartMatrixValidationRes` can also disable irrelevant cells
+and prefill others, as in `e06`. The wizard must not trust a bridge to enforce
+anything, so after `ask_matrix_form()` returns the whole matrix is checked again
+and, on a problem, asked again with a `re_ask_reason`.
+
+**Naming a cell.** A bridge also checks each cell on its own, for instance that
+2027-14-32 is not a date, and names the cell in its message. By default the
+name comes from the nearest labels, here the header above the cell and the row
+number, as in `Row 3 / Start date`. A `cell_namer` names the cell from the
+current answers instead:
+
+```python
+def contractor_cell_name(answers, position):
+    name = answers[position.row][_NAME]          # the contractor's name cell
+    who = f'Contractor {position.row - _HEADER_ROWS + 1}'
+    if isinstance(name, AnswerTextCell) and name.value:
+        who = name.value
+    return f'{who}, {_HEADER_TEXTS[position.column].lower()}'
+```
+
+so the message reads `Alice, start date: ...`. Run `run_e09_resizable_matrix.py`
+from the Tk examples to try it; the console and Textual bridges do not show a
+matrix form yet, as noted for `e08`.
+
+```sh
+python -m wizard_ui_example.e09_resizable_matrix
+python -m wizard_ui_example.e09_resizable_matrix --ui console
 ```

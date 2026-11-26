@@ -156,3 +156,42 @@ def test_input_help_required(cell_type: type) -> None:
                       if cell_field.name == 'help_text')
     assert help_field.default is MISSING
     assert not help_field.kw_only
+
+
+_WIDTH_CELLS: list[Callable[..., AskCellCommon]] = [
+    partial(AskLabelCell, 'Name'), partial(AskTextCell, None),
+    partial(AskIntCell, None), partial(AskChoiceCell, None, ('a',)),
+    partial(AskChoiceField, 'Q', None, ('a',)), partial(AskDateCell, None)]
+
+
+@pytest.mark.parametrize('make', _WIDTH_CELLS)
+def test_width_hint(make: Callable[..., AskCellCommon]) -> None:
+    """Every cell and field takes a keyword-only width, None by default."""
+    assert make().width is None
+    assert make(width=7).width == 7
+
+
+@pytest.mark.parametrize('make', _WIDTH_CELLS)
+@pytest.mark.parametrize('width', [0, -3])
+def test_width_too_small(make: Callable[..., AskCellCommon],
+                         width: int) -> None:
+    """A width hint below one character is a programming error."""
+    with pytest.raises(ValueError, match='width'):
+        make(width=width)
+
+
+def test_width_kw_only() -> None:
+    """The width hint cannot be given positionally."""
+    help_field = next(cell_field for cell_field in fields(AskCellCommon)
+                      if cell_field.name == 'width')
+    assert help_field.kw_only
+
+
+def test_label_style() -> None:
+    """A label is plain by default, and bold and italic are keywords."""
+    plain = AskLabelCell('Name')
+    assert (plain.bold, plain.italic) == (False, False)
+    styled = AskLabelCell('Name', bold=True, italic=True)
+    assert (styled.bold, styled.italic) == (True, True)
+    with pytest.raises(TypeError):
+        AskLabelCell('Name', None, True)  # type: ignore[call-arg]

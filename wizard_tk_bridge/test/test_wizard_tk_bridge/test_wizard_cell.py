@@ -12,12 +12,14 @@ from typing import Optional
 import pytest
 from wizard_ui_bridge import AskCell, PathAskOptions, PrefillValueType, \
     AskLabelCell, AskTextCell, AskIntCell, AskPathCell, AskYesNoCell, \
-    AskChoiceCell, AskMultiChoiceCell, AskFloatCell, AskDateCell
+    AskChoiceCell, AskMultiChoiceCell, AskFloatCell, AskDateCell, \
+    AskDateTimeCell, AskDurationCell, AskTimeCell
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_error, out_of_range, range_error, text_answer
-from wizard_tk_bridge.wizard_cell import CellInput, HelpTooltip, \
-    build_input, int_answer, scrolled_editor, tooltip_text, _inside, \
-    _set_combo, _set_entry_text, _set_multi
+from wizard_tk_bridge.wizard_cell import INT_WIDTH, CellInput, \
+    HelpTooltip, build_input, int_answer, scroll_into_view, scrolled_editor, \
+    tooltip_text, view_start, _inside, _set_combo, _set_entry_text, \
+    _set_multi
 from .gui_test_helpers import find_widgets, gui_root, set_entry
 
 
@@ -316,3 +318,97 @@ def test_scrolled_editor(sideways: bool, orients: list[str]) -> None:
                 for scrollbar in scrollbars] == orients
         assert isinstance(grid, tk.Frame)
         assert str(status.cget('text')) == ''
+
+
+_PATH_CELL = AskPathCell(None, PathAskOptions())
+
+
+@pytest.mark.parametrize('cell, kind', [
+    (AskTextCell(None), tk.Entry), (_PATH_CELL, tk.Entry),
+    (AskDateCell(None), tk.Entry), (AskFloatCell(None), tk.Entry),
+    (AskChoiceCell(None, choices=('a',)), ttk.Combobox),
+    (AskMultiChoiceCell(None, choices=('a',)), tk.Listbox),
+    (AskYesNoCell(None, default=True), tk.Checkbutton)])
+def test_cell_main_widget(cell: AskCell, kind: type[tk.Widget]) -> None:
+    """Test the main widget is the entry beside a button, or the input."""
+    with gui_root() as root:
+        built, _ = _input(root, cell)
+        assert isinstance(built.main_widget(), kind)
+
+
+@pytest.mark.parametrize('cell', [
+    AskTextCell(None, width=5), AskIntCell(None, width=5),
+    AskPathCell(None, PathAskOptions(), width=5), AskDateCell(None, width=5),
+    AskTimeCell(None, width=5), AskChoiceCell(None, ('a',), width=5),
+    AskMultiChoiceCell(None, ('a',), width=5)])
+def test_cell_width_hint(cell: AskCell) -> None:
+    """Test a width hint sets the width of the input's text part."""
+    with gui_root() as root:
+        for compact in (False, True):
+            built = build_input(tk.Frame(root), cell, lambda: None, compact)
+            assert int(built.main_widget().cget('width')) == 5
+
+
+def test_cell_yes_no_width() -> None:
+    """Test a check box ignores a width hint, having no text part."""
+    with gui_root() as root:
+        plain = _input(root, AskYesNoCell(None, default=True))[0]
+        hinted = _input(root, AskYesNoCell(None, default=True, width=5))[0]
+        assert hinted.widget.cget('width') == plain.widget.cget('width')
+
+
+@pytest.mark.parametrize('cell, width', [
+    (AskTextCell(None), 20), (AskIntCell(None), 8), (_PATH_CELL, 24),
+    (AskFloatCell(None), 10), (AskDateCell(None), 12),
+    (AskTimeCell(None), 10), (AskDateTimeCell(None), 20),
+    (AskDurationCell(None), 16),
+    (AskChoiceCell(None, ('ab', 'abcd')), 6),
+    (AskMultiChoiceCell(None, ('abc',)), 5)])
+def test_cell_compact_width(cell: AskCell, width: int) -> None:
+    """Test a compact input fits a typical value or its longest choice."""
+    with gui_root() as root:
+        built = build_input(tk.Frame(root), cell, lambda: None, compact=True)
+        assert int(built.main_widget().cget('width')) == width
+
+
+def test_cell_form_width() -> None:
+    """Test an input that is not compact keeps the form row width."""
+    with gui_root() as root:
+        built, _ = _input(root, AskIntCell(None))
+        assert int(built.main_widget().cget('width')) == INT_WIDTH
+
+
+@pytest.mark.parametrize('item, size, view, shown, expected', [
+    (50, 10, 0, 100, 0), (5, 10, 20, 100, 5), (150, 10, 0, 100, 60),
+    (150, 200, 0, 100, 150), (95, 10, 0, 100, 5)])
+def test_view_start(item: int, size: int, view: int, shown: int,
+                    expected: int) -> None:
+    """Test the view moves as little as needed to show an item."""
+    assert view_start(item, size, view, shown) == expected
+
+
+def test_scroll_into_view() -> None:
+    """Test a widget below or above the visible area is scrolled to.
+
+    A canvas in a window that is never shown keeps a height of one pixel,
+    so the test checks that the view needs no further move to show the
+    widget, whatever the height, rather than a fixed position.
+    """
+    with gui_root() as root:
+        parent = tk.Frame(root)
+        parent.pack()
+        grid, _ = scrolled_editor(parent, sideways=True)
+        canvas = grid.master
+        assert isinstance(canvas, tk.Canvas)
+        canvas.configure(height=40)
+        entries = [tk.Entry(grid) for _ in range(10)]
+        for row, entry in enumerate(entries):
+            entry.grid(row=row, column=0)
+        last = entries[-1]
+        scroll_into_view(grid, last)
+        top = canvas.canvasy(0)
+        assert top > 0
+        assert view_start(last.winfo_y(), last.winfo_reqheight(), top,
+                          canvas.winfo_height()) == top
+        scroll_into_view(grid, entries[0])
+        assert canvas.canvasy(0) == 0

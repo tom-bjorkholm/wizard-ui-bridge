@@ -21,8 +21,9 @@ from wizard_ui_example import e08_matrix_form, e09_resizable_matrix
 from wizard_ui_example.e09_resizable_matrix import Contractor
 from wizard_ui_bridge import WizardPathKind, WizardUiBridge, WizardAbort, \
     MatrixRequest, MatrixDimension, MatrixDimensions, AnswerCells, AskCell, \
-    AnswerCell, AskLabelCell, AskTextCell, AskIntCell, AskDateCell, \
-    AskPathCell, AnswerTextCell, AnswerIntCell, AnswerDateCell, AnswerPathCell
+    CellPosition, AnswerCell, AskLabelCell, AskTextCell, AskIntCell, \
+    AskDateCell, AskPathCell, AnswerTextCell, AnswerIntCell, AnswerDateCell, \
+    AnswerPathCell
 from .console_driver import drive
 
 _JAN = date(2027, 1, 1)
@@ -109,6 +110,8 @@ def test_e08_request() -> None:
     cells = request.ask_cells
     assert isinstance(cells, list)
     assert _texts(cells[0]) == ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+    assert [isinstance(cell, AskLabelCell) and cell.bold
+            for cell in cells[0]] == [False] + [True] * 5
     assert _texts([row[0] for row in cells]) == ['', 'Alice', 'Bob', 'Cleo']
     hours = [cell for row in cells[1:] for cell in row[1:]]
     assert len(hours) == 15
@@ -207,7 +210,9 @@ def test_e09_request_shape() -> None:
     assert isinstance(cells, list)
     assert len(cells) == 5
     assert all(len(row) == 6 for row in cells)
-    assert all(isinstance(cell, AskLabelCell) for cell in cells[0])
+    assert all(isinstance(cell, AskLabelCell) and cell.bold
+               for cell in cells[0])
+    assert request.cell_namer is e09_resizable_matrix.contractor_cell_name
     assert e09_resizable_matrix.read_contractors(
         _default_answers(request)) == [Contractor('', None, None, (None,))]
     assert e09_resizable_matrix.build_parser().parse_args([]).ui == 'auto'
@@ -252,6 +257,18 @@ def test_e09_validator(start: Optional[date], end: Optional[date],
                               'date must be before the end date.')
     assert result.disable_cells == ()
     assert result.prefill_values == ()
+
+
+@pytest.mark.parametrize('position, name', [
+    (CellPosition(1, 1), 'Alice, start date'),
+    (CellPosition(2, 2), 'Contractor 2, end date'),
+    (CellPosition(2, 4), 'Contractor 2, contract 2')])
+def test_e09_cell_name(position: CellPosition, name: str) -> None:
+    """A cell is named by its contractor, or its number, and its column."""
+    answers = _answers_for([Contractor('Alice', _JAN, _JUN, (None,)),
+                            Contractor('', None, None, (None, None))])
+    namer = e09_resizable_matrix.contractor_cell_name
+    assert namer(answers, position) == name
 
 
 @pytest.mark.parametrize('name, dates, kinds, problem', [

@@ -27,9 +27,10 @@ A MatrixRequest holds everything the bridge needs:
 
 Each cell is an Ask*Cell, and its Python type tells the bridge what to
 show. The weekday names and the team member names are AskLabelCells:
-plain text with no input. The hours are AskIntCells. Their min_value and
-max_value make the bridge accept only 0 to 24 hours, so no validation code
-is needed in this example.
+plain text with no input. The weekday names ask to be shown in bold, so
+the header row stands out where the bridge can show bold text. The hours
+are AskIntCells. Their min_value and max_value make the bridge accept
+only 0 to 24 hours, so no validation code is needed in this example.
 
 Reading the answers
 -------------------
@@ -87,7 +88,8 @@ def build_request() -> MatrixRequest:
     of exactly that size, which the user cannot resize.
     """
     header: list[AskCell] = [AskLabelCell('')]
-    header += [AskLabelCell(day) for day in _DAYS]
+    # bold is only a hint: a bridge that cannot show bold text ignores it.
+    header += [AskLabelCell(day, bold=True) for day in _DAYS]
     rows = [header] + [_member_row(member) for member in _TEAM]
     dimensions = MatrixDimensions.fixed(len(rows), len(header))
     return MatrixRequest(long_question=_MATRIX_QUESTION, ask_cells=rows,

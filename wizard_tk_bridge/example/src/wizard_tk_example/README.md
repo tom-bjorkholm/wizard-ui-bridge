@@ -71,6 +71,12 @@ the file they run, not in the file itself.
 - [`run_e06_typed_form.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/run_e06_typed_form.py)
   runs [`e06_typed_form.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e06_typed_form.py):
   the typed form fields (numbers, dates, times, durations) and prefills.
+- [`run_e08_matrix_form.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/run_e08_matrix_form.py)
+  runs [`e08_matrix_form.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e08_matrix_form.py):
+  a fixed timesheet asked as one matrix form.
+- [`run_e09_resizable_matrix.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/run_e09_resizable_matrix.py)
+  runs [`e09_resizable_matrix.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_ui_bridge/example/src/wizard_ui_example/e09_resizable_matrix.py):
+  a contractor matrix the user resizes, with live validation and re-asking.
 
 They exist for two reasons. The first is the point made above: the same wizard
 really does run on another bridge, and here is the proof, running the very same
@@ -254,11 +260,20 @@ graphical interface beats the base class fallback outright:
 | `ask_choice` / `ask_multi` | a single- / multi-selection list |
 | `ask_table` | an editable grid, with **Add row** and **Remove row** when the question allows a variable number of rows |
 | `ask_form` | every field of the form on one screen, answered in any order |
+| `ask_matrix_form` | a grid of labels and inputs on one screen, with **+ Row**, **− Row**, **+ Column** and **− Column** buttons when the shape may change |
 
 In a form, `help_text` becomes a hover tooltip rather than an extra printed
 line, the float, time and duration fields show their accepted format as greyed
 placeholder text, and a date or date-time field adds a **Pick** button opening
 a month calendar. `run_e06_typed_form.py` shows all of that at once.
+
+A matrix form shows each input cell with the same input a form field of its
+type gets, only narrower unless the cell gives a `width` hint, and each label
+cell as plain text, in bold or italics when the cell asks for it. An appended
+row or column is scrolled into view and its first input gets the keyboard
+focus, and on **OK** the focus moves to the first cell that fails its own
+check. `run_e08_matrix_form.py` shows a fixed matrix and
+`run_e09_resizable_matrix.py` a resizable one.
 
 Because `ask_form()` is overridden, `supports_form_field()` reports that all
 current field types are shown, and `ask_form_w_fake()` therefore just calls
@@ -271,6 +286,7 @@ The examples are covered by
 [`test_examples.py`](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/test/test_wizard_tk_example/test_examples.py).
 The pizza wizard's logic is tested through a scripted fake bridge, and the two
 application examples are tested by building their widgets on a withdrawn root,
-so no test window ever reaches the screen. Tests that need a real focused
-window live with the bridge's own tests and are run by hand with
-`./run_focus_sensitive_tests.py`.
+so no test window ever reaches the screen. The `e08` matrix form is also run
+through `WizardUiBridgeTk` built into such an area, filling in cells and
+pressing its buttons. Tests that need a real focused window live with the
+bridge's own tests and are run by hand with `./run_focus_sensitive_tests.py`.

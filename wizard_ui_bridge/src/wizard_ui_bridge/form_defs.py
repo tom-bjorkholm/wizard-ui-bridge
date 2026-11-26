@@ -56,6 +56,9 @@ class AskFieldCommon:
     help_text. help_text is declared both here and in AskCellCommon, so
     a field type derived only from this class still has it.
 
+    Every field also has the keyword-only width hint of AskCellCommon,
+    for instance AskTextField('Name?', None, width=20).
+
     Attributes:
         short_question: A short question to be displayed to the user.
                         In a GUI implementation this is typically displayed

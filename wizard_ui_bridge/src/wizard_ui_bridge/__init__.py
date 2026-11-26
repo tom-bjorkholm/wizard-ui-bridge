@@ -45,7 +45,7 @@ from wizard_ui_bridge.matrix_cell_defs import AskCell, AnswerCell, \
 from wizard_ui_bridge.matrix_defs import AnswerCells, CellPosition, \
     MatrixDimension, MatrixDimensions, PrefillCellValues, \
     PartMatrixValidationRes, PartialMatrixValidator, AskCellGenerator, \
-    MatrixCellSpec, MatrixConsoleQuestion, MatrixRequest
+    MatrixCellSpec, MatrixConsoleQuestion, MatrixRequest, CellNamer
 from wizard_ui_bridge.factory import make_text_ui_bridge, UiBridgeType, \
     textual_installed, load_textual_bridge
 if TYPE_CHECKING:
@@ -90,4 +90,4 @@ __all__ = ['WizardUiBridge', 'WizardUiBridgeConsole', 'WizardUiBridgeTextual',
            'CellPosition', 'MatrixDimension', 'MatrixDimensions',
            'PrefillCellValues', 'PartMatrixValidationRes',
            'PartialMatrixValidator', 'AskCellGenerator', 'MatrixCellSpec',
-           'MatrixConsoleQuestion', 'MatrixRequest']
+           'MatrixConsoleQuestion', 'MatrixRequest', 'CellNamer']

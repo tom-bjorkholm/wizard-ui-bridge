@@ -11,6 +11,9 @@ A form and a table screen show every field at once but report validation
 in one shared status line, so the message helpers here name the field or
 the cell a message complains about; without that name the user cannot
 tell which of the fields on the screen to correct.
+
+The width hint of a field sizes its input with _apply_width(), once the
+input is mounted.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -31,6 +34,11 @@ from wizard_ui_bridge.form_defs import AskField, \
     AskTextField, AskIntField, AskPathField, AskYesNoField, AskChoiceField, \
     AskMultiChoiceField, AskFloatField, AskDateField, AskTimeField, \
     AskDateTimeField, AskDurationField
+
+# The cells of border and padding each input kind adds around its text, so
+# a width hint in characters is the width of the text part, as in Tk.
+_GUTTERS: tuple[tuple[type[Widget], int], ...] = (
+    (Input, 6), (Select, 8), (SelectionList, 8))
 
 
 def _header_widgets(messages: list[str], question: str) -> Iterator[Static]:
@@ -163,6 +171,21 @@ def _basic_field_widget(field: AskField, index: int) -> Widget:
         return _choice_select(field, widget_id)
     assert isinstance(field, AskMultiChoiceField)
     return _multi_selection(field, widget_id)
+
+
+def _apply_width(widget: Widget, width: Optional[int]) -> None:
+    """Size a field input to a width hint in characters, if one is given.
+
+    The hint is the width of the text part, so the border and padding
+    of the input are added. A check box has no text part and keeps its
+    size.
+    """
+    if width is None:
+        return
+    for kind, gutter in _GUTTERS:
+        if isinstance(widget, kind):
+            widget.styles.width = width + gutter
+            return
 
 
 def _id_index(widget_id: Optional[str], prefix: str) -> Optional[int]:
