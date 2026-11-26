@@ -33,7 +33,8 @@ from dataclasses import dataclass, field
 from typing import Any, Generic, Optional, Protocol, Sequence, TypeVar, Union
 from pathlib import Path
 from datetime import datetime, date, time, timedelta
-from wizard_ui_bridge.arg_types import PathAskOptions, check_nullable
+from wizard_ui_bridge.arg_types import PathAskOptions, check_nullable, \
+    check_choice_args, check_multi_args
 
 
 class _OrderedValue(Protocol):
@@ -63,9 +64,9 @@ def value_out_of_range(value: _OrderedT, minimum: Optional[_OrderedT],
     return below or above
 
 
-def _check_bounds(minimum: Optional[_OrderedValue],
-                  maximum: Optional[_OrderedValue],
-                  default: Optional[_OrderedValue]) -> None:
+def check_bounds(minimum: Optional[_OrderedValue],
+                 maximum: Optional[_OrderedValue],
+                 default: Optional[_OrderedValue]) -> None:
     """Raise ValueError when ordered bounds or the default disagree."""
     if minimum is not None and maximum is not None and minimum > maximum:
         raise ValueError('min_value must not exceed max_value')
@@ -196,7 +197,7 @@ class AskRangeCell(AskCellCommon, Generic[_OrderedT]):
     def __post_init__(self) -> None:
         """Check that the bounds, the default and nullable agree."""
         super().__post_init__()
-        _check_bounds(self.min_value, self.max_value, self.default)
+        check_bounds(self.min_value, self.max_value, self.default)
         check_nullable(self.nullable, self.default is not None)
 
 
@@ -250,7 +251,8 @@ class AskChoiceCell(AskCellCommon):
         default: The value returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
                  as the starting value in the input field, and the user can
-                 change it.
+                 change it. It must be one of choices, or ValueError is
+                 raised.
         nullable: When True the user may leave the choice empty, which is
                   reported as None. When False an empty choice with no
                   default is not a valid final answer. Not allowed
@@ -262,9 +264,9 @@ class AskChoiceCell(AskCellCommon):
     nullable: bool = False
 
     def __post_init__(self) -> None:
-        """Check that nullable is not combined with a default."""
+        """Check that a default is a choice and not combined with nullable."""
         super().__post_init__()
-        check_nullable(self.nullable, self.default is not None)
+        check_choice_args(self.choices, self.default, self.nullable)
 
 
 @dataclass
@@ -279,16 +281,26 @@ class AskMultiChoiceCell(AskCellCommon):
         default: The values returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
                  as the starting value in the input field, and the user can
-                 change it.
+                 change it. It must name distinct choices, at most
+                 max_select of them, but may name fewer than min_select.
         min_select: The minimum number of choices that must be selected.
         max_select: The maximum number of choices that can be selected,
-                    or None for no maximum.
+                    or None for no maximum. The bounds must satisfy
+                    0 <= min_select <= max_select <= len(choices).
+
+    A default or bounds breaking these rules raise ValueError.
     """
 
     choices: Sequence[str]
     default: Optional[Sequence[str]] = None
     min_select: int = 0
     max_select: Optional[int] = None
+
+    def __post_init__(self) -> None:
+        """Check that the bounds and the default fit the choices."""
+        super().__post_init__()
+        check_multi_args(self.choices, self.default, self.min_select,
+                         self.max_select)
 
 
 @dataclass

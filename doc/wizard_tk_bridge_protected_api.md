@@ -146,8 +146,6 @@
   * [\_perform\_close](#wizard_tk_bridge.close_binding._perform_close)
   * [bind\_close](#wizard_tk_bridge.close_binding.bind_close)
 * [wizard\_tk\_bridge.wizard\_table](#wizard_tk_bridge.wizard_table)
-  * [\_uniform](#wizard_tk_bridge.wizard_table._uniform)
-  * [\_new\_row\_template](#wizard_tk_bridge.wizard_table._new_row_template)
   * [Cell](#wizard_tk_bridge.wizard_table.Cell)
   * [\_cell\_text](#wizard_tk_bridge.wizard_table._cell_text)
   * [TableEditor](#wizard_tk_bridge.wizard_table.TableEditor)
@@ -2069,32 +2067,6 @@ when its columns are wider than the window, and a variable table also
 scrolls vertically within a fixed height so a long table stays usable.
 :class:`TableEditor` builds the grid, reads the final cell strings back,
 and runs the optional per-cell partial check for early feedback.
-
-<a id="wizard_tk_bridge.wizard_table._uniform"></a>
-
-#### \_uniform
-
-```python
-def _uniform(values: list[_V], default: _V) -> _V
-```
-
-Return the value shared by every entry, or the default.
-
-<a id="wizard_tk_bridge.wizard_table._new_row_template"></a>
-
-#### \_new\_row\_template
-
-```python
-def _new_row_template(columns: Sequence[TableColumn],
-                      rows: Sequence[Sequence[TableCell]]) -> list[TableCell]
-```
-
-Return the cell descriptors used for rows added at run time.
-
-For each column the new cell keeps the value, choices and nullable
-flag shared by every seed cell of that column, and falls back to an
-empty string, no choices and not-nullable when they differ. A cell in
-an added row is always editable, even in a read-only column.
 
 <a id="wizard_tk_bridge.wizard_table.Cell"></a>
 

@@ -47,6 +47,16 @@ def test_choice_default() -> None:
     assert '3: blue (default)' in out_file.getvalue()
 
 
+def test_bad_defaults() -> None:
+    """A console default that is not a choice is rejected before asking."""
+    bridge, out_file, _ = _menu('')
+    with pytest.raises(ValueError, match='one of choices'):
+        bridge.ask_choice('Color?', choices=_COLORS, default='pink')
+    with pytest.raises(ValueError, match='one of choices'):
+        bridge.ask_multi('Color?', choices=_COLORS, default=['pink'])
+    assert out_file.getvalue() == ''
+
+
 @pytest.mark.parametrize('answer', ['pink', '0', '4', '-1', ''])
 def test_choice_rejected(answer: str) -> None:
     """A console answer naming no choice re-asks with the choice error."""

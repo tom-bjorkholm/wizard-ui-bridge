@@ -47,6 +47,7 @@
   * [message\_name](#wizard_ui_bridge.matrix_helpers.message_name)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [value\_out\_of\_range](#wizard_ui_bridge.matrix_cell_defs.value_out_of_range)
+  * [check\_bounds](#wizard_ui_bridge.matrix_cell_defs.check_bounds)
   * [AskCellCommon](#wizard_ui_bridge.matrix_cell_defs.AskCellCommon)
   * [AskLabelCell](#wizard_ui_bridge.matrix_cell_defs.AskLabelCell)
   * [AskTextCell](#wizard_ui_bridge.matrix_cell_defs.AskTextCell)
@@ -80,6 +81,8 @@
   * [WizardAbort](#wizard_ui_bridge.arg_types.WizardAbort)
   * [WizardPathKind](#wizard_ui_bridge.arg_types.WizardPathKind)
   * [check\_nullable](#wizard_ui_bridge.arg_types.check_nullable)
+  * [check\_choice\_args](#wizard_ui_bridge.arg_types.check_choice_args)
+  * [check\_multi\_args](#wizard_ui_bridge.arg_types.check_multi_args)
   * [PathAskOptions](#wizard_ui_bridge.arg_types.PathAskOptions)
   * [TableColumn](#wizard_ui_bridge.arg_types.TableColumn)
   * [TableCell](#wizard_ui_bridge.arg_types.TableCell)
@@ -158,6 +161,7 @@
   * [match\_token](#wizard_ui_bridge.bridge_helpers.match_token)
   * [multi\_count\_error](#wizard_ui_bridge.bridge_helpers.multi_count_error)
   * [multi\_count\_message](#wizard_ui_bridge.bridge_helpers.multi_count_message)
+  * [new\_row\_template](#wizard_ui_bridge.bridge_helpers.new_row_template)
 * [wizard\_ui\_bridge.textual\_bridge](#wizard_ui_bridge.textual_bridge)
   * [WizardUiBridgeTextual](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual)
     * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.__init__)
@@ -910,6 +914,18 @@ def value_out_of_range(value: _OrderedT, minimum: Optional[_OrderedT],
 
 Return whether value lies outside the inclusive bounds.
 
+<a id="wizard_ui_bridge.matrix_cell_defs.check_bounds"></a>
+
+#### check\_bounds
+
+```python
+def check_bounds(minimum: Optional[_OrderedValue],
+                 maximum: Optional[_OrderedValue],
+                 default: Optional[_OrderedValue]) -> None
+```
+
+Raise ValueError when ordered bounds or the default disagree.
+
 <a id="wizard_ui_bridge.matrix_cell_defs.AskCellCommon"></a>
 
 ## AskCellCommon Objects
@@ -1098,7 +1114,8 @@ or a set of radio buttons.
 - `default` - The value returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
   as the starting value in the input field, and the user can
-  change it.
+  change it. It must be one of choices, or ValueError is
+  raised.
 - `nullable` - When True the user may leave the choice empty, which is
   reported as None. When False an empty choice with no
   default is not a valid final answer. Not allowed
@@ -1124,10 +1141,14 @@ or a list of items with multiple selection enabled.
 - `default` - The values returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
   as the starting value in the input field, and the user can
-  change it.
+  change it. It must name distinct choices, at most
+  max_select of them, but may name fewer than min_select.
 - `min_select` - The minimum number of choices that must be selected.
 - `max_select` - The maximum number of choices that can be selected,
-  or None for no maximum.
+  or None for no maximum. The bounds must satisfy
+  0 <= min_select <= max_select <= len(choices).
+  
+  A default or bounds breaking these rules raise ValueError.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskFloatCell"></a>
 
@@ -1518,6 +1539,58 @@ a contradiction and a programming error in the calling code.
 
 - `ValueError` - Both nullable and has_default are True.
 
+<a id="wizard_ui_bridge.arg_types.check_choice_args"></a>
+
+#### check\_choice\_args
+
+```python
+def check_choice_args(choices: Sequence[str], default: Optional[str],
+                      nullable: bool) -> None
+```
+
+Raise ValueError when single-choice arguments contradict each other.
+
+**Arguments**:
+
+- `choices` - The choices offered.
+- `default` - The choice selected by an empty answer, or None.
+- `nullable` - Whether no choice is allowed, reported as None.
+
+**Raises**:
+
+- `ValueError` - default is not one of choices, or default is given
+  together with nullable.
+
+<a id="wizard_ui_bridge.arg_types.check_multi_args"></a>
+
+#### check\_multi\_args
+
+```python
+def check_multi_args(choices: Sequence[str], default: Optional[Sequence[str]],
+                     min_select: int, max_select: Optional[int]) -> None
+```
+
+Raise ValueError when multi-choice arguments contradict each other.
+
+The selection bounds must be satisfiable, so 0 <= min_select <=
+max_select <= len(choices), where a max_select of None stands for
+len(choices). A default must name distinct choices, at most
+max_select of them. It may name fewer than min_select, leaving the
+rest of the selection for the user to make deliberately.
+
+**Arguments**:
+
+- `choices` - The choices offered.
+- `default` - The choices pre-selected by an empty answer, or None.
+- `min_select` - The smallest acceptable number of choices.
+- `max_select` - The largest acceptable number of choices, or None.
+
+**Raises**:
+
+- `ValueError` - The bounds cannot be satisfied, or default names a
+  value that is not a choice, names a choice twice or
+  names more than max_select choices.
+
 <a id="wizard_ui_bridge.arg_types.PathAskOptions"></a>
 
 ## PathAskOptions Objects
@@ -1588,6 +1661,11 @@ different values, such as one settings row per named option.
   an empty string the validation may or may not accept,
   and with choices given an empty editable cell is not yet
   a valid final value.
+
+**Raises**:
+
+- `ValueError` - choices is given and value is neither None nor one
+  of choices.
 
 <a id="wizard_ui_bridge.matrix_defs"></a>
 
@@ -1901,8 +1979,9 @@ The console bridge offers a prefill as the row's default when the row
 is asked. A field may not be both nullable and have a default, so the
 returned field is not nullable: as for any default, an empty answer
 takes the prefill. A prefill that cannot serve as a valid default,
-such as an integer or date outside the field's bounds, is ignored so
-the field keeps its own default. The prefill has already been checked
+such as an integer or date outside the field's bounds or a
+multi-choice selection of more than max_select choices, is ignored
+so the field keeps its own default. The prefill has already been checked
 against the field type by valid_prefills().
 
 <a id="wizard_ui_bridge.bridge"></a>
@@ -2047,7 +2126,9 @@ derived bridge may override it with a direct numeric control.
 
 **Raises**:
 
-- `ValueError` - default is given together with nullable.
+- `ValueError` - min_value exceeds max_value, default is outside
+  the bounds, or default is given together with
+  nullable.
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -2173,7 +2254,9 @@ overloads on its override. The base class has no implementation.
 
 **Raises**:
 
-- `ValueError` - default is given together with nullable.
+- `ValueError` - default is not one of choices, or is given
+  together with nullable. A bridge checks this with
+  arg_types.check_choice_args().
 - `NotImplementedError` - The bridge does not implement ask_choice().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
@@ -2197,8 +2280,11 @@ Ask the user to pick several of choices and return them.
 
 The result holds the chosen values in the order of choices, with
 a count between min_select and max_select; max_select None means
-no upper bound. An empty answer selects default, or selects
-nothing when default is None.
+no upper bound, and 0 <= min_select <= max_select <= len(choices).
+An empty answer selects default, or selects nothing when default
+is None. A default names distinct choices, at most max_select of
+them, but may name fewer than min_select so that the user makes
+the rest of the selection deliberately.
 
 The application is responsible for implementing this method with
 a real multi-selection control, such as a list of check boxes or
@@ -2223,6 +2309,11 @@ implementation.
 
 **Raises**:
 
+- `ValueError` - The bounds cannot be satisfied, or default names
+  a value that is not a choice, names a choice
+  twice or names more than max_select choices. A
+  bridge checks this with
+  arg_types.check_multi_args().
 - `NotImplementedError` - The bridge does not implement ask_multi().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
@@ -3102,7 +3193,8 @@ when default is None.
 
 **Raises**:
 
-- `ValueError` - nullable is combined with a default.
+- `ValueError` - default is not one of choices, or is combined with
+  nullable.
 
 <a id="wizard_ui_bridge.bridge_helpers.offered_choices"></a>
 
@@ -3132,6 +3224,10 @@ def ask_many(reader: Callable[[Optional[str]], str | int],
 ```
 
 Re-ask through reader until a valid set of choices is selected.
+
+**Raises**:
+
+- `ValueError` - The arguments break a rule of check_multi_args().
 
 <a id="wizard_ui_bridge.bridge_helpers.match_token"></a>
 
@@ -3168,6 +3264,25 @@ Return why count is not an allowed selection size, or None.
 Every bridge accepts the same selection counts and explains a
 rejected count with the same message, so each of them asks here
 instead of repeating the bounds check and the wording.
+
+<a id="wizard_ui_bridge.bridge_helpers.new_row_template"></a>
+
+#### new\_row\_template
+
+```python
+def new_row_template(columns: Sequence[TableColumn],
+                     cells: Sequence[Sequence[TableCell]]) -> list[TableCell]
+```
+
+Return the cell descriptors used for rows added to a table.
+
+For each column, the new cell keeps the value, choices and nullable
+flag shared by every template cell in that column. Where they differ
+it falls back to no choices, not nullable and an empty value. The
+empty value is an empty string for free text, but None, an empty
+cell, when the column keeps its choices, as an empty string is not
+one of them. A shared value is valid for shared choices, since every
+template cell has been checked to hold one of its own choices.
 
 <a id="wizard_ui_bridge.textual_bridge"></a>
 

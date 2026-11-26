@@ -12,11 +12,12 @@ is not accepted.
 
 from io import StringIO
 from pathlib import Path
-from typing import Callable, Literal, Optional, Sequence, overload
+from typing import Callable, Literal, Optional, Sequence, TypeVar, \
+    overload
 from config_as_json import InvalidConfiguration, string_best_match
 from wizard_ui_bridge.arg_types import PartialCheck, \
     AskReader, WizardBack, WizardPathKind, PathAskOptions, TableColumn, \
-    TableCell, check_nullable
+    TableCell, check_nullable, check_choice_args, check_multi_args
 
 
 _ERASE_TOKEN = ':e'  # empties an editable cell in a one-cell-at-a-time table
@@ -25,6 +26,8 @@ INT_ERROR = 'Please enter an integer.'
 _PATH_REQUIRED = 'Please enter a path.'
 _VALUE_REQUIRED = 'Please enter a value.'
 NO_CHOICE = '(none)'  # the entry that selects no choice when nullable
+
+_V = TypeVar('_V')
 
 
 def check_text_args(default: Optional[str], sensitive: bool,
@@ -388,9 +391,10 @@ def ask_one(reader: Callable[[Optional[str]], str | int],
     when default is None.
 
     Raises:
-        ValueError: nullable is combined with a default.
+        ValueError: default is not one of choices, or is combined with
+                    nullable.
     """
-    check_nullable(nullable, default is not None)
+    check_choice_args(choices, default, nullable)
     reason = re_ask_reason
     while True:
         answer = reader(reason)
@@ -420,7 +424,12 @@ def ask_many(reader: Callable[[Optional[str]], str | int],
              choices: Sequence[str], default: Optional[Sequence[str]],
              min_select: int, max_select: Optional[int],
              re_ask_reason: Optional[str], one_based: bool) -> list[str]:
-    """Re-ask through reader until a valid set of choices is selected."""
+    """Re-ask through reader until a valid set of choices is selected.
+
+    Raises:
+        ValueError: The arguments break a rule of check_multi_args().
+    """
+    check_multi_args(choices, default, min_select, max_select)
     reason = re_ask_reason
     while True:
         chosen, error = _resolve_multi(reader(reason), choices, default,
@@ -531,3 +540,34 @@ def multi_count_message(count: int, min_select: int,
     if too_few or too_many:
         return multi_count_error(min_select, max_select)
     return None
+
+
+def _uniform(values: list[_V], default: _V) -> _V:
+    """Return the value shared by every entry, or the default."""
+    if values and all(value == values[0] for value in values):
+        return values[0]
+    return default
+
+
+def new_row_template(columns: Sequence[TableColumn],
+                     cells: Sequence[Sequence[TableCell]]) -> list[TableCell]:
+    """Return the cell descriptors used for rows added to a table.
+
+    For each column, the new cell keeps the value, choices and nullable
+    flag shared by every template cell in that column. Where they differ
+    it falls back to no choices, not nullable and an empty value. The
+    empty value is an empty string for free text, but None, an empty
+    cell, when the column keeps its choices, as an empty string is not
+    one of them. A shared value is valid for shared choices, since every
+    template cell has been checked to hold one of its own choices.
+    """
+    new_row: list[TableCell] = []
+    for col in range(len(columns)):
+        column = [row[col] for row in cells]
+        choices = _uniform([cell.choices for cell in column], None)
+        empty = '' if choices is None else None
+        new_row.append(TableCell(
+            value=_uniform([cell.value for cell in column], empty),
+            choices=choices,
+            nullable=_uniform([cell.nullable for cell in column], False)))
+    return new_row

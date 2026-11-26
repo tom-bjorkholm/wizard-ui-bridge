@@ -287,6 +287,18 @@ def test_null_choice_default() -> None:
     assert not bridge.launched
 
 
+def test_bad_choice_defaults() -> None:
+    """A default that is not a choice is rejected before any screen."""
+    bridge = _CannedBridge([])
+    with pytest.raises(ValueError, match='one of choices'):
+        bridge.ask_choice('q', choices=['a'], default='b')
+    with pytest.raises(ValueError, match='one of choices'):
+        bridge.ask_multi('q', choices=['a'], default=['b'])
+    with pytest.raises(ValueError, match='min_select'):
+        bridge.ask_multi('q', choices=['a'], min_select=2)
+    assert not bridge.launched
+
+
 @pytest.mark.parametrize('nav', [WizardBack, WizardCancelLevel, WizardAbort])
 def test_nav_reraised(nav: type[WizardNavigation]) -> None:
     """A recorded navigation request is re-raised by the bridge."""
@@ -356,9 +368,9 @@ def test_preselected_default() -> None:
     assert _preselected(('a', 'b'), None) == []
 
 
-def test_default_idx_missing() -> None:
-    """A default outside the choices highlights no option."""
-    assert _default_index(('a', 'b'), 'zzz') is None
+def test_default_index() -> None:
+    """A default maps to its index, and no default highlights nothing."""
+    assert _default_index(('a', 'b'), 'b') == 1
     assert _default_index(('a', 'b'), None) is None
 
 

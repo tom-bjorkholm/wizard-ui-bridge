@@ -1,10 +1,9 @@
 #! /usr/local/bin/python3
 """Variable-row table editing shared by the wizard UI bridges.
 
-This module holds the parts of the table question that are about a
-variable number of rows: the descriptor for rows added at run time,
-shared by the console and Textual bridges, and the console row-menu
-editor used when the console bridge is asked for a variable-row table.
+This module holds the console row-menu editor used when the console
+bridge is asked for a variable-row table. The descriptor for rows added
+at run time is bridge_helpers.new_row_template(), shared by all bridges.
 
 The console editor shows the whole table as a numbered overview each
 round and then asks one action prompt last, so the actions and any
@@ -18,45 +17,17 @@ and per-cell navigation behave identically.
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from typing import Callable, Optional, Sequence, TypeVar
+from typing import Callable, Optional, Sequence
 from wizard_ui_bridge.arg_types import AskReader, \
     PartialCheck, TableCell, TableColumn, WizardBack
 from wizard_ui_bridge.bridge_helpers import cell_checker, \
-    fill_cell, int_text
+    fill_cell, int_text, new_row_template
 
 _ADD_ROW = ':+'  # appends a row in the variable-row console table editor
 _DEL_ROW = ':-'  # deletes a row in the variable-row console table editor
 _BAD_MENU = 'Enter a row number, :+, :- N, or blank to accept.'
 _ROW_MENU_HELP = ('Enter a row number to edit it, :+ to add a row, '
                   ':- N to delete row N, blank to accept.')
-
-_V = TypeVar('_V')
-
-
-def _uniform(values: list[_V], default: _V) -> _V:
-    """Return the value shared by every entry, or the default."""
-    if values and all(value == values[0] for value in values):
-        return values[0]
-    return default
-
-
-def _new_row_template(columns: Sequence[TableColumn],
-                      cells: list[list[TableCell]]) -> list[TableCell]:
-    """Return the cell descriptors used for rows added to the table.
-
-    For each column, a member of the new cell keeps the value shared by
-    every template cell in that column, or falls back to a default when
-    they differ: an empty string for value, None for choices and False
-    for nullable.
-    """
-    new_row: list[TableCell] = []
-    for col in range(len(columns)):
-        column = [row[col] for row in cells]
-        new_row.append(TableCell(
-            value=_uniform([cell.value for cell in column], ''),
-            choices=_uniform([cell.choices for cell in column], None),
-            nullable=_uniform([cell.nullable for cell in column], False)))
-    return new_row
 
 
 # pylint: disable-next=too-many-instance-attributes,too-few-public-methods
@@ -79,7 +50,7 @@ class _VarTable:
         self._check = partial_check
         self._min = min_rows
         self._max = max_rows
-        self._new = _new_row_template(columns, cells)
+        self._new = new_row_template(columns, cells)
         self._rows = [list(row) for row in cells]
         self._added = [False] * len(cells)
         self.table: list[list[Optional[str]]] = [

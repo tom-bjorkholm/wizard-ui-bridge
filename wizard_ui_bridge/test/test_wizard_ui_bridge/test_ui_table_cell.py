@@ -121,3 +121,10 @@ def test_row_label_in_prompt() -> None:
     bridge = WizardUiBridgeConsole(out_file, StringIO('8\n'), StringIO())
     assert bridge.ask_table(columns, cells, 'Q:') == [['size', '8']]
     assert 'size - Value [7]' in out_file.getvalue()
+
+
+def test_cell_bad_value() -> None:
+    """A table cell value that is not one of its choices is rejected."""
+    with pytest.raises(ValueError, match='one of choices'):
+        TableCell(value='w', choices=_PICK)
+    assert TableCell(value=None, choices=_PICK).value is None

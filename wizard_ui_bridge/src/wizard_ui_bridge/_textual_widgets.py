@@ -50,10 +50,8 @@ def _header_widgets(messages: list[str], question: str) -> Iterator[Static]:
 
 def _default_index(choices: Sequence[str],
                    default: Optional[str]) -> Optional[int]:
-    """Return the index of default within choices, or None."""
-    if default is not None and default in choices:
-        return list(choices).index(default)
-    return None
+    """Return the index of default, one of choices, or None for none."""
+    return None if default is None else list(choices).index(default)
 
 
 def _preselected(choices: Sequence[str],
@@ -79,7 +77,7 @@ def _make_select(cell: TableCell, widget_id: str) -> Select[str]:
     assert cell.choices is not None
     options = [(choice, choice) for choice in cell.choices]
     value = cell.value
-    if value is not None and value in cell.choices:
+    if value is not None:
         return Select(options, value=value, allow_blank=cell.nullable,
                       id=widget_id)
     if cell.nullable:
@@ -91,7 +89,7 @@ def _make_select(cell: TableCell, widget_id: str) -> Select[str]:
 def _choice_select(field: AskChoiceField, widget_id: str) -> Select[str]:
     """Return a drop-down for a choice field, blank when no default."""
     options = [(choice, choice) for choice in field.choices]
-    if field.default is not None and field.default in field.choices:
+    if field.default is not None:
         return Select(options, value=field.default, allow_blank=False,
                       id=widget_id)
     return Select(options, allow_blank=True, id=widget_id)

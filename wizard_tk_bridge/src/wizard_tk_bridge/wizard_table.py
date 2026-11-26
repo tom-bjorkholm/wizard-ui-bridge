@@ -17,42 +17,15 @@ and runs the optional per-cell partial check for early feedback.
 import tkinter as tk
 from dataclasses import dataclass
 from tkinter import ttk
-from typing import Optional, Sequence, TypeVar
+from typing import Optional, Sequence
 from wizard_ui_bridge import PartialCheck, TableCell, TableColumn
+from wizard_ui_bridge.bridge_helpers import new_row_template
 from wizard_tk_bridge.auto_scroll import auto_hide, bind_wheel
 from wizard_tk_bridge.gui_style import choice_combo, style_input
 
 WRAP_LENGTH = 520
 TABLE_VIEW_HEIGHT = 210
 HEADER_FONT = ('TkDefaultFont', 10, 'bold')
-
-_V = TypeVar('_V')
-
-
-def _uniform(values: list[_V], default: _V) -> _V:
-    """Return the value shared by every entry, or the default."""
-    if values and all(value == values[0] for value in values):
-        return values[0]
-    return default
-
-
-def _new_row_template(columns: Sequence[TableColumn],
-                      rows: Sequence[Sequence[TableCell]]) -> list[TableCell]:
-    """Return the cell descriptors used for rows added at run time.
-
-    For each column the new cell keeps the value, choices and nullable
-    flag shared by every seed cell of that column, and falls back to an
-    empty string, no choices and not-nullable when they differ. A cell in
-    an added row is always editable, even in a read-only column.
-    """
-    template: list[TableCell] = []
-    for col in range(len(columns)):
-        column = [row[col] for row in rows]
-        template.append(TableCell(
-            value=_uniform([cell.value for cell in column], ''),
-            choices=_uniform([cell.choices for cell in column], None),
-            nullable=_uniform([cell.nullable for cell in column], False)))
-    return template
 
 
 @dataclass(frozen=True)
@@ -105,7 +78,7 @@ class TableEditor:
         self._variable = min_rows is not None and max_rows is not None
         self._min_rows = len(rows) if min_rows is None else min_rows
         self._max_rows = len(rows) if max_rows is None else max_rows
-        self._template = _new_row_template(columns, rows)
+        self._template = new_row_template(columns, rows)
         self._cells: list[list[Cell]] = []
         self._canvas: Optional[tk.Canvas] = None
         self._grid = self._build_scroll(parent)

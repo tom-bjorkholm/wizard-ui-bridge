@@ -37,7 +37,7 @@ from textual.widgets.selection_list import Selection
 from wizard_ui_bridge.bridge import WizardUiBridge
 from wizard_ui_bridge.bridge_helpers import check_text_args, INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
-    text_answer, offered_choices
+    text_answer, offered_choices, new_row_template
 from wizard_ui_bridge.form_helpers import initial_answer
 from wizard_ui_bridge._form_prefill import apply_prefills
 from wizard_ui_bridge._parse import NEW_FIELD_TYPES, \
@@ -52,14 +52,14 @@ from wizard_ui_bridge._path import _PathPick, \
     _PickerScreen, _start_dir, _start_value
 from wizard_ui_bridge.arg_types import PartialCheck, \
     WizardNavigation, WizardBack, WizardCancelLevel, \
-    WizardAbort, PathAskOptions, TableColumn, TableCell, check_nullable
+    WizardAbort, PathAskOptions, TableColumn, TableCell, \
+    check_choice_args, check_multi_args
 from wizard_ui_bridge.form_defs import AskField, AskFields, \
     ALL_ASK_FIELD_TYPES, AnswerField, AnswerFields, PartialFormValidator, \
     AskTextField, AskIntField, AskPathField, AskYesNoField, AskChoiceField, \
     AskMultiChoiceField, AskDateField, AskDateTimeField, AnswerTextField, \
     AnswerIntField, AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
     AnswerMultiChoiceField
-from wizard_ui_bridge._table import _new_row_template
 
 _CAL_TOKEN = '?'
 
@@ -251,7 +251,7 @@ class _TableApp(_NavApp[list[list[Optional[str]]]]):
     number of rows: an Add row and a Remove row button grow the table up
     to max_rows and shrink it down to min_rows. Every cell in an added
     row is editable, even in a read-only column, and its descriptor comes
-    from _new_row_template().
+    from new_row_template().
 
     A rejected cell is framed in the error colour while the shared status
     line names it, so the user sees which cell of the grid to correct.
@@ -278,7 +278,7 @@ class _TableApp(_NavApp[list[list[Optional[str]]]]):
         self._variable = min_rows is not None and max_rows is not None
         self._min_rows = len(cells) if min_rows is None else min_rows
         self._max_rows = len(cells) if max_rows is None else max_rows
-        self._new_row = _new_row_template(columns, cells)
+        self._new_row = new_row_template(columns, cells)
         self._rows = [list(row) for row in cells]
         self._added = [False] * len(cells)
         self._table: list[list[Optional[str]]] = [
@@ -885,7 +885,7 @@ class WizardUiBridgeTextual(WizardUiBridge):
         A nullable choice is offered with a leading, highlighted
         '(none)' option that selects no choice.
         """
-        check_nullable(nullable, default is not None)
+        check_choice_args(choices, default, nullable)
         messages = self._collect(re_ask_reason)
         offered = offered_choices(choices, nullable)
         start = 0 if nullable else _default_index(choices, default)
@@ -899,6 +899,7 @@ class WizardUiBridgeTextual(WizardUiBridge):
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None) -> list[str]:
         """Ask the user to pick several choices; see ask_multi."""
+        check_multi_args(choices, default, min_select, max_select)
         messages = self._collect(re_ask_reason)
         chosen = self._run(_MultiApp(question, list(choices),
                                      _preselected(choices, default),

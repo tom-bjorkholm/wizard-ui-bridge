@@ -14,17 +14,18 @@ from dataclasses import MISSING, fields
 from datetime import date, datetime, time, timedelta
 from functools import partial
 from pathlib import Path
-from typing import Callable, TypeAliasType, get_args
+from typing import Callable, Optional, TypeAliasType, get_args
 
 import pytest
 
 from wizard_ui_bridge.arg_types import PathAskOptions
 from wizard_ui_bridge.form_defs import ALL_ASK_FIELD_TYPES, AnswerField, \
-    AskFieldCommon, AskChoiceField
+    AskFieldCommon, AskChoiceField, AskMultiChoiceField
 from wizard_ui_bridge.matrix_cell_defs import ALL_ASK_CELL_TYPES, AskCell, \
     AnswerCell, AskRangeCell, AskIntCell, AskFloatCell, AskDateCell, \
     AskTimeCell, AskDateTimeCell, AskDurationCell, AskTextCell, \
-    AskLabelCell, AskCellCommon, AskChoiceCell, _OrderedValue
+    AskLabelCell, AskCellCommon, AskChoiceCell, AskMultiChoiceCell, \
+    _OrderedValue
 
 
 def _members(alias: TypeAliasType) -> tuple[type, ...]:
@@ -46,6 +47,16 @@ _NULL_DEFAULTS: list[Callable[[], AskCellCommon | PathAskOptions]] = [
     partial(AskChoiceCell, None, ('a',), default='a', nullable=True),
     partial(AskChoiceField, 'Q', None, ('a',), default='a', nullable=True),
     partial(PathAskOptions, nullable=True, default=Path('x'))]
+
+
+_ABC = ('a', 'b', 'c')
+_BAD_MULTI = [(None, -1, None, 'min_select'), (None, 2, 1, 'min_select'),
+              (None, 0, 4, 'number of choices'),
+              (None, 4, None, 'number of choices'),
+              (['a', 'x'], 0, None, 'one of choices'),
+              (['a', 'a'], 0, None, 'twice'), (['a', 'b'], 0, 1, 'max_select')]
+_GOOD_MULTI = [(None, 0, None), (['a'], 2, None), (list(_ABC), 0, None),
+               (None, 3, 3), ([], 0, 0)]
 
 
 def _names(cls: type) -> list[str]:
@@ -131,6 +142,37 @@ def test_choice_nullable() -> None:
     """A choice cell is not nullable by default; nullable is its last arg."""
     assert AskChoiceCell(None, ('a', 'b')).nullable is False
     assert _names(AskChoiceCell)[-1] == 'nullable'
+
+
+@pytest.mark.parametrize('make', [AskChoiceCell, partial(AskChoiceField, 'Q')])
+def test_choice_bad_default(make: Callable[..., AskChoiceCell]) -> None:
+    """A choice default that is not one of the choices is rejected."""
+    with pytest.raises(ValueError, match='one of choices'):
+        make(None, _ABC, default='x')
+    assert make(None, _ABC, default='b').default == 'b'
+
+
+@pytest.mark.parametrize('make', [AskMultiChoiceCell,
+                                  partial(AskMultiChoiceField, 'Q')])
+@pytest.mark.parametrize('default, low, high, message', _BAD_MULTI)
+def test_multi_bad_args(make: Callable[..., AskMultiChoiceCell],
+                        default: Optional[list[str]], low: int,
+                        high: Optional[int], message: str) -> None:
+    """Unsatisfiable bounds or a default breaking them are rejected."""
+    with pytest.raises(ValueError, match=message):
+        make(None, _ABC, default=default, min_select=low, max_select=high)
+
+
+@pytest.mark.parametrize('default, low, high', _GOOD_MULTI)
+def test_multi_good_args(default: Optional[list[str]], low: int,
+                         high: Optional[int]) -> None:
+    """A default may name fewer choices than min_select, never more.
+
+    The bounds may also reach the number of choices, and a default of no
+    choices is accepted.
+    """
+    AskMultiChoiceCell(None, _ABC, default=default, min_select=low,
+                       max_select=high)
 
 
 def test_label_cell() -> None:

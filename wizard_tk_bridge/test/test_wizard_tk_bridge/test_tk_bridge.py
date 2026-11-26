@@ -223,6 +223,21 @@ def test_null_default_raises() -> None:
         bridge.close()
 
 
+def test_bad_default_raises() -> None:
+    """Test a default breaking its constraints is rejected before asking."""
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        with pytest.raises(ValueError, match='one of choices'):
+            bridge.ask_choice('Pick?', choices=['a'], default='b')
+        with pytest.raises(ValueError, match='one of choices'):
+            bridge.ask_multi('Pick?', choices=['a'], default=['b'])
+        with pytest.raises(ValueError, match='range'):
+            bridge.ask_int('Age?', min_value=1, max_value=5, default=9)
+        with pytest.raises(ValueError, match='min_value'):
+            bridge.ask_int('Age?', min_value=5, max_value=1)
+        bridge.close()
+
+
 def test_ask_multi_delegates() -> None:
     """Test ask_multi reaches the wizard window and returns its answer."""
     with gui_root() as root:

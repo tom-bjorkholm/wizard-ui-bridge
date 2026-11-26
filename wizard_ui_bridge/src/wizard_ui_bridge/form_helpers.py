@@ -298,8 +298,9 @@ def prefilled_field(field: AskField, prefill: PrefillValueType) -> AskField:
     is asked. A field may not be both nullable and have a default, so the
     returned field is not nullable: as for any default, an empty answer
     takes the prefill. A prefill that cannot serve as a valid default,
-    such as an integer or date outside the field's bounds, is ignored so
-    the field keeps its own default. The prefill has already been checked
+    such as an integer or date outside the field's bounds or a
+    multi-choice selection of more than max_select choices, is ignored
+    so the field keeps its own default. The prefill has already been checked
     against the field type by valid_prefills().
     """
     try:

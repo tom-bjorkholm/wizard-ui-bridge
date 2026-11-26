@@ -46,7 +46,8 @@ from wizard_ui_bridge.form_defs import AskField, AskFields, \
     AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField, \
     AnswerTimeField, AnswerDateTimeField, AnswerDurationField
-from wizard_ui_bridge.matrix_cell_defs import PrefillValueType
+from wizard_ui_bridge.matrix_cell_defs import PrefillValueType, \
+    check_bounds
 from wizard_ui_bridge.matrix_defs import MatrixRequest, AnswerCells
 
 
@@ -133,15 +134,14 @@ class WizardUiBridge:
             The entered integer, default for an empty answer with a
             default, or None for an empty answer when nullable.
         Raises:
-            ValueError: default is given together with nullable.
+            ValueError: min_value exceeds max_value, default is outside
+                        the bounds, or default is given together with
+                        nullable.
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        assert (min_value is None or max_value is None
-                or min_value <= max_value)
-        assert default is None or not out_of_range(default, min_value,
-                                                   max_value)
+        check_bounds(min_value, max_value, default)
         check_nullable(nullable, default is not None)
         reason = re_ask_reason
         default_text = None if default is None else str(default)
@@ -264,7 +264,9 @@ class WizardUiBridge:
             The chosen value, one of choices, or None for no choice when
             nullable.
         Raises:
-            ValueError: default is given together with nullable.
+            ValueError: default is not one of choices, or is given
+                        together with nullable. A bridge checks this with
+                        arg_types.check_choice_args().
             NotImplementedError: The bridge does not implement ask_choice().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
@@ -281,8 +283,11 @@ class WizardUiBridge:
 
         The result holds the chosen values in the order of choices, with
         a count between min_select and max_select; max_select None means
-        no upper bound. An empty answer selects default, or selects
-        nothing when default is None.
+        no upper bound, and 0 <= min_select <= max_select <= len(choices).
+        An empty answer selects default, or selects nothing when default
+        is None. A default names distinct choices, at most max_select of
+        them, but may name fewer than min_select so that the user makes
+        the rest of the selection deliberately.
 
         The application is responsible for implementing this method with
         a real multi-selection control, such as a list of check boxes or
@@ -302,6 +307,11 @@ class WizardUiBridge:
         Returns:
             The chosen values, each one of choices, in choices order.
         Raises:
+            ValueError: The bounds cannot be satisfied, or default names
+                        a value that is not a choice, names a choice
+                        twice or names more than max_select choices. A
+                        bridge checks this with
+                        arg_types.check_multi_args().
             NotImplementedError: The bridge does not implement ask_multi().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.

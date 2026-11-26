@@ -19,7 +19,7 @@ import pytest
 from wizard_ui_bridge import TableCell, TableColumn
 from wizard_ui_bridge.bridge_helpers import ask_many, ask_one, \
     ask_yes_no, run_table, CHOICE_ERROR, check_text_args, offered_choices, \
-    NO_CHOICE
+    NO_CHOICE, new_row_template
 
 _COLORS = ('red', 'green', 'blue')
 _NEEDED = 'Please enter a value.'
@@ -106,6 +106,22 @@ def test_one_null_default() -> None:
         ask_one(_Reader([]).one, _COLORS, 'red', None, nullable=True)
 
 
+def test_one_bad_default() -> None:
+    """A single-choice default that is not a choice is rejected."""
+    reader = _Reader([])
+    with pytest.raises(ValueError, match='one of choices'):
+        ask_one(reader.one, _COLORS, 'pink', None)
+    assert not reader.reasons
+
+
+def test_many_bad_default() -> None:
+    """A multi-choice default that is not a choice is rejected."""
+    reader = _Reader([])
+    with pytest.raises(ValueError, match='one of choices'):
+        ask_many(reader.one, _COLORS, ['pink'], 0, None, None, True)
+    assert not reader.reasons
+
+
 def test_offered_choices() -> None:
     """A nullable list leads with the no-choice entry mapped to None.
 
@@ -159,3 +175,37 @@ def test_cell_bool() -> None:
                       None, None)
     assert table == [['text']]
     assert reader.reasons == [None, _NEEDED]
+
+
+def test_new_row_shared() -> None:
+    """A new row keeps the members shared across each template column."""
+    columns = (TableColumn('P', read_only=True), TableColumn('V'))
+    cells = [[TableCell(value='a', choices=('a', 'b'), nullable=True),
+              TableCell(value=None, nullable=True)],
+             [TableCell(value='a', choices=('a', 'b'), nullable=True),
+              TableCell(value=None, nullable=True)]]
+    assert new_row_template(columns, cells) == cells[0]
+
+
+@pytest.mark.parametrize('first, second, expected', [
+    (TableCell(value='a', choices=('a', 'b')),
+     TableCell(value='b', choices=('a', 'b')),
+     TableCell(value=None, choices=('a', 'b'))),
+    (TableCell(value='x'), TableCell(value='y'), TableCell(value='')),
+    (TableCell(value='a', choices=('a',), nullable=True),
+     TableCell(value='b', choices=('a', 'b')), TableCell(value=''))])
+def test_new_row_fallback(first: TableCell, second: TableCell,
+                          expected: TableCell) -> None:
+    """Differing template members fall back to an empty, plain cell.
+
+    The empty value is None when the column keeps its choices, since an
+    empty string is not one of them, and an empty string otherwise.
+    """
+    columns = (TableColumn('V'),)
+    assert new_row_template(columns, [[first], [second]]) == [expected]
+
+
+def test_new_row_no_rows() -> None:
+    """The template of a table with no rows is an empty free-text cell."""
+    columns = (TableColumn('V'),)
+    assert new_row_template(columns, []) == [TableCell(value='')]

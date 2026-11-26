@@ -113,6 +113,57 @@ def check_nullable(nullable: bool, has_default: bool) -> None:
         raise ValueError('nullable is not allowed together with a default')
 
 
+def check_choice_args(choices: Sequence[str], default: Optional[str],
+                      nullable: bool) -> None:
+    """Raise ValueError when single-choice arguments contradict each other.
+
+    Args:
+        choices: The choices offered.
+        default: The choice selected by an empty answer, or None.
+        nullable: Whether no choice is allowed, reported as None.
+    Raises:
+        ValueError: default is not one of choices, or default is given
+                    together with nullable.
+    """
+    check_nullable(nullable, default is not None)
+    if default is not None and default not in choices:
+        raise ValueError('default must be one of choices')
+
+
+def check_multi_args(choices: Sequence[str], default: Optional[Sequence[str]],
+                     min_select: int, max_select: Optional[int]) -> None:
+    """Raise ValueError when multi-choice arguments contradict each other.
+
+    The selection bounds must be satisfiable, so 0 <= min_select <=
+    max_select <= len(choices), where a max_select of None stands for
+    len(choices). A default must name distinct choices, at most
+    max_select of them. It may name fewer than min_select, leaving the
+    rest of the selection for the user to make deliberately.
+
+    Args:
+        choices: The choices offered.
+        default: The choices pre-selected by an empty answer, or None.
+        min_select: The smallest acceptable number of choices.
+        max_select: The largest acceptable number of choices, or None.
+    Raises:
+        ValueError: The bounds cannot be satisfied, or default names a
+                    value that is not a choice, names a choice twice or
+                    names more than max_select choices.
+    """
+    upper = len(choices) if max_select is None else max_select
+    if not 0 <= min_select <= upper <= len(choices):
+        raise ValueError('need 0 <= min_select <= max_select <= '
+                         'number of choices')
+    if default is None:
+        return
+    if not set(default) <= set(choices):
+        raise ValueError('every default value must be one of choices')
+    if len(set(default)) != len(default):
+        raise ValueError('default must not name a choice twice')
+    if len(default) > upper:
+        raise ValueError('default must not name more than max_select')
+
+
 @dataclass(frozen=True)
 class PathAskOptions:
     """Options for a path question.
@@ -174,8 +225,17 @@ class TableCell:
                   an empty string the validation may or may not accept,
                   and with choices given an empty editable cell is not yet
                   a valid final value.
+    Raises:
+        ValueError: choices is given and value is neither None nor one
+                    of choices.
     """
 
     value: Optional[str] = None
     choices: Optional[tuple[str, ...]] = None
     nullable: bool = False
+
+    def __post_init__(self) -> None:
+        """Check that a given value is one of the choices."""
+        if (self.choices is not None and self.value is not None
+                and self.value not in self.choices):
+            raise ValueError('value must be one of choices')

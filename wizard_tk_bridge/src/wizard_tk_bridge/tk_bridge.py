@@ -40,8 +40,10 @@ import tkinter as tk
 from wizard_ui_bridge import AnswerCells, AnswerFields, AskField, AskFields, \
     MatrixRequest, PartialCheck, PartialFormValidator, PathAskOptions, \
     TableCell, TableColumn, WizardUiBridge
-from wizard_ui_bridge.arg_types import check_nullable
+from wizard_ui_bridge.arg_types import check_nullable, check_choice_args, \
+    check_multi_args
 from wizard_ui_bridge.bridge_helpers import check_text_args
+from wizard_ui_bridge.matrix_cell_defs import check_bounds
 from wizard_tk_bridge._no_text_io import NoTextIO
 from wizard_tk_bridge.wizard_form import handles_field
 from wizard_tk_bridge.wizard_window import WizardWindow
@@ -96,6 +98,7 @@ class WizardUiBridgeTk(WizardUiBridge):
                 default: Optional[int] = None) -> Optional[int]:
         """Ask for an integer within optional bounds; see ask_int."""
         check_nullable(nullable, default is not None)
+        check_bounds(min_value, max_value, default)
         return self._window_obj().ask_int(question, re_ask_reason, nullable,
                                           min_value, max_value, default)
 
@@ -132,7 +135,7 @@ class WizardUiBridgeTk(WizardUiBridge):
 
         A nullable choice is offered with a leading '(none)' entry.
         """
-        check_nullable(nullable, default is not None)
+        check_choice_args(choices, default, nullable)
         return self._window_obj().ask_choice(question, choices, default,
                                              re_ask_reason, nullable)
 
@@ -142,6 +145,7 @@ class WizardUiBridgeTk(WizardUiBridge):
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None) -> list[str]:
         """Ask the user to pick several choices from a multi-selection list."""
+        check_multi_args(choices, default, min_select, max_select)
         return self._window_obj().ask_multi(question, choices, default,
                                             min_select, max_select,
                                             re_ask_reason)

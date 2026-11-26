@@ -95,8 +95,17 @@ def test_int_default() -> None:
 def test_int_default_range() -> None:
     """An integer default must be inside the allowed range."""
     bridge = _TextBridge([])
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match='range'):
         bridge.ask_int('How many?', min_value=1, max_value=5, default=9)
+    assert not bridge.calls
+
+
+def test_int_bad_bounds() -> None:
+    """An integer question with min above max is rejected."""
+    bridge = _TextBridge([])
+    with pytest.raises(ValueError, match='min_value'):
+        bridge.ask_int('How many?', min_value=5, max_value=1)
+    assert not bridge.calls
 
 
 def test_int_not_number() -> None:

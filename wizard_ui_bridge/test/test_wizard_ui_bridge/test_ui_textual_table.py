@@ -15,7 +15,6 @@ from wizard_ui_bridge import TableCell, TableColumn, WizardBack, \
     WizardCancelLevel
 from wizard_ui_bridge.textual_bridge import _TableApp
 from wizard_ui_bridge._textual_widgets import _parse_cell_id
-from wizard_ui_bridge._table import _new_row_template
 from .ui_textual_support import drive, _CannedBridge
 
 
@@ -158,42 +157,6 @@ def test_ask_table_nav() -> None:
     bridge = _CannedBridge([WizardCancelLevel])
     with pytest.raises(WizardCancelLevel):
         bridge.ask_table(columns, cells, 'q')
-
-
-def test_new_row_uniform() -> None:
-    """A new row keeps the members shared across each template column."""
-    columns = (TableColumn('P', read_only=True), TableColumn('V'))
-    cells = [[TableCell(value='p', choices=('a', 'b'), nullable=True),
-              TableCell(value='x', choices=('a', 'b'), nullable=True)],
-             [TableCell(value='p', choices=('a', 'b'), nullable=True),
-              TableCell(value='y', choices=('a', 'b'), nullable=True)]]
-    new_row = _new_row_template(columns, cells)
-    assert new_row[0].value == 'p'
-    assert new_row[0].choices == ('a', 'b')
-    assert new_row[0].nullable is True
-    assert new_row[1].value == ''
-    assert new_row[1].choices == ('a', 'b')
-
-
-def test_new_row_defaults() -> None:
-    """Differing template members fall back to '', None and False."""
-    columns = (TableColumn('V'),)
-    cells = [[TableCell(value='x', choices=('a',), nullable=True)],
-             [TableCell(value='y', choices=('a', 'b'), nullable=False)]]
-    new_row = _new_row_template(columns, cells)
-    assert new_row[0].value == ''
-    assert new_row[0].choices is None
-    assert new_row[0].nullable is False
-
-
-def test_new_row_none() -> None:
-    """A uniformly None value stays None in added rows."""
-    columns = (TableColumn('V'),)
-    cells = [[TableCell(value=None, nullable=True)],
-             [TableCell(value=None, nullable=True)]]
-    new_row = _new_row_template(columns, cells)
-    assert new_row[0].value is None
-    assert new_row[0].nullable is True
 
 
 def test_table_add_row() -> None:

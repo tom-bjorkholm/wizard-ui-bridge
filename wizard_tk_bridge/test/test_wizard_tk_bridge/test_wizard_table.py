@@ -10,32 +10,8 @@ from typing import Optional
 import pytest
 from wizard_ui_bridge import TableCell, TableColumn
 from wizard_tk_bridge.auto_scroll import _wheel_area
-from wizard_tk_bridge.wizard_table import TableEditor, _new_row_template, \
-    _uniform
+from wizard_tk_bridge.wizard_table import TableEditor
 from .gui_test_helpers import find_widgets, gui_root
-
-
-def test_uniform() -> None:
-    """Test a shared value is kept and a mix falls back to the default."""
-    assert _uniform([1, 1, 1], 0) == 1
-    assert _uniform([1, 2], 0) == 0
-    assert _uniform([], 0) == 0
-
-
-def test_new_row_template() -> None:
-    """Test the added-row template keeps shared cells and clears the rest."""
-    columns = [TableColumn(header='A'), TableColumn(header='B')]
-    rows = [[TableCell(value='x', choices=('x', 'y')), TableCell(value='m')],
-            [TableCell(value='x', choices=('x', 'y')), TableCell(value='n')]]
-    template = _new_row_template(columns, rows)
-    assert template[0] == TableCell(value='x', choices=('x', 'y'))
-    assert template[1] == TableCell(value='')
-
-
-def test_template_empty() -> None:
-    """Test the template of an empty seed is all default cells."""
-    columns = [TableColumn(header='A')]
-    assert _new_row_template(columns, []) == [TableCell(value='')]
 
 
 def test_table_editor_text() -> None:
