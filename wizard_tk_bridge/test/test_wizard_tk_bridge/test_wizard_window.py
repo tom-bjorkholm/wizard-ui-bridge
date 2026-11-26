@@ -5,14 +5,16 @@
 # MIT License
 
 import tkinter as tk
-from tkinter import ttk
 import pytest
 from wizard_ui_bridge import AskTextField, AnswerTextField, TableCell, \
-    TableColumn
+    TableColumn, WizardBack, MatrixConsoleQuestion, MatrixDimension, \
+    MatrixDimensions, MatrixRequest, AskLabelCell, AskIntCell, AnswerIntCell
 from wizard_tk_bridge import wizard_window
+from wizard_tk_bridge.wizard_matrix import ADD_ROW, REMOVE_ROW
 from wizard_tk_bridge.wizard_table import TableEditor
-from wizard_tk_bridge.wizard_window import WizardWindow, _bind_submit
-from .gui_test_helpers import CloseSpy, gui_root
+from wizard_tk_bridge.wizard_window import WizardWindow
+from .gui_test_helpers import CloseSpy, click_button, content_of, gui_root, \
+    label_texts
 
 
 def test_choice_list_shown() -> None:
@@ -211,29 +213,6 @@ def test_table_ok_plain() -> None:
         window.close()
 
 
-def test_bind_submit_inputs() -> None:
-    """Test binding Return reaches every input, and only the inputs.
-
-    An input nested in a two-widget row is reached through the
-    recursion, while a button keeps its own key handling.
-    """
-    with gui_root() as root:
-        frame = tk.Frame(root)
-        entry = tk.Entry(frame)
-        row = tk.Frame(frame)
-        nested = tk.Entry(row)
-        button = tk.Button(frame)
-        listbox = tk.Listbox(frame)
-        combo = ttk.Combobox(frame)
-        _bind_submit(frame, lambda: None)
-        assert entry.bind('<Return>') != ''
-        assert nested.bind('<Return>') != ''
-        assert listbox.bind('<Return>') != ''
-        assert combo.bind('<Return>') != ''
-        assert button.bind('<Return>') == ''
-        assert frame.bind('<Return>') == ''
-
-
 def test_messages_kept() -> None:
     """Test shown messages are kept in order in a read-only message area."""
     with gui_root() as root:
@@ -260,7 +239,7 @@ def test_form_binds_return() -> None:
         form = window._form
         assert form is not None
         # pylint: disable-next=protected-access
-        assert form._rows[0].widget.bind('<Return>') != ''
+        assert form._rows[0].cell_input.widget.bind('<Return>') != ''
         window.close()
 
 
@@ -286,7 +265,7 @@ def _press_return_in_form(window: WizardWindow) -> None:
     form = window._form
     assert form is not None
     # pylint: disable-next=protected-access
-    entry = form._rows[0].widget
+    entry = form._rows[0].cell_input.widget
     entry.focus_force()
     entry.update()
     entry.event_generate('<Return>', when='now')
@@ -368,4 +347,55 @@ def test_parent_modal_off() -> None:
         window = WizardWindow(tk.Frame(root), modal=False)
         root.update()
         assert root.grab_current() is None  # type: ignore[no-untyped-call]
+        window.close()
+
+
+_HOURS = AskIntCell(None, default=8)
+
+
+def _matrix_request() -> MatrixRequest:
+    """Return a request of a label and an hours cell, one or two rows."""
+    dims = MatrixDimensions(MatrixDimension(1, 2), MatrixDimension(2, 2),
+                            MatrixDimension(1, 2))
+    return MatrixRequest('Hours?', [[AskLabelCell('Ann'), _HOURS]], dims,
+                         MatrixConsoleQuestion(False, True, True))
+
+
+def test_matrix_prompt() -> None:
+    """Test a matrix prompt's question, buttons and returned answers.
+
+    The re-ask reason and the question are shown above the matrix, and
+    the default OK button comes first, then the resize buttons of the
+    resizable rows, and then the navigation buttons.
+    """
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        seen: list[list[str]] = []
+
+        def _inspect() -> None:
+            """Record the labels and buttons shown, then press OK."""
+            content = content_of(window)
+            box = content.winfo_children()[-1]
+            buttons = [w for w in box.winfo_children()
+                       if isinstance(w, tk.Button)]
+            seen.append(label_texts(content)[:2])
+            seen.append([str(w.cget('text')) for w in buttons])
+            seen.append([str(w.cget('default')) for w in buttons[:1]])
+            buttons[0].invoke()
+        root.after(0, _inspect)
+        answers = window.ask_matrix_form(_matrix_request(), 'Try again.')
+        assert seen == [['Try again.', 'Hours?'],
+                        ['OK', ADD_ROW, REMOVE_ROW, 'Back', 'Out one level',
+                         'Abort'], ['active']]
+        assert answers == [[None, AnswerIntCell(_HOURS, 8)]]
+        window.close()
+
+
+def test_matrix_prompt_back() -> None:
+    """Test the Back button of a matrix prompt raises WizardBack."""
+    with gui_root() as root:
+        window = WizardWindow(tk.Frame(root))
+        root.after(0, lambda: click_button(content_of(window), 'Back'))
+        with pytest.raises(WizardBack):
+            window.ask_matrix_form(_matrix_request(), None)
         window.close()

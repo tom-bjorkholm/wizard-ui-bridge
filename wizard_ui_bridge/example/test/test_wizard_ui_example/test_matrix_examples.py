@@ -1,10 +1,11 @@
 #! /usr/bin/env python3
 """Tests for the matrix form teaching examples e08 and e09.
 
-No bridge implements ask_matrix_form() yet. The tests that use the
-scripted _MatrixBridge check the examples' own logic today. The console
-tests need the console implementation of ask_matrix_form() and are
-skipped until it exists.
+The tests that use the scripted _MatrixBridge check the examples' own
+logic. The console tests need the console implementation of
+ask_matrix_form() and are skipped until it exists. The Tk bridge
+implements ask_matrix_form(), and the tests of the wizard_tk_bridge
+examples run e08 through it.
 """
 
 # Copyright (c) 2026 Tom Björkholm

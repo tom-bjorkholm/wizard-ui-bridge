@@ -1,5 +1,5 @@
 #! /usr/local/bin/python3
-"""Tests for the whole-form editor and its answer-parsing helpers."""
+"""Tests for the whole-form editor."""
 
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
@@ -9,7 +9,6 @@ from tkinter import ttk
 from datetime import date
 from pathlib import Path
 from typing import Optional, Sequence
-import pytest
 from wizard_ui_bridge import AnswerFields, AnswerField, AskField, \
     PartFormValidationResult, PartialFormValidator, PathAskOptions, \
     PrefillValues, WizardPathKind, AskTextField, AskIntField, AskPathField, \
@@ -17,70 +16,9 @@ from wizard_ui_bridge import AnswerFields, AnswerField, AskField, \
     AskDateField, AskDurationField, AnswerTextField, AnswerIntField, \
     AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField
-from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
-    int_text, multi_count_error, out_of_range, range_error, text_answer
 from wizard_tk_bridge.auto_scroll import _wheel_area
-from wizard_tk_bridge.wizard_form import FormEditor, HelpTooltip, \
-    handles_field, int_answer, _inside, _set_combo, _set_entry_text, _set_multi
+from wizard_tk_bridge.wizard_form import FormEditor, handles_field
 from .gui_test_helpers import gui_root
-
-
-@pytest.mark.parametrize('text, expected', [
-    ('5', 5), ('-3', -3), ('x', None), ('', None), ('1.5', None)])
-def test_int_text(text: str, expected: Optional[int]) -> None:
-    """Test int_text parses a whole number or reports None."""
-    assert int_text(text) == expected
-
-
-@pytest.mark.parametrize('value, lo, hi, expected', [
-    (5, 1, 10, False), (0, 1, 10, True), (11, 1, 10, True),
-    (5, None, None, False), (5, None, 4, True), (5, 6, None, True)])
-def test_out_of_range(value: int, lo: Optional[int], hi: Optional[int],
-                      expected: bool) -> None:
-    """Test out_of_range respects each inclusive bound."""
-    assert out_of_range(value, lo, hi) is expected
-
-
-@pytest.mark.parametrize('lo, hi, needle', [
-    (None, 5, 'at most 5'), (1, None, 'at least 1'),
-    (1, 5, 'between 1 and 5')])
-def test_range_error(lo: Optional[int], hi: Optional[int],
-                     needle: str) -> None:
-    """Test the range error names the bounds that apply."""
-    assert needle in range_error(lo, hi)
-
-
-@pytest.mark.parametrize('lo, hi, needle', [
-    (2, None, 'at least 2'), (3, 3, 'exactly 3'), (1, 4, 'between 1 and 4')])
-def test_multi_count_error(lo: int, hi: Optional[int], needle: str) -> None:
-    """Test the multi-select count error names the allowed range."""
-    assert needle in multi_count_error(lo, hi)
-
-
-@pytest.mark.parametrize('text, nullable, default, expected', [
-    ('hi', False, None, 'hi'), ('', True, None, None), ('', False, None, ''),
-    ('', False, 'd', 'd'), ('', True, 'd', 'd')])
-def test_text_answer(text: str, nullable: bool, default: Optional[str],
-                     expected: Optional[str]) -> None:
-    """Test the default and nullable rules for a text answer."""
-    assert text_answer(text, nullable, default) == expected
-
-
-@pytest.mark.parametrize('text, nullable, lo, hi, default, expected', [
-    ('5', False, 1, 10, None, (True, 5, None)),
-    ('', False, None, None, 3, (True, 3, None)),
-    ('', True, None, None, None, (True, None, None)),
-    ('', False, None, None, None, (False, None, _INT_ERROR)),
-    ('x', False, None, None, None, (False, None, _INT_ERROR)),
-    ('20', False, 1, 10, None,
-     (False, None, 'Please enter an integer between 1 and 10.'))])
-# pylint: disable-next=too-many-arguments,too-many-positional-arguments
-def test_int_answer(text: str, nullable: bool, lo: Optional[int],
-                    hi: Optional[int], default: Optional[int],
-                    expected: tuple[bool, Optional[int], Optional[str]]
-                    ) -> None:
-    """Test int_answer reports its value or a re-ask reason."""
-    assert int_answer(text, nullable, lo, hi, default) == expected
 
 
 def _build(root: tk.Tk, fields: Sequence[AskField],
@@ -106,7 +44,7 @@ def test_form_sensitive_masks() -> None:
         field = AskTextField('PW', None, sensitive=True)
         editor, _ = _build(root, [field])
         # pylint: disable-next=protected-access
-        widget = editor._rows[0].widget
+        widget = editor._rows[0].cell_input.widget
         assert isinstance(widget, tk.Entry) and widget.cget('show') == '*'
 
 
@@ -164,7 +102,7 @@ def test_form_null_choice() -> None:
         field = AskChoiceField('Pick', None, choices=('a', 'b'), nullable=True)
         editor, recorded = _build(root, [field])
         # pylint: disable-next=protected-access
-        widget = editor._rows[0].widget
+        widget = editor._rows[0].cell_input.widget
         assert isinstance(widget, ttk.Combobox)
         assert list(widget.cget('values')) == ['', 'a', 'b']
         editor.submit()
@@ -177,7 +115,7 @@ def test_form_null_reblank() -> None:
         field = AskChoiceField('Pick', None, choices=('a', 'b'), nullable=True)
         editor, _ = _build(root, [field])
         # pylint: disable-next=protected-access
-        widget = editor._rows[0].widget
+        widget = editor._rows[0].cell_input.widget
         assert isinstance(widget, ttk.Combobox)
         widget.set('a')
         assert editor.answers() == [AnswerChoiceField(field, 'a')]
@@ -191,7 +129,7 @@ def test_form_int_oor_blocks() -> None:
         field = AskIntField('Age', None, min_value=1, max_value=5)
         editor, recorded = _build(root, [field])
         # pylint: disable-next=protected-access
-        entry = editor._rows[0].widget
+        entry = editor._rows[0].cell_input.widget
         assert isinstance(entry, tk.Entry)
         entry.insert(0, '9')
         editor.submit()
@@ -206,7 +144,7 @@ def test_field_error_labelled() -> None:
         field = AskIntField('Age', None, min_value=1, max_value=5)
         editor, _ = _build(root, [field])
         # pylint: disable-next=protected-access
-        entry = editor._rows[0].widget
+        entry = editor._rows[0].cell_input.widget
         assert isinstance(entry, tk.Entry)
         entry.insert(0, '9')
         # pylint: disable-next=protected-access
@@ -292,7 +230,7 @@ def test_form_live_error() -> None:
         field = AskIntField('Age', None, min_value=1, max_value=5)
         editor, _ = _build(root, [field])
         # pylint: disable-next=protected-access
-        entry = editor._rows[0].widget
+        entry = editor._rows[0].cell_input.widget
         assert isinstance(entry, tk.Entry)
         entry.insert(0, '9')
         # pylint: disable-next=protected-access
@@ -310,10 +248,10 @@ def test_form_disable_state() -> None:
         editor._apply_disabled((0,))
         # pylint: disable-next=protected-access
         row = editor._rows[0]
-        assert str(row.widget.cget('state')) == 'disabled'
+        assert str(row.cell_input.widget.cget('state')) == 'disabled'
         # pylint: disable-next=protected-access
         editor._apply_disabled(())
-        assert str(row.widget.cget('state')) == 'normal'
+        assert str(row.cell_input.widget.cget('state')) == 'normal'
 
 
 def test_form_tooltip_help() -> None:
@@ -336,82 +274,6 @@ def test_form_no_tooltip() -> None:
         assert editor._rows[0].tooltip is None
 
 
-def _bubbles(anchor: tk.Widget) -> list[tk.Label]:
-    """Return the tooltip labels placed over the anchor's own window."""
-    host = anchor.winfo_toplevel()
-    return [child for child in host.winfo_children()
-            if isinstance(child, tk.Label) and child.place_info()]
-
-
-def test_tooltip_show_hide() -> None:
-    """Test showing then hiding a tooltip creates and removes its bubble."""
-    with gui_root() as root:
-        anchor = tk.Label(root, text='x')
-        tip = HelpTooltip('help me', anchor, (anchor,))
-        tip.show()
-        assert len(_bubbles(anchor)) == 1
-        tip.hide()
-        assert not _bubbles(anchor)
-
-
-def test_tooltip_show_twice() -> None:
-    """Test showing an already-shown tooltip keeps a single bubble."""
-    with gui_root() as root:
-        anchor = tk.Label(root, text='x')
-        tip = HelpTooltip('help me', anchor, (anchor,))
-        tip.show()
-        tip.show()
-        assert len(_bubbles(anchor)) == 1
-        tip.hide()
-
-
-def test_tooltip_hide_none() -> None:
-    """Test hiding a tooltip that was never shown does nothing."""
-    with gui_root() as root:
-        anchor = tk.Label(root, text='x')
-        tip = HelpTooltip('help me', anchor, (anchor,))
-        tip.hide()
-        assert not _bubbles(anchor)
-
-
-def test_tooltip_on_destroy() -> None:
-    """Test a shown bubble goes away when its bound widget is destroyed."""
-    with gui_root() as root:
-        anchor = tk.Label(root, text='x')
-        anchor.pack()
-        tip = HelpTooltip('help me', anchor, (anchor,))
-        tip.show()
-        assert len(_bubbles(anchor)) == 1
-        holder = tk.Label(root, text='y')
-        holder.pack()
-        anchor.destroy()
-        assert not _bubbles(holder)
-
-
-@pytest.mark.parametrize('start, size, limit, expected', [
-    (10, 50, 200, 10), (180, 50, 200, 150), (-5, 50, 200, 0),
-    (10, 300, 200, 0), (150, 50, 200, 150)])
-def test_inside(start: int, size: int, limit: int, expected: int) -> None:
-    """Test a bubble coordinate is moved back inside the window."""
-    assert _inside(start, size, limit) == expected
-
-
-def test_tooltip_inside() -> None:
-    """Test a bubble under the last row still starts inside the window."""
-    with gui_root() as root:
-        root.geometry('200x80')
-        root.update()
-        anchor = tk.Label(root, text='a rather wide label text here')
-        anchor.pack(side='bottom')
-        root.update()
-        tip = HelpTooltip('a help text wider than the window', anchor,
-                          (anchor,))
-        tip.show()
-        bubble = _bubbles(anchor)[0]
-        assert int(bubble.place_info()['x']) == 0
-        assert 0 <= int(bubble.place_info()['y']) <= 80
-
-
 def test_multi_error_bounds() -> None:
     """Test a multi-select row reports too few and too many, accepts in range.
 
@@ -425,7 +287,7 @@ def test_multi_error_bounds() -> None:
         # pylint: disable-next=protected-access
         assert editor._field_error(0) is not None
         # pylint: disable-next=protected-access
-        listbox = editor._rows[0].widget
+        listbox = editor._rows[0].cell_input.widget
         assert isinstance(listbox, tk.Listbox)
         listbox.selection_set(0, 1)
         # pylint: disable-next=protected-access
@@ -446,9 +308,9 @@ def test_form_disable_path() -> None:
         editor._apply_disabled((0,))
         # pylint: disable-next=protected-access
         row = editor._rows[0]
-        assert row.path is not None
+        assert row.cell_input.path is not None
         # pylint: disable-next=protected-access
-        assert str(row.path._entry.cget('state')) == 'disabled'
+        assert str(row.cell_input.path._entry.cget('state')) == 'disabled'
 
 
 def test_form_live_validator() -> None:
@@ -514,8 +376,8 @@ def test_form_date_read() -> None:
         editor, _ = _build(root, [field])
         # pylint: disable-next=protected-access
         row = editor._rows[0]
-        assert row.typed is not None
-        row.typed.set_text('2026-07-24')
+        assert row.cell_input.typed is not None
+        row.cell_input.typed.set_text('2026-07-24')
         answer = editor.answers()[0]
         assert isinstance(answer, AnswerDateField)
         assert answer.value == date(2026, 7, 24)
@@ -529,7 +391,8 @@ def test_form_disable_typed() -> None:
         # pylint: disable-next=protected-access
         editor._apply_disabled((0,))
         # pylint: disable-next=protected-access
-        assert str(editor._rows[0].widget.cget('state')) == 'disabled'
+        widget = editor._rows[0].cell_input.widget
+        assert str(widget.cget('state')) == 'disabled'
 
 
 def _prefill_date(_answers: AnswerFields,
@@ -546,8 +409,8 @@ def test_form_prefill_applied() -> None:
         editor, _ = _build(root, [first, second], _prefill_date)
         # pylint: disable-next=protected-access
         row = editor._rows[1]
-        assert row.typed is not None
-        assert row.typed.text() == '2026-08-01'
+        assert row.cell_input.typed is not None
+        assert row.cell_input.typed.text() == '2026-08-01'
 
 
 def _basic_fields() -> list[AskField]:
@@ -564,7 +427,7 @@ def _basic_fields() -> list[AskField]:
 def test_write_value_kinds() -> None:
     """Test a prefill writes the right value into every non-typed kind.
 
-    A value of each basic field type flows through _write_value and its
+    A value of each basic field type flows through CellInput.write() and its
     setters, and is then read back through the row's own answer.
     """
     with gui_root() as root:
@@ -589,51 +452,9 @@ def test_write_value_kinds() -> None:
         assert answers[5].value == ['a', 'c']
 
 
-def test_set_entry_helper() -> None:
-    """Test the entry setter writes into a disabled entry and skips no-ops."""
-    with gui_root() as root:
-        entry = tk.Entry(root)
-        _set_entry_text(entry, 'a')
-        assert entry.get() == 'a'
-        entry.configure(state='disabled')
-        _set_entry_text(entry, 'b')
-        assert entry.get() == 'b'
-        assert str(entry.cget('state')) == 'disabled'
-        _set_entry_text(entry, 'b')
-        assert entry.get() == 'b'
-
-
-def test_set_combo_helper() -> None:
-    """Test the combo setter sets a value, keeps read-only, skips no-ops."""
-    with gui_root() as root:
-        box = ttk.Combobox(root, values=['x', 'y'], state='readonly')
-        _set_combo(box, 'x')
-        assert box.get() == 'x' and str(box.cget('state')) == 'readonly'
-        _set_combo(box, 'x')
-        assert box.get() == 'x'
-        _set_combo(box, 'y')
-        assert box.get() == 'y'
-
-
-def test_set_multi_helper() -> None:
-    """Test the multi setter selects the wanted members and clears the rest.
-
-    A stale selection is cleared, then the wanted members are selected and
-    the others are left unselected.
-    """
-    with gui_root() as root:
-        box = tk.Listbox(root, selectmode='multiple')
-        for choice in ('a', 'b', 'c'):
-            box.insert('end', choice)
-        box.selection_set(1)
-        _set_multi(box, ('a', 'b', 'c'), ['a', 'c'])
-        picks = box.curselection()  # type: ignore[no-untyped-call]
-        assert [int(index) for index in picks] == [0, 2]
-
-
 def test_form_wheel_area() -> None:
     """Test a field of the form sits in the wheel-scrolling area."""
     with gui_root() as root:
         editor, _ = _build(root, [AskTextField('Name', None, default='Bob')])
         # pylint: disable-next=protected-access
-        assert _wheel_area(editor._rows[0].widget) is not None
+        assert _wheel_area(editor._rows[0].cell_input.widget) is not None

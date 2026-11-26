@@ -12,10 +12,25 @@
     * [seek](#wizard_tk_bridge._no_text_io.NoTextIO.seek)
     * [tell](#wizard_tk_bridge._no_text_io.NoTextIO.tell)
     * [truncate](#wizard_tk_bridge._no_text_io.NoTextIO.truncate)
+* [wizard\_tk\_bridge.wizard\_cell](#wizard_tk_bridge.wizard_cell)
+  * [int\_answer](#wizard_tk_bridge.wizard_cell.int_answer)
+  * [HelpTooltip](#wizard_tk_bridge.wizard_cell.HelpTooltip)
+    * [\_\_init\_\_](#wizard_tk_bridge.wizard_cell.HelpTooltip.__init__)
+    * [show](#wizard_tk_bridge.wizard_cell.HelpTooltip.show)
+    * [hide](#wizard_tk_bridge.wizard_cell.HelpTooltip.hide)
+  * [tooltip\_text](#wizard_tk_bridge.wizard_cell.tooltip_text)
+  * [CellInput](#wizard_tk_bridge.wizard_cell.CellInput)
+    * [value](#wizard_tk_bridge.wizard_cell.CellInput.value)
+    * [error](#wizard_tk_bridge.wizard_cell.CellInput.error)
+    * [write](#wizard_tk_bridge.wizard_cell.CellInput.write)
+    * [set\_enabled](#wizard_tk_bridge.wizard_cell.CellInput.set_enabled)
+  * [build\_input](#wizard_tk_bridge.wizard_cell.build_input)
+  * [scrolled\_editor](#wizard_tk_bridge.wizard_cell.scrolled_editor)
 * [wizard\_tk\_bridge.gui\_style](#wizard_tk_bridge.gui_style)
   * [style\_input](#wizard_tk_bridge.gui_style.style_input)
   * [choice\_combo](#wizard_tk_bridge.gui_style.choice_combo)
   * [focus\_first\_input](#wizard_tk_bridge.gui_style.focus_first_input)
+  * [bind\_submit](#wizard_tk_bridge.gui_style.bind_submit)
 * [wizard\_tk\_bridge.wizard\_typed](#wizard_tk_bridge.wizard_typed)
   * [parse\_float](#wizard_tk_bridge.wizard_typed.parse_float)
   * [parse\_date](#wizard_tk_bridge.wizard_typed.parse_date)
@@ -30,7 +45,6 @@
   * [default\_text](#wizard_tk_bridge.wizard_typed.default_text)
   * [typed\_value](#wizard_tk_bridge.wizard_typed.typed_value)
   * [typed\_error](#wizard_tk_bridge.wizard_typed.typed_error)
-  * [typed\_answer](#wizard_tk_bridge.wizard_typed.typed_answer)
   * [date\_of](#wizard_tk_bridge.wizard_typed.date_of)
   * [calendar\_seed](#wizard_tk_bridge.wizard_typed.calendar_seed)
   * [combined\_text](#wizard_tk_bridge.wizard_typed.combined_text)
@@ -67,11 +81,6 @@
     * [remove\_row](#wizard_tk_bridge.wizard_table.TableEditor.remove_row)
 * [wizard\_tk\_bridge.wizard\_form](#wizard_tk_bridge.wizard_form)
   * [handles\_field](#wizard_tk_bridge.wizard_form.handles_field)
-  * [int\_answer](#wizard_tk_bridge.wizard_form.int_answer)
-  * [HelpTooltip](#wizard_tk_bridge.wizard_form.HelpTooltip)
-    * [\_\_init\_\_](#wizard_tk_bridge.wizard_form.HelpTooltip.__init__)
-    * [show](#wizard_tk_bridge.wizard_form.HelpTooltip.show)
-    * [hide](#wizard_tk_bridge.wizard_form.HelpTooltip.hide)
   * [FormRow](#wizard_tk_bridge.wizard_form.FormRow)
   * [FormEditor](#wizard_tk_bridge.wizard_form.FormEditor)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_form.FormEditor.__init__)
@@ -88,6 +97,7 @@
     * [ask\_multi](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_multi)
     * [ask\_table](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_table)
     * [ask\_form](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_form)
+    * [ask\_matrix\_form](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_matrix_form)
     * [supports\_form\_field](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.supports_form_field)
     * [show](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.show)
     * [error\_file](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.error_file)
@@ -99,6 +109,20 @@
     * [get](#wizard_tk_bridge.wizard_path.PathRow.get)
     * [set\_text](#wizard_tk_bridge.wizard_path.PathRow.set_text)
     * [set\_enabled](#wizard_tk_bridge.wizard_path.PathRow.set_enabled)
+* [wizard\_tk\_bridge.wizard\_matrix](#wizard_tk_bridge.wizard_matrix)
+  * [MatrixCell](#wizard_tk_bridge.wizard_matrix.MatrixCell)
+    * [answer](#wizard_tk_bridge.wizard_matrix.MatrixCell.answer)
+    * [error](#wizard_tk_bridge.wizard_matrix.MatrixCell.error)
+  * [MatrixEditor](#wizard_tk_bridge.wizard_matrix.MatrixEditor)
+    * [\_\_init\_\_](#wizard_tk_bridge.wizard_matrix.MatrixEditor.__init__)
+    * [shape](#wizard_tk_bridge.wizard_matrix.MatrixEditor.shape)
+    * [answers](#wizard_tk_bridge.wizard_matrix.MatrixEditor.answers)
+    * [submit](#wizard_tk_bridge.wizard_matrix.MatrixEditor.submit)
+    * [add\_resize\_buttons](#wizard_tk_bridge.wizard_matrix.MatrixEditor.add_resize_buttons)
+    * [add\_row](#wizard_tk_bridge.wizard_matrix.MatrixEditor.add_row)
+    * [remove\_row](#wizard_tk_bridge.wizard_matrix.MatrixEditor.remove_row)
+    * [add\_column](#wizard_tk_bridge.wizard_matrix.MatrixEditor.add_column)
+    * [remove\_column](#wizard_tk_bridge.wizard_matrix.MatrixEditor.remove_column)
 * [wizard\_tk\_bridge.wizard\_window](#wizard_tk_bridge.wizard_window)
   * [WizardWindow](#wizard_tk_bridge.wizard_window.WizardWindow)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_window.WizardWindow.__init__)
@@ -108,6 +132,7 @@
     * [ask\_int](#wizard_tk_bridge.wizard_window.WizardWindow.ask_int)
     * [ask\_path](#wizard_tk_bridge.wizard_window.WizardWindow.ask_path)
     * [ask\_form](#wizard_tk_bridge.wizard_window.WizardWindow.ask_form)
+    * [ask\_matrix\_form](#wizard_tk_bridge.wizard_window.WizardWindow.ask_matrix_form)
     * [ask\_yes\_no](#wizard_tk_bridge.wizard_window.WizardWindow.ask_yes_no)
     * [ask\_choice](#wizard_tk_bridge.wizard_window.WizardWindow.ask_choice)
     * [ask\_multi](#wizard_tk_bridge.wizard_window.WizardWindow.ask_multi)
@@ -283,6 +308,205 @@ Truncate the NoTextIO object.
 
 This method does nothing and returns 0.
 
+<a id="wizard_tk_bridge.wizard_cell"></a>
+
+# wizard\_tk\_bridge.wizard\_cell
+
+The input of one form field or matrix cell, and the editors' layout.
+
+A form row and a matrix cell show the same kinds of input: an entry for
+text and integers, a path entry with a Browse button, a check box, a
+drop-down, a multi-selection list, and a placeholder entry, with a
+calendar Pick button for dates, for the typed values. :func:`build_input`
+builds the :class:`CellInput` for one Ask*Cell (every Ask*Field is one
+too), which reads the current answer value, reports the input's own
+validation error, writes a prefill into the input, and enables or
+disables it. :class:`HelpTooltip` shows a help text on hover, and
+:func:`scrolled_editor` builds the scrolling area and status line shared
+by the form and matrix editors.
+
+Turning the raw text of an integer input into its answer is the same job
+in a cell and in a standalone question, so :func:`int_answer` lives here
+and is shared with the wizard window. Its text counterpart is
+:func:`wizard_ui_bridge.bridge_helpers.text_answer`, which every bridge
+shares, so a graphical answer is accepted or rejected exactly as a
+console one is.
+
+<a id="wizard_tk_bridge.wizard_cell.int_answer"></a>
+
+#### int\_answer
+
+```python
+def int_answer(
+        text: str, nullable: bool, min_value: Optional[int],
+        max_value: Optional[int],
+        default: Optional[int]) -> tuple[bool, Optional[int], Optional[str]]
+```
+
+Return whether an integer answer is final, its value, and a reason.
+
+An empty answer takes the default, is None when nullable, or is
+re-asked otherwise. A non-empty answer must parse as an integer that
+lies within the inclusive bounds.
+
+<a id="wizard_tk_bridge.wizard_cell.HelpTooltip"></a>
+
+## HelpTooltip Objects
+
+```python
+class HelpTooltip()
+```
+
+A hover bubble showing a help text over its widgets.
+
+The bubble is a label placed over the window that holds the bound
+widgets, shown when the pointer enters one of them and destroyed
+when it leaves, so help appears on hover as it does in the textual
+bridge. A window of its own is drawn with the platform's window
+shape, which on macOS rounds the corners of a borderless window so
+much that a one-line bubble loses its first and last characters. A
+placed label is a plain rectangle on every platform, takes neither
+focus nor a grab, and cannot outlive the widgets it belongs to.
+
+<a id="wizard_tk_bridge.wizard_cell.HelpTooltip.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__(text: str, anchor: tk.Widget,
+             widgets: Sequence[tk.Widget]) -> None
+```
+
+Bind hover show and hide on each widget for the help text.
+
+<a id="wizard_tk_bridge.wizard_cell.HelpTooltip.show"></a>
+
+#### show
+
+```python
+def show() -> None
+```
+
+Show the help bubble just below the anchor widget.
+
+<a id="wizard_tk_bridge.wizard_cell.HelpTooltip.hide"></a>
+
+#### hide
+
+```python
+def hide() -> None
+```
+
+Destroy the help bubble when one is shown.
+
+<a id="wizard_tk_bridge.wizard_cell.tooltip_text"></a>
+
+#### tooltip\_text
+
+```python
+def tooltip_text(cell: AskCell) -> Optional[str]
+```
+
+Return the tooltip text combining help text and format hint.
+
+<a id="wizard_tk_bridge.wizard_cell.CellInput"></a>
+
+## CellInput Objects
+
+```python
+@dataclass(frozen=True)
+class CellInput()
+```
+
+The built input of one field or cell, and how to use it.
+
+widget is the widget to place in a grid. Some inputs keep a handle
+of their own besides it: var holds the value of a yes/no check box,
+path is the path entry with its Browse button, and typed is the
+placeholder entry, with any Pick button, of a typed field or cell.
+
+<a id="wizard_tk_bridge.wizard_cell.CellInput.value"></a>
+
+#### value
+
+```python
+def value() -> Optional[PrefillValueType]
+```
+
+Return the current answer value read from the input.
+
+An empty input gives the default, or None when there is no
+default. Text that is not a valid answer also gives None, and
+error() tells why.
+
+<a id="wizard_tk_bridge.wizard_cell.CellInput.error"></a>
+
+#### error
+
+```python
+def error() -> Optional[str]
+```
+
+Return the input's own validation error, or None when valid.
+
+<a id="wizard_tk_bridge.wizard_cell.CellInput.write"></a>
+
+#### write
+
+```python
+def write(value: PrefillValueType) -> None
+```
+
+Write a prefill value into the input, even when it is disabled.
+
+The value has been checked against the cell type, see
+wizard_ui_bridge.form_helpers.prefill_value().
+
+<a id="wizard_tk_bridge.wizard_cell.CellInput.set_enabled"></a>
+
+#### set\_enabled
+
+```python
+def set_enabled(enabled: bool) -> None
+```
+
+Enable or disable the input, keeping a drop-down read-only.
+
+<a id="wizard_tk_bridge.wizard_cell.build_input"></a>
+
+#### build\_input
+
+```python
+def build_input(parent: tk.Misc, cell: AskCell,
+                change: Callable[[], None]) -> CellInput
+```
+
+Build the input matching an input cell or field type.
+
+change is called whenever the user changes the input. A label cell
+has no input and must not be passed.
+
+<a id="wizard_tk_bridge.wizard_cell.scrolled_editor"></a>
+
+#### scrolled\_editor
+
+```python
+def scrolled_editor(parent: tk.Misc,
+                    sideways: bool) -> tuple[tk.Frame, tk.Label]
+```
+
+Build an editor's scrolling area and the status line below it.
+
+The inputs of a tall form or matrix would overflow the fixed-size
+wizard window, so they sit in a frame inside a scrolling canvas whose
+scrollbars appear only when they are needed. With sideways the area
+also scrolls horizontally, for a matrix wider than the window. The
+status line stays below the scroll area so it is always shown.
+
+**Returns**:
+
+  The frame to grid the inputs into, and the status line label.
+
 <a id="wizard_tk_bridge.gui_style"></a>
 
 # wizard\_tk\_bridge.gui\_style
@@ -296,7 +520,7 @@ field and a thin border so it stands out. :func:`choice_combo` builds a
 styled read-only drop-down that a nullable choice can empty again.
 :func:`focus_first_input` puts the keyboard focus on the first editable
 widget of a window, so the user can start typing as soon as the window
-opens.
+opens. :func:`bind_submit` lets Return in an input confirm the prompt.
 
 <a id="wizard_tk_bridge.gui_style.style_input"></a>
 
@@ -339,17 +563,36 @@ def focus_first_input(window: tk.Misc) -> None
 
 Give the keyboard focus to the first editable input, if any.
 
+<a id="wizard_tk_bridge.gui_style.bind_submit"></a>
+
+#### bind\_submit
+
+```python
+def bind_submit(widget: tk.Misc, on_ok: Callable[[], None]) -> None
+```
+
+Bind Return to the confirm action on every input inside widget.
+
+A prompt builds its inputs before its buttons, so binding them all
+from one place gives every prompt the same rule: Return in an input
+does what the default OK button does. Only inputs are bound, which
+both leaves the Browse, Pick and navigation buttons their own keys
+and reaches the entry inside a two-widget input row. An editor that
+adds inputs later binds each of them itself when it builds it.
+
 <a id="wizard_tk_bridge.wizard_typed"></a>
 
 # wizard\_tk\_bridge.wizard\_typed
 
-Text parsing and formatting for the typed wizard form fields.
+Text parsing and formatting for the typed form fields and cells.
 
-The float, date, time, date-time and duration form fields each turn user
-text into a typed value and a typed value back into text. This module
-holds that conversion for the Tkinter bridge, together with the format
-hints and the parse and range error messages, so the graphical form
-accepts the same text a user would type on the console.
+The float, date, time, date-time and duration form fields and matrix
+cells each turn user text into a typed value and a typed value back into
+text. This module holds that conversion for the Tkinter bridge, together
+with the format hints and the parse and range error messages, so the
+graphical form and matrix form accept the same text a user would type on
+the console. Every Ask*Field derives from its Ask*Cell, so each function
+taking a cell takes a field too.
 
 A duration is written as an optional day count and a clock part,
 ``<days> d HH:MM:SS``, where the seconds may carry a decimal fraction, or
@@ -447,27 +690,27 @@ Return the message shown when a typed value is out of range.
 #### is\_typed
 
 ```python
-def is_typed(field: AskField) -> bool
+def is_typed(field: AskCell) -> bool
 ```
 
-Return whether field is one of the five typed form fields.
+Return whether field is one of the five typed fields or cells.
 
 <a id="wizard_tk_bridge.wizard_typed.field_hint"></a>
 
 #### field\_hint
 
 ```python
-def field_hint(field: AskField) -> str
+def field_hint(field: AskCell) -> str
 ```
 
-Return the accepted-format hint shown for a typed field.
+Return the accepted-format hint shown for a typed field or cell.
 
 <a id="wizard_tk_bridge.wizard_typed.default_text"></a>
 
 #### default\_text
 
 ```python
-def default_text(field: AskField) -> str
+def default_text(field: AskCell) -> str
 ```
 
 Return the starting entry text for a typed field's default.
@@ -477,7 +720,7 @@ Return the starting entry text for a typed field's default.
 #### typed\_value
 
 ```python
-def typed_value(field: AskField, text: str) -> Optional[object]
+def typed_value(field: AskCell, text: str) -> Optional[PrefillValueType]
 ```
 
 Return the typed value of a typed field for its widget text.
@@ -491,23 +734,13 @@ the error separately through typed_error().
 #### typed\_error
 
 ```python
-def typed_error(field: AskField, text: str) -> Optional[str]
+def typed_error(field: AskCell, text: str) -> Optional[str]
 ```
 
 Return the parse or range error of a typed field's widget text.
 
 Empty text is accepted when the field is nullable or has a default,
 and otherwise reports that a value is required.
-
-<a id="wizard_tk_bridge.wizard_typed.typed_answer"></a>
-
-#### typed\_answer
-
-```python
-def typed_answer(field: AskField, value: Optional[object]) -> AnswerField
-```
-
-Wrap a typed value in the answer matching a typed field.
 
 <a id="wizard_tk_bridge.wizard_typed.date_of"></a>
 
@@ -524,7 +757,7 @@ Return the date part of a date or datetime, or None.
 #### calendar\_seed
 
 ```python
-def calendar_seed(field: AskField,
+def calendar_seed(field: AskCell,
                   text: str) -> tuple[date, Optional[date], Optional[date]]
 ```
 
@@ -538,7 +771,7 @@ the acceptable days and the field itself validates the exact value.
 #### combined\_text
 
 ```python
-def combined_text(field: AskField, picked: date, current: str) -> str
+def combined_text(field: AskCell, picked: date, current: str) -> str
 ```
 
 Return the input text for a picked date, keeping any typed time.
@@ -547,17 +780,18 @@ Return the input text for a picked date, keeping any typed time.
 
 # wizard\_tk\_bridge.wizard\_pick\_row
 
-Placeholder-aware entries for the typed wizard form fields.
+Placeholder-aware entries for the typed form fields and matrix cells.
 
-The float, time and duration form fields are shown as a text entry that
-displays its accepted-format hint as greyed placeholder text while empty,
-so the user learns the format without cluttering the field label. A date
-or date-time field adds a Pick button that opens a month calendar, and
-typing the ``?`` token into the entry opens the same calendar.
+The float, time and duration fields and cells are shown as a text entry
+that displays its accepted-format hint as greyed placeholder text while
+empty, so the user learns the format without cluttering the field label.
+A date or date-time field or cell adds a Pick button that opens a month
+calendar, and typing the ``?`` token into the entry opens the same
+calendar.
 
 :class:`HintEntry` is the placeholder entry, and :class:`PickRow` bundles
 one with the calendar button. Both satisfy :class:`TypedInput`, the small
-interface the form editor uses to read, write, and enable a typed row.
+interface a cell input uses to read, write, and enable a typed input.
 
 <a id="wizard_tk_bridge.wizard_pick_row.TypedInput"></a>
 
@@ -665,7 +899,7 @@ A hint entry paired with a Pick button that opens a calendar.
 #### \_\_init\_\_
 
 ```python
-def __init__(parent: tk.Misc, field: AskField, hint: str, initial: str,
+def __init__(parent: tk.Misc, field: AskCell, hint: str, initial: str,
              on_change: Callable[[], None]) -> None
 ```
 
@@ -921,21 +1155,16 @@ Remove the last row, down to the minimum row count.
 
 # wizard\_tk\_bridge.wizard\_form
 
-A whole wizard form shown on one screen, and its answer parsing.
+A whole wizard form shown on one screen.
 
 A form question asks several related fields at once. :class:`FormEditor`
 builds a two-column grid, a label on the left and an input widget on the
 right, one row per :class:`AskField`. It reads one :class:`AnswerField`
 per row, runs the optional partial validator after every change to show
 advisory feedback and disable irrelevant rows, and validates every
-enabled field on submit so a submitted form is always complete.
-
-Turning the raw text of a field into its typed answer is the same job on
-a form row and in a standalone question, so :func:`int_answer` lives
-here and is shared with the wizard window. Its text counterpart is
-:func:`wizard_ui_bridge.bridge_helpers.text_answer`, which every bridge
-shares, so a graphical answer is accepted or rejected exactly as a
-console one is.
+enabled field on submit so a submitted form is always complete. The input
+of each row is a :class:`~wizard_tk_bridge.wizard_cell.CellInput`, the
+same input a matrix form shows in a cell.
 
 <a id="wizard_tk_bridge.wizard_form.handles_field"></a>
 
@@ -946,73 +1175,6 @@ def handles_field(field: AskField) -> bool
 ```
 
 Return whether the Tk form can show the given field type.
-
-<a id="wizard_tk_bridge.wizard_form.int_answer"></a>
-
-#### int\_answer
-
-```python
-def int_answer(
-        text: str, nullable: bool, min_value: Optional[int],
-        max_value: Optional[int],
-        default: Optional[int]) -> tuple[bool, Optional[int], Optional[str]]
-```
-
-Return whether an integer answer is final, its value, and a reason.
-
-An empty answer takes the default, is None when nullable, or is
-re-asked otherwise. A non-empty answer must parse as an integer that
-lies within the inclusive bounds.
-
-<a id="wizard_tk_bridge.wizard_form.HelpTooltip"></a>
-
-## HelpTooltip Objects
-
-```python
-class HelpTooltip()
-```
-
-A hover bubble showing a field's help text over its widgets.
-
-The bubble is a label placed over the window that holds the bound
-widgets, shown when the pointer enters one of them and destroyed
-when it leaves, so help appears on hover as it does in the textual
-bridge. A window of its own is drawn with the platform's window
-shape, which on macOS rounds the corners of a borderless window so
-much that a one-line bubble loses its first and last characters. A
-placed label is a plain rectangle on every platform, takes neither
-focus nor a grab, and cannot outlive the widgets it belongs to.
-
-<a id="wizard_tk_bridge.wizard_form.HelpTooltip.__init__"></a>
-
-#### \_\_init\_\_
-
-```python
-def __init__(text: str, anchor: tk.Widget,
-             widgets: Sequence[tk.Widget]) -> None
-```
-
-Bind hover show and hide on each widget for the help text.
-
-<a id="wizard_tk_bridge.wizard_form.HelpTooltip.show"></a>
-
-#### show
-
-```python
-def show() -> None
-```
-
-Show the help bubble just below the anchor widget.
-
-<a id="wizard_tk_bridge.wizard_form.HelpTooltip.hide"></a>
-
-#### hide
-
-```python
-def hide() -> None
-```
-
-Destroy the help bubble when one is shown.
 
 <a id="wizard_tk_bridge.wizard_form.FormRow"></a>
 
@@ -1076,8 +1238,9 @@ Graphical Tkinter bridge that drives a synchronous wizard.
 :class:`WizardUiBridgeTk` is a concrete :class:`WizardUiBridge` that
 overrides every typed ask method with a real Tkinter control, including
 the GUI-recommended ones: ask_path() opens a native file or directory
-picker, and ask_form() shows a whole form on one screen so the user
-answers related fields together in any order. All questions of one
+picker, ask_form() shows a whole form on one screen so the user
+answers related fields together in any order, and ask_matrix_form()
+shows a whole grid of cells on one screen the same way. All questions of one
 wizard session are answered in a single reused
 :class:`~wizard_tk_bridge.wizard_window.WizardWindow`, so the session
 does not jump around the display.
@@ -1267,6 +1430,31 @@ def ask_form(
 
 Ask a whole form on one screen; see WizardUiBridge.ask_form.
 
+<a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_matrix_form"></a>
+
+#### ask\_matrix\_form
+
+```python
+def ask_matrix_form(request: MatrixRequest,
+                    *,
+                    re_ask_reason: Optional[str] = None) -> AnswerCells
+```
+
+Ask a whole matrix form on one screen; see ask_matrix_form.
+
+Each AskLabelCell is shown as plain text and every other cell as
+the input a form field of its type gets, with its help text and
+any format hint as a hover tooltip. When the minimum and maximum
+dimensions differ, buttons in the button row append or delete the
+last row or column within the bounds. The partial validator is
+called after each change of a cell, with its position, and after
+each change of the shape, with None, but not when the matrix is
+first shown. Its disabled cells are greyed out, its prefills are
+written into the inputs, and its message is shown below the
+matrix. OK first runs the partial validator, then needs every
+enabled cell to hold a valid answer, and finally needs the
+validator to accept the matrix.
+
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.supports_form_field"></a>
 
 #### supports\_form\_field
@@ -1390,6 +1578,170 @@ def set_enabled(enabled: bool) -> None
 
 Enable or disable both the entry and the Browse button.
 
+<a id="wizard_tk_bridge.wizard_matrix"></a>
+
+# wizard\_tk\_bridge.wizard\_matrix
+
+A whole matrix form shown on one screen.
+
+A matrix form asks a grid of cells at once. :class:`MatrixEditor` builds
+one widget per cell of the current shape: a plain label for an
+AskLabelCell, and for every other cell a
+:class:`~wizard_tk_bridge.wizard_cell.CellInput`, the same input a form
+row shows. It reads the answers of the current shape, runs the optional
+partial validator after every change of a cell and of the shape to show
+advisory feedback, disable irrelevant cells and apply prefills, and
+validates every enabled cell on submit, so a submitted matrix is always
+complete. The partial validator is not called when the matrix is first
+shown, only once the user changes it, and on submit.
+
+When the minimum and maximum dimensions of a request differ,
+:meth:`MatrixEditor.add_resize_buttons` adds buttons that append or
+delete the last row or column, each greyed out at its bound. Return in an
+input submits the matrix, also in a row or column added later, since each
+input is bound when it is built.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixCell"></a>
+
+## MatrixCell Objects
+
+```python
+@dataclass(frozen=True)
+class MatrixCell()
+```
+
+One built matrix cell: its AskCell, widget, input and tooltip.
+
+A label cell has no input.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixCell.answer"></a>
+
+#### answer
+
+```python
+def answer() -> Optional[AnswerCell]
+```
+
+Return the current answer of the cell, or None for a label.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixCell.error"></a>
+
+#### error
+
+```python
+def error() -> Optional[str]
+```
+
+Return the cell's own validation error, or None when valid.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor"></a>
+
+## MatrixEditor Objects
+
+```python
+class MatrixEditor()
+```
+
+A grid of label and input cells that asks a whole matrix form.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__(parent: tk.Misc, request: MatrixRequest,
+             on_submit: Callable[[AnswerCells], None]) -> None
+```
+
+Build the cells of the default shape, plus a status line.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.shape"></a>
+
+#### shape
+
+```python
+@property
+def shape() -> MatrixDimension
+```
+
+Return the current number of rows and columns.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.answers"></a>
+
+#### answers
+
+```python
+def answers() -> list[list[Optional[AnswerCell]]]
+```
+
+Return the current answers, one list per row of the shape.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.submit"></a>
+
+#### submit
+
+```python
+def submit() -> None
+```
+
+Validate the whole matrix and submit its answers when valid.
+
+The partial validator runs first, so the cells it disables are not
+checked. Every enabled cell must then pass its own check, and the
+validator must accept the matrix.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.add_resize_buttons"></a>
+
+#### add\_resize\_buttons
+
+```python
+def add_resize_buttons(box: tk.Frame) -> None
+```
+
+Add the buttons that append or delete the last row or column.
+
+Only a dimension whose minimum and maximum differ gets buttons.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.add_row"></a>
+
+#### add\_row
+
+```python
+def add_row() -> None
+```
+
+Append a row of fresh cells, up to the maximum row count.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.remove_row"></a>
+
+#### remove\_row
+
+```python
+def remove_row() -> None
+```
+
+Delete the last row, down to the minimum row count.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.add_column"></a>
+
+#### add\_column
+
+```python
+def add_column() -> None
+```
+
+Append a column of fresh cells, up to the maximum column count.
+
+<a id="wizard_tk_bridge.wizard_matrix.MatrixEditor.remove_column"></a>
+
+#### remove\_column
+
+```python
+def remove_column() -> None
+```
+
+Delete the last column, down to the minimum column count.
+
 <a id="wizard_tk_bridge.wizard_window"></a>
 
 # wizard\_tk\_bridge.wizard\_window
@@ -1398,8 +1750,9 @@ A Tk host that asks every wizard prompt in turn, one at a time.
 
 :class:`WizardWindow` lays out one question at a time: a text entry, an
 integer entry, a path entry with a native Browse button, a yes/no button
-pair, a single- and a multi-selection list, an editable table and a whole
-form on one screen, kept below a lasting message area. Every prompt also
+pair, a single- and a multi-selection list, an editable table, a whole
+form and a whole matrix form on one screen, kept below a lasting message
+area. Every prompt also
 offers back, out-one-level and abort buttons, which raise the matching
 :class:`WizardNavigation` request so the wizard can step within its
 questions or be abandoned.
@@ -1407,7 +1760,9 @@ questions or be abandoned.
 Return pressed in an input confirms the prompt, exactly as its OK button
 does, which that button shows by being the marked default one. The
 editable table is the exception: a row added after the buttons were built
-would miss the binding, so a table is confirmed by its button alone.
+would miss the binding, so a table is confirmed by its button alone. A
+matrix form binds Return in each input as it builds it, so a row or
+column it adds later confirms the matrix too.
 
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
@@ -1511,6 +1866,20 @@ def ask_form(long_question: str, fields: AskFields, re_ask: Optional[str],
 ```
 
 Ask a whole form on one screen and return its answers.
+
+<a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_matrix_form"></a>
+
+#### ask\_matrix\_form
+
+```python
+def ask_matrix_form(request: MatrixRequest,
+                    re_ask: Optional[str]) -> AnswerCells
+```
+
+Ask a whole matrix form on one screen and return its answers.
+
+The matrix editor binds Return in each input itself, also in a
+row or column added later, so the content is not bound here.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_yes_no"></a>
 

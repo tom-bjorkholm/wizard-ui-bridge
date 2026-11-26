@@ -70,6 +70,16 @@
   * [\_single\_index](#wizard_ui_bridge.console._single_index)
   * [\_menu\_lines](#wizard_ui_bridge.console._menu_lines)
   * [\_multi\_question](#wizard_ui_bridge.console._multi_question)
+* [wizard\_ui\_bridge.matrix\_helpers](#wizard_ui_bridge.matrix_helpers)
+  * [cell\_at](#wizard_ui_bridge.matrix_helpers.cell_at)
+  * [\_listed\_cell](#wizard_ui_bridge.matrix_helpers._listed_cell)
+  * [valid\_cell\_prefills](#wizard_ui_bridge.matrix_helpers.valid_cell_prefills)
+  * [\_input\_cell](#wizard_ui_bridge.matrix_helpers._input_cell)
+  * [\_where](#wizard_ui_bridge.matrix_helpers._where)
+  * [row\_label](#wizard_ui_bridge.matrix_helpers.row_label)
+  * [column\_label](#wizard_ui_bridge.matrix_helpers.column_label)
+  * [\_nearest\_label](#wizard_ui_bridge.matrix_helpers._nearest_label)
+  * [cell\_name](#wizard_ui_bridge.matrix_helpers.cell_name)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [\_OrderedValue](#wizard_ui_bridge.matrix_cell_defs._OrderedValue)
     * [\_\_lt\_\_](#wizard_ui_bridge.matrix_cell_defs._OrderedValue.__lt__)
@@ -129,11 +139,17 @@
 * [wizard\_ui\_bridge.form\_helpers](#wizard_ui_bridge.form_helpers)
   * [nullable\_choice](#wizard_ui_bridge.form_helpers.nullable_choice)
   * [initial\_answer](#wizard_ui_bridge.form_helpers.initial_answer)
-  * [\_new\_initial](#wizard_ui_bridge.form_helpers._new_initial)
-  * [\_basic\_initial](#wizard_ui_bridge.form_helpers._basic_initial)
+  * [\_default\_value](#wizard_ui_bridge.form_helpers._default_value)
+  * [answer\_of](#wizard_ui_bridge.form_helpers.answer_of)
+  * [\_optional](#wizard_ui_bridge.form_helpers._optional)
+  * [\_float\_value](#wizard_ui_bridge.form_helpers._float_value)
+  * [\_text\_like\_answer](#wizard_ui_bridge.form_helpers._text_like_answer)
+  * [\_choice\_answer](#wizard_ui_bridge.form_helpers._choice_answer)
+  * [\_number\_answer](#wizard_ui_bridge.form_helpers._number_answer)
+  * [\_temporal\_answer](#wizard_ui_bridge.form_helpers._temporal_answer)
   * [valid\_prefills](#wizard_ui_bridge.form_helpers.valid_prefills)
   * [\_check\_row](#wizard_ui_bridge.form_helpers._check_row)
-  * [\_prefill\_value](#wizard_ui_bridge.form_helpers._prefill_value)
+  * [prefill\_value](#wizard_ui_bridge.form_helpers.prefill_value)
   * [\_ordered\_prefill](#wizard_ui_bridge.form_helpers._ordered_prefill)
   * [\_multi\_prefill](#wizard_ui_bridge.form_helpers._multi_prefill)
   * [\_need](#wizard_ui_bridge.form_helpers._need)
@@ -1351,6 +1367,143 @@ def _multi_question(question: str) -> str
 
 Return the multi-choice question with an entry hint appended.
 
+<a id="wizard_ui_bridge.matrix_helpers"></a>
+
+# wizard\_ui\_bridge.matrix\_helpers
+
+Helpers shared by the bridges that show a matrix form question.
+
+A bridge builds the cells of a matrix form from the MatrixCellSpec of the
+request with cell_at(), applies the prefills of a partial validator with
+valid_cell_prefills(), and names a cell in a message with cell_name().
+The cells of the current shape are given to the last two as a grid of
+AskCells, one sequence per row.
+
+<a id="wizard_ui_bridge.matrix_helpers.cell_at"></a>
+
+#### cell\_at
+
+```python
+def cell_at(spec: MatrixCellSpec, position: CellPosition) -> AskCell
+```
+
+Return the AskCell the specification gives for a position.
+
+A generator is called with the position. A 2D sequence gives the
+cell at the position, repeating its last row below the sequence and
+the last cell of a row to the right of that row, as described for
+MatrixCellSpec.
+
+**Raises**:
+
+- `ValueError` - The sequence, or the row used, has no cells.
+- `TypeError` - The specification gave no AskCell for the position.
+
+<a id="wizard_ui_bridge.matrix_helpers._listed_cell"></a>
+
+#### \_listed\_cell
+
+```python
+def _listed_cell(cells: Sequence[Sequence[AskCell]],
+                 position: CellPosition) -> AskCell
+```
+
+Return the cell of a 2D sequence, repeating the last row or cell.
+
+<a id="wizard_ui_bridge.matrix_helpers.valid_cell_prefills"></a>
+
+#### valid\_cell\_prefills
+
+```python
+def valid_cell_prefills(
+    cells: Sequence[Sequence[AskCell]], changed: Optional[CellPosition],
+    prefill_values: PrefillCellValues
+) -> Iterator[tuple[CellPosition, PrefillValueType]]
+```
+
+Yield the prefill requests a bridge should apply, validated.
+
+cells is the grid of the current shape and changed the cell that
+just changed, or None after a shape change. Each yielded (position,
+value) pair is ready to place into the input of that cell. The rules
+are those of PartMatrixValidationRes.prefill_values: a prefill aimed
+at the changed cell is skipped; a position outside the matrix raises
+IndexError, and a label cell or a value of the wrong type raises
+TypeError; a choice value not among the cell's choices and any
+prefill of a sensitive cell are dropped.
+
+<a id="wizard_ui_bridge.matrix_helpers._input_cell"></a>
+
+#### \_input\_cell
+
+```python
+def _input_cell(cells: Sequence[Sequence[AskCell]],
+                position: CellPosition) -> AskCell
+```
+
+Return the input cell a prefill is aimed at, raising for a bug.
+
+<a id="wizard_ui_bridge.matrix_helpers._where"></a>
+
+#### \_where
+
+```python
+def _where(position: CellPosition) -> str
+```
+
+Return a 0-based position as text for an exception message.
+
+<a id="wizard_ui_bridge.matrix_helpers.row_label"></a>
+
+#### row\_label
+
+```python
+def row_label(cells: Sequence[Sequence[AskCell]],
+              position: CellPosition) -> Optional[str]
+```
+
+Return the nearest label text to the left of a cell, or None.
+
+Labels whose text is blank, such as an empty corner, are skipped.
+
+<a id="wizard_ui_bridge.matrix_helpers.column_label"></a>
+
+#### column\_label
+
+```python
+def column_label(cells: Sequence[Sequence[AskCell]],
+                 position: CellPosition) -> Optional[str]
+```
+
+Return the nearest label text above a cell, or None.
+
+Labels whose text is blank, such as an empty corner, are skipped.
+
+<a id="wizard_ui_bridge.matrix_helpers._nearest_label"></a>
+
+#### \_nearest\_label
+
+```python
+def _nearest_label(cells: Iterable[AskCell]) -> Optional[str]
+```
+
+Return the text of the first label with non-blank text, or None.
+
+<a id="wizard_ui_bridge.matrix_helpers.cell_name"></a>
+
+#### cell\_name
+
+```python
+def cell_name(cells: Sequence[Sequence[AskCell]],
+              position: CellPosition) -> str
+```
+
+Return a name of a cell for a message shown to the user.
+
+The name is the row label and the column label of the cell joined
+with ' / ', such as 'Bob / Tue', or the one of them that exists. A
+cell with neither is named by its 1-based row and column.
+
 <a id="wizard_ui_bridge.matrix_cell_defs"></a>
 
 # wizard\_ui\_bridge.matrix\_cell\_defs
@@ -2369,7 +2522,11 @@ Request for a matrix form.
 
 # wizard\_ui\_bridge.form\_helpers
 
-Helpers shared by the WizardUiBridge form question.
+Helpers shared by the WizardUiBridge form and matrix form questions.
+
+Every Ask*Field of a form derives from the Ask*Cell of a matrix form, so
+the helpers that only need what a field and a cell have in common take a
+cell, and serve both questions.
 
 <a id="wizard_ui_bridge.form_helpers.nullable_choice"></a>
 
@@ -2400,25 +2557,100 @@ state when the field has no default. A choice field with no default
 starts as None, which tells a partial validator the choice is not
 answered yet; a bridge must not leave that None in a submitted form.
 
-<a id="wizard_ui_bridge.form_helpers._new_initial"></a>
+<a id="wizard_ui_bridge.form_helpers._default_value"></a>
 
-#### \_new\_initial
-
-```python
-def _new_initial(field: AskField) -> Optional[AnswerField]
-```
-
-Return the starting answer for a typed field, else None.
-
-<a id="wizard_ui_bridge.form_helpers._basic_initial"></a>
-
-#### \_basic\_initial
+#### \_default\_value
 
 ```python
-def _basic_initial(field: AskField) -> AnswerField
+def _default_value(cell: AskCell) -> Optional[PrefillValueType]
 ```
 
-Return the starting answer for one of the original field kinds.
+Return the default answer value of an input cell or field.
+
+A multi-choice with no default starts with nothing selected.
+
+<a id="wizard_ui_bridge.form_helpers.answer_of"></a>
+
+#### answer\_of
+
+```python
+def answer_of(ask: AskCell, value: Optional[PrefillValueType]) -> AnswerCell
+```
+
+Return the answer holding value for a form field or an input cell.
+
+A form field gets its Answer*Field and a matrix cell its Answer*Cell,
+so a bridge reads a field and a cell the same way. value must have
+the answer type of ask (see PrefillValueType), where an integer is
+accepted for a float, a list of str is needed for a multi-choice, a
+bool for a yes/no, and None is accepted wherever the answer value is
+Optional. A label cell has no answer and must not be passed.
+
+<a id="wizard_ui_bridge.form_helpers._optional"></a>
+
+#### \_optional
+
+```python
+def _optional(value: Optional[PrefillValueType],
+              kind: type[_T]) -> Optional[_T]
+```
+
+Return value, which must be None or an instance of kind.
+
+<a id="wizard_ui_bridge.form_helpers._float_value"></a>
+
+#### \_float\_value
+
+```python
+def _float_value(value: Optional[PrefillValueType]) -> Optional[float]
+```
+
+Return value as a float, accepting an integer as float defaults do.
+
+<a id="wizard_ui_bridge.form_helpers._text_like_answer"></a>
+
+#### \_text\_like\_answer
+
+```python
+def _text_like_answer(
+        ask: AskCell,
+        value: Optional[PrefillValueType]) -> Optional[AnswerCell]
+```
+
+Return the answer of a text, integer or path ask, else None.
+
+<a id="wizard_ui_bridge.form_helpers._choice_answer"></a>
+
+#### \_choice\_answer
+
+```python
+def _choice_answer(ask: AskCell,
+                   value: Optional[PrefillValueType]) -> Optional[AnswerCell]
+```
+
+Return the answer of a yes/no, choice or multi-choice, else None.
+
+<a id="wizard_ui_bridge.form_helpers._number_answer"></a>
+
+#### \_number\_answer
+
+```python
+def _number_answer(ask: AskCell,
+                   value: Optional[PrefillValueType]) -> Optional[AnswerCell]
+```
+
+Return the answer of a float, date or time ask, else None.
+
+<a id="wizard_ui_bridge.form_helpers._temporal_answer"></a>
+
+#### \_temporal\_answer
+
+```python
+def _temporal_answer(ask: AskCell,
+                     value: Optional[PrefillValueType]) -> AnswerCell
+```
+
+Return the answer of a date-time or duration ask.
 
 <a id="wizard_ui_bridge.form_helpers.valid_prefills"></a>
 
@@ -2452,41 +2684,44 @@ def _check_row(fields: Sequence[AskField], index: int) -> None
 
 Raise when a prefill row index lies outside the form.
 
-<a id="wizard_ui_bridge.form_helpers._prefill_value"></a>
+<a id="wizard_ui_bridge.form_helpers.prefill_value"></a>
 
-#### \_prefill\_value
+#### prefill\_value
 
 ```python
-def _prefill_value(field: AskField, value: PrefillValueType,
-                   index: int) -> Optional[PrefillValueType]
+def prefill_value(cell: AskCell, value: PrefillValueType,
+                  where: str) -> Optional[PrefillValueType]
 ```
 
 Return the value to apply for a prefill, or None to drop it.
 
-Raises TypeError when value's Python type does not match field.
+cell is the input field or cell the prefill is aimed at, and where
+names its place, such as 'row 2', in the error message. The rules are
+those of valid_prefills(). Raises TypeError when value's Python type
+does not match cell.
 
 <a id="wizard_ui_bridge.form_helpers._ordered_prefill"></a>
 
 #### \_ordered\_prefill
 
 ```python
-def _ordered_prefill(field: AskField, value: PrefillValueType,
-                     index: int) -> PrefillValueType
+def _ordered_prefill(cell: AskCell, value: PrefillValueType,
+                     where: str) -> PrefillValueType
 ```
 
-Return an ordered field's prefill, or raise TypeError for it.
+Return an ordered cell's prefill, or raise TypeError for it.
 
-An integer or float field takes a number, and a date field takes a
+An integer or float cell takes a number, and a date cell takes a
 date that is not a datetime, so a datetime is never mistaken for a
-plain date. Each temporal field takes exactly its own type.
+plain date. Each temporal cell takes exactly its own type.
 
 <a id="wizard_ui_bridge.form_helpers._multi_prefill"></a>
 
 #### \_multi\_prefill
 
 ```python
-def _multi_prefill(field: AskMultiChoiceField, value: PrefillValueType,
-                   index: int) -> Optional[list[str]]
+def _multi_prefill(cell: AskMultiChoiceCell, value: PrefillValueType,
+                   where: str) -> Optional[list[str]]
 ```
 
 Return the valid members of a multi-choice prefill, or None.
@@ -2496,7 +2731,7 @@ Return the valid members of a multi-choice prefill, or None.
 #### \_need
 
 ```python
-def _need(value: PrefillValueType, index: int, wanted: type) -> None
+def _need(value: PrefillValueType, where: str, wanted: type) -> None
 ```
 
 Raise TypeError when value is not an instance of wanted.
@@ -2506,7 +2741,7 @@ Raise TypeError when value is not an instance of wanted.
 #### \_bad\_type
 
 ```python
-def _bad_type(index: int) -> NoReturn
+def _bad_type(where: str) -> NoReturn
 ```
 
 Raise a TypeError for a prefill value of the wrong type.

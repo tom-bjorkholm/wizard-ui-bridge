@@ -1,11 +1,13 @@
 #! /usr/local/bin/python3
-"""Text parsing and formatting for the typed wizard form fields.
+"""Text parsing and formatting for the typed form fields and cells.
 
-The float, date, time, date-time and duration form fields each turn user
-text into a typed value and a typed value back into text. This module
-holds that conversion for the Tkinter bridge, together with the format
-hints and the parse and range error messages, so the graphical form
-accepts the same text a user would type on the console.
+The float, date, time, date-time and duration form fields and matrix
+cells each turn user text into a typed value and a typed value back into
+text. This module holds that conversion for the Tkinter bridge, together
+with the format hints and the parse and range error messages, so the
+graphical form and matrix form accept the same text a user would type on
+the console. Every Ask*Field derives from its Ask*Cell, so each function
+taking a cell takes a field too.
 
 A duration is written as an optional day count and a clock part,
 ``<days> d HH:MM:SS``, where the seconds may carry a decimal fraction, or
@@ -21,10 +23,8 @@ import math
 import re
 from datetime import date, datetime, time, timedelta
 from typing import Optional, TypeVar
-from wizard_ui_bridge import AskField, AnswerField, AskFloatField, \
-    AskDateField, AskTimeField, AskDateTimeField, AskDurationField, \
-    AnswerFloatField, AnswerDateField, AnswerTimeField, AnswerDateTimeField, \
-    AnswerDurationField
+from wizard_ui_bridge import AskCell, AskFloatCell, AskDateCell, \
+    AskTimeCell, AskDateTimeCell, AskDurationCell, PrefillValueType
 from wizard_ui_bridge.form_defs import value_out_of_range
 
 # The module constants and the parsing, formatting, range-check and
@@ -41,8 +41,8 @@ DATE_HINT = 'a date as YYYY-MM-DD'
 TIME_HINT = 'a time as HH:MM or HH:MM:SS'
 DATETIME_HINT = 'a date and time as YYYY-MM-DD HH:MM:SS'
 DURATION_HINT = "a duration as '<days> d HH:MM:SS' or a number of seconds"
-_TYPED_FIELDS = (AskFloatField, AskDateField, AskTimeField, AskDateTimeField,
-                 AskDurationField)
+_TYPED_CELLS = (AskFloatCell, AskDateCell, AskTimeCell, AskDateTimeCell,
+                AskDurationCell)
 _DURATION_RE = re.compile(r'^(?:(\d+)\s*d\s+)?(\d+):(\d+):(\d+(?:\.\d+)?)$')
 _Ordered = TypeVar('_Ordered', float, date, time, datetime, timedelta)
 
@@ -145,54 +145,54 @@ def ordered_range_error(minimum: Optional[object],
     return f'Please enter a value between {low} and {high}.'
 
 
-def is_typed(field: AskField) -> bool:
-    """Return whether field is one of the five typed form fields."""
-    return isinstance(field, _TYPED_FIELDS)
+def is_typed(field: AskCell) -> bool:
+    """Return whether field is one of the five typed fields or cells."""
+    return isinstance(field, _TYPED_CELLS)
 
 
-def field_hint(field: AskField) -> str:
-    """Return the accepted-format hint shown for a typed field."""
-    if isinstance(field, AskFloatField):
+def field_hint(field: AskCell) -> str:
+    """Return the accepted-format hint shown for a typed field or cell."""
+    if isinstance(field, AskFloatCell):
         return FLOAT_HINT
-    if isinstance(field, AskDateField):
+    if isinstance(field, AskDateCell):
         return DATE_HINT
-    if isinstance(field, AskTimeField):
+    if isinstance(field, AskTimeCell):
         return TIME_HINT
-    if isinstance(field, AskDateTimeField):
+    if isinstance(field, AskDateTimeCell):
         return DATETIME_HINT
-    assert isinstance(field, AskDurationField)
+    assert isinstance(field, AskDurationCell)
     return DURATION_HINT
 
 
-def _default_of(field: AskField) -> Optional[object]:
-    """Return the default of a typed field."""
-    assert isinstance(field, _TYPED_FIELDS)
+def _default_of(field: AskCell) -> Optional[PrefillValueType]:
+    """Return the default of a typed field or cell."""
+    assert isinstance(field, _TYPED_CELLS)
     return field.default
 
 
-def _resolve(field: AskField,
-             text: str) -> tuple[Optional[object], Optional[str]]:
+def _resolve(field: AskCell,
+             text: str) -> tuple[Optional[PrefillValueType], Optional[str]]:
     """Return a typed field's parsed value and any parse or range error."""
-    if isinstance(field, AskFloatField):
+    if isinstance(field, AskFloatCell):
         return _checked(parse_float(text), field, field.min_value,
                         field.max_value)
-    if isinstance(field, AskDateField):
+    if isinstance(field, AskDateCell):
         return _checked(parse_date(text), field, field.min_value,
                         field.max_value)
-    if isinstance(field, AskTimeField):
+    if isinstance(field, AskTimeCell):
         return _checked(parse_time(text), field, field.min_value,
                         field.max_value)
-    if isinstance(field, AskDateTimeField):
+    if isinstance(field, AskDateTimeCell):
         return _checked(parse_datetime(text), field, field.min_value,
                         field.max_value)
-    assert isinstance(field, AskDurationField)
+    assert isinstance(field, AskDurationCell)
     return _checked(parse_duration(text), field, field.min_value,
                     field.max_value)
 
 
-def _checked(value: Optional[_Ordered], field: AskField,
+def _checked(value: Optional[_Ordered], field: AskCell,
              minimum: Optional[_Ordered], maximum: Optional[_Ordered]
-             ) -> tuple[Optional[object], Optional[str]]:
+             ) -> tuple[Optional[PrefillValueType], Optional[str]]:
     """Return value and no error, or None and the reason it is unusable."""
     if value is None:
         return (None, f'Please enter {field_hint(field)}.')
@@ -201,13 +201,13 @@ def _checked(value: Optional[_Ordered], field: AskField,
     return (value, None)
 
 
-def default_text(field: AskField) -> str:
+def default_text(field: AskCell) -> str:
     """Return the starting entry text for a typed field's default."""
     default = _default_of(field)
     return '' if default is None else format_value(default)
 
 
-def typed_value(field: AskField, text: str) -> Optional[object]:
+def typed_value(field: AskCell, text: str) -> Optional[PrefillValueType]:
     """Return the typed value of a typed field for its widget text.
 
     An empty text yields the field default. A non-empty text is parsed;
@@ -219,7 +219,7 @@ def typed_value(field: AskField, text: str) -> Optional[object]:
     return _resolve(field, text)[0]
 
 
-def typed_error(field: AskField, text: str) -> Optional[str]:
+def typed_error(field: AskCell, text: str) -> Optional[str]:
     """Return the parse or range error of a typed field's widget text.
 
     Empty text is accepted when the field is nullable or has a default,
@@ -227,29 +227,10 @@ def typed_error(field: AskField, text: str) -> Optional[str]:
     """
     if text != '':
         return _resolve(field, text)[1]
-    assert isinstance(field, _TYPED_FIELDS)
+    assert isinstance(field, _TYPED_CELLS)
     if field.nullable or field.default is not None:
         return None
     return f'Please enter {field_hint(field)}.'
-
-
-def typed_answer(field: AskField, value: Optional[object]) -> AnswerField:
-    """Wrap a typed value in the answer matching a typed field."""
-    if isinstance(field, AskFloatField):
-        assert value is None or isinstance(value, float)
-        return AnswerFloatField(field, value)
-    if isinstance(field, AskDateField):
-        assert value is None or isinstance(value, date)
-        return AnswerDateField(field, value)
-    if isinstance(field, AskTimeField):
-        assert value is None or isinstance(value, time)
-        return AnswerTimeField(field, value)
-    if isinstance(field, AskDateTimeField):
-        assert value is None or isinstance(value, datetime)
-        return AnswerDateTimeField(field, value)
-    assert isinstance(field, AskDurationField)
-    assert value is None or isinstance(value, timedelta)
-    return AnswerDurationField(field, value)
 
 
 def date_of(value: Optional[object]) -> Optional[date]:
@@ -259,18 +240,18 @@ def date_of(value: Optional[object]) -> Optional[date]:
     return value if isinstance(value, date) else None
 
 
-def calendar_seed(field: AskField, text: str
+def calendar_seed(field: AskCell, text: str
                   ) -> tuple[date, Optional[date], Optional[date]]:
     """Return the calendar seed date and its inclusive day bounds.
 
     A date-time field's bounds are its date parts, so the calendar offers
     the acceptable days and the field itself validates the exact value.
     """
-    if isinstance(field, AskDateField):
+    if isinstance(field, AskDateCell):
         parsed = parse_date(text)
         minimum, maximum = field.min_value, field.max_value
     else:
-        assert isinstance(field, AskDateTimeField)
+        assert isinstance(field, AskDateTimeCell)
         parsed = date_of(parse_datetime(text))
         minimum = date_of(field.min_value)
         maximum = date_of(field.max_value)
@@ -278,11 +259,11 @@ def calendar_seed(field: AskField, text: str
     return (seed, minimum, maximum)
 
 
-def combined_text(field: AskField, picked: date, current: str) -> str:
+def combined_text(field: AskCell, picked: date, current: str) -> str:
     """Return the input text for a picked date, keeping any typed time."""
-    if isinstance(field, AskDateField):
+    if isinstance(field, AskDateCell):
         return picked.isoformat()
-    assert isinstance(field, AskDateTimeField)
+    assert isinstance(field, AskDateTimeCell)
     existing = parse_datetime(current)
     clock = existing.time() if existing is not None else time()
     return datetime.combine(picked, clock).isoformat(sep=' ')

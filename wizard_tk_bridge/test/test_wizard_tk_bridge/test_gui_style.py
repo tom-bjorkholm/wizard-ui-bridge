@@ -8,7 +8,8 @@ import tkinter as tk
 from tkinter import ttk
 import pytest
 from wizard_tk_bridge.gui_style import (
-    choice_combo, focus_first_input, style_input, _first_input, _is_input)
+    bind_submit, choice_combo, focus_first_input, style_input, _first_input,
+    _is_input)
 from .gui_test_helpers import gui_root
 
 
@@ -139,3 +140,26 @@ def test_focus_no_input() -> None:
     with gui_root() as root:
         tk.Button(root, text='ok').pack()
         focus_first_input(root)
+
+
+def test_bind_submit_inputs() -> None:
+    """Test binding Return reaches every input, and only the inputs.
+
+    An input nested in a two-widget row is reached through the
+    recursion, while a button keeps its own key handling.
+    """
+    with gui_root() as root:
+        frame = tk.Frame(root)
+        entry = tk.Entry(frame)
+        row = tk.Frame(frame)
+        nested = tk.Entry(row)
+        button = tk.Button(frame)
+        listbox = tk.Listbox(frame)
+        combo = ttk.Combobox(frame)
+        bind_submit(frame, lambda: None)
+        assert entry.bind('<Return>') != ''
+        assert nested.bind('<Return>') != ''
+        assert listbox.bind('<Return>') != ''
+        assert combo.bind('<Return>') != ''
+        assert button.bind('<Return>') == ''
+        assert frame.bind('<Return>') == ''

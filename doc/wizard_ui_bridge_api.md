@@ -38,6 +38,12 @@
     * [ask\_multi](#wizard_ui_bridge.console.WizardUiBridgeConsole.ask_multi)
     * [error\_file](#wizard_ui_bridge.console.WizardUiBridgeConsole.error_file)
     * [show](#wizard_ui_bridge.console.WizardUiBridgeConsole.show)
+* [wizard\_ui\_bridge.matrix\_helpers](#wizard_ui_bridge.matrix_helpers)
+  * [cell\_at](#wizard_ui_bridge.matrix_helpers.cell_at)
+  * [valid\_cell\_prefills](#wizard_ui_bridge.matrix_helpers.valid_cell_prefills)
+  * [row\_label](#wizard_ui_bridge.matrix_helpers.row_label)
+  * [column\_label](#wizard_ui_bridge.matrix_helpers.column_label)
+  * [cell\_name](#wizard_ui_bridge.matrix_helpers.cell_name)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [value\_out\_of\_range](#wizard_ui_bridge.matrix_cell_defs.value_out_of_range)
   * [AskCellCommon](#wizard_ui_bridge.matrix_cell_defs.AskCellCommon)
@@ -87,7 +93,9 @@
 * [wizard\_ui\_bridge.form\_helpers](#wizard_ui_bridge.form_helpers)
   * [nullable\_choice](#wizard_ui_bridge.form_helpers.nullable_choice)
   * [initial\_answer](#wizard_ui_bridge.form_helpers.initial_answer)
+  * [answer\_of](#wizard_ui_bridge.form_helpers.answer_of)
   * [valid\_prefills](#wizard_ui_bridge.form_helpers.valid_prefills)
+  * [prefill\_value](#wizard_ui_bridge.form_helpers.prefill_value)
   * [prefilled\_field](#wizard_ui_bridge.form_helpers.prefilled_field)
 * [wizard\_ui\_bridge.bridge](#wizard_ui_bridge.bridge)
   * [WizardUiBridge](#wizard_ui_bridge.bridge.WizardUiBridge)
@@ -745,6 +753,101 @@ This method prints the message to the console.
 **Arguments**:
 
 - `message` - The message to show the user.
+
+<a id="wizard_ui_bridge.matrix_helpers"></a>
+
+# wizard\_ui\_bridge.matrix\_helpers
+
+Helpers shared by the bridges that show a matrix form question.
+
+A bridge builds the cells of a matrix form from the MatrixCellSpec of the
+request with cell_at(), applies the prefills of a partial validator with
+valid_cell_prefills(), and names a cell in a message with cell_name().
+The cells of the current shape are given to the last two as a grid of
+AskCells, one sequence per row.
+
+<a id="wizard_ui_bridge.matrix_helpers.cell_at"></a>
+
+#### cell\_at
+
+```python
+def cell_at(spec: MatrixCellSpec, position: CellPosition) -> AskCell
+```
+
+Return the AskCell the specification gives for a position.
+
+A generator is called with the position. A 2D sequence gives the
+cell at the position, repeating its last row below the sequence and
+the last cell of a row to the right of that row, as described for
+MatrixCellSpec.
+
+**Raises**:
+
+- `ValueError` - The sequence, or the row used, has no cells.
+- `TypeError` - The specification gave no AskCell for the position.
+
+<a id="wizard_ui_bridge.matrix_helpers.valid_cell_prefills"></a>
+
+#### valid\_cell\_prefills
+
+```python
+def valid_cell_prefills(
+    cells: Sequence[Sequence[AskCell]], changed: Optional[CellPosition],
+    prefill_values: PrefillCellValues
+) -> Iterator[tuple[CellPosition, PrefillValueType]]
+```
+
+Yield the prefill requests a bridge should apply, validated.
+
+cells is the grid of the current shape and changed the cell that
+just changed, or None after a shape change. Each yielded (position,
+value) pair is ready to place into the input of that cell. The rules
+are those of PartMatrixValidationRes.prefill_values: a prefill aimed
+at the changed cell is skipped; a position outside the matrix raises
+IndexError, and a label cell or a value of the wrong type raises
+TypeError; a choice value not among the cell's choices and any
+prefill of a sensitive cell are dropped.
+
+<a id="wizard_ui_bridge.matrix_helpers.row_label"></a>
+
+#### row\_label
+
+```python
+def row_label(cells: Sequence[Sequence[AskCell]],
+              position: CellPosition) -> Optional[str]
+```
+
+Return the nearest label text to the left of a cell, or None.
+
+Labels whose text is blank, such as an empty corner, are skipped.
+
+<a id="wizard_ui_bridge.matrix_helpers.column_label"></a>
+
+#### column\_label
+
+```python
+def column_label(cells: Sequence[Sequence[AskCell]],
+                 position: CellPosition) -> Optional[str]
+```
+
+Return the nearest label text above a cell, or None.
+
+Labels whose text is blank, such as an empty corner, are skipped.
+
+<a id="wizard_ui_bridge.matrix_helpers.cell_name"></a>
+
+#### cell\_name
+
+```python
+def cell_name(cells: Sequence[Sequence[AskCell]],
+              position: CellPosition) -> str
+```
+
+Return a name of a cell for a message shown to the user.
+
+The name is the row label and the column label of the cell joined
+with ' / ', such as 'Bob / Tue', or the one of them that exists. A
+cell with neither is named by its 1-based row and column.
 
 <a id="wizard_ui_bridge.matrix_cell_defs"></a>
 
@@ -1657,7 +1760,11 @@ Request for a matrix form.
 
 # wizard\_ui\_bridge.form\_helpers
 
-Helpers shared by the WizardUiBridge form question.
+Helpers shared by the WizardUiBridge form and matrix form questions.
+
+Every Ask*Field of a form derives from the Ask*Cell of a matrix form, so
+the helpers that only need what a field and a cell have in common take a
+cell, and serve both questions.
 
 <a id="wizard_ui_bridge.form_helpers.nullable_choice"></a>
 
@@ -1688,6 +1795,23 @@ state when the field has no default. A choice field with no default
 starts as None, which tells a partial validator the choice is not
 answered yet; a bridge must not leave that None in a submitted form.
 
+<a id="wizard_ui_bridge.form_helpers.answer_of"></a>
+
+#### answer\_of
+
+```python
+def answer_of(ask: AskCell, value: Optional[PrefillValueType]) -> AnswerCell
+```
+
+Return the answer holding value for a form field or an input cell.
+
+A form field gets its Answer*Field and a matrix cell its Answer*Cell,
+so a bridge reads a field and a cell the same way. value must have
+the answer type of ask (see PrefillValueType), where an integer is
+accepted for a float, a list of str is needed for a multi-choice, a
+bool for a yes/no, and None is accepted wherever the answer value is
+Optional. A label cell has no answer and must not be passed.
+
 <a id="wizard_ui_bridge.form_helpers.valid_prefills"></a>
 
 #### valid\_prefills
@@ -1709,6 +1833,22 @@ not among the field's choices, any prefill of a sensitive text field,
 and a multi-choice value with no valid member, are dropped instead, so
 a portable validator stays safe. A multi-choice value keeps only its
 members that are valid choices.
+
+<a id="wizard_ui_bridge.form_helpers.prefill_value"></a>
+
+#### prefill\_value
+
+```python
+def prefill_value(cell: AskCell, value: PrefillValueType,
+                  where: str) -> Optional[PrefillValueType]
+```
+
+Return the value to apply for a prefill, or None to drop it.
+
+cell is the input field or cell the prefill is aimed at, and where
+names its place, such as 'row 2', in the error message. The rules are
+those of valid_prefills(). Raises TypeError when value's Python type
+does not match cell.
 
 <a id="wizard_ui_bridge.form_helpers.prefilled_field"></a>
 

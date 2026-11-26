@@ -3,8 +3,9 @@
 
 :class:`WizardWindow` lays out one question at a time: a text entry, an
 integer entry, a path entry with a native Browse button, a yes/no button
-pair, a single- and a multi-selection list, an editable table and a whole
-form on one screen, kept below a lasting message area. Every prompt also
+pair, a single- and a multi-selection list, an editable table, a whole
+form and a whole matrix form on one screen, kept below a lasting message
+area. Every prompt also
 offers back, out-one-level and abort buttons, which raise the matching
 :class:`WizardNavigation` request so the wizard can step within its
 questions or be abandoned.
@@ -12,7 +13,9 @@ questions or be abandoned.
 Return pressed in an input confirms the prompt, exactly as its OK button
 does, which that button shows by being the marked default one. The
 editable table is the exception: a row added after the buttons were built
-would miss the binding, so a table is confirmed by its button alone.
+would miss the binding, so a table is confirmed by its button alone. A
+matrix form binds Return in each input as it builds it, so a row or
+column it adds later confirms the matrix too.
 
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
@@ -27,16 +30,19 @@ rest of the window should stay usable meanwhile.
 
 import tkinter as tk
 from pathlib import Path
-from tkinter import ttk
 from typing import Callable, Optional, Sequence
-from wizard_ui_bridge import AnswerFields, AskFields, PartialCheck, \
-    PartialFormValidator, PathAskOptions, TableCell, TableColumn, \
-    WizardAbort, WizardBack, WizardCancelLevel, WizardNavigation
+from wizard_ui_bridge import AnswerCells, AnswerFields, AskFields, \
+    MatrixRequest, PartialCheck, PartialFormValidator, PathAskOptions, \
+    TableCell, TableColumn, WizardAbort, WizardBack, WizardCancelLevel, \
+    WizardNavigation
 from wizard_ui_bridge.bridge_helpers import multi_count_message, \
     offered_choices, path_answer, text_answer
 from wizard_tk_bridge.close_binding import bind_close
-from wizard_tk_bridge.gui_style import focus_first_input, style_input
-from wizard_tk_bridge.wizard_form import FormEditor, int_answer
+from wizard_tk_bridge.gui_style import bind_submit, focus_first_input, \
+    style_input
+from wizard_tk_bridge.wizard_cell import int_answer
+from wizard_tk_bridge.wizard_form import FormEditor
+from wizard_tk_bridge.wizard_matrix import MatrixEditor
 from wizard_tk_bridge.wizard_path import PathRow
 from wizard_tk_bridge.wizard_table import TableEditor
 
@@ -45,27 +51,11 @@ WINDOW_SIZE = '720x620'
 WRAP_LENGTH = 520
 MESSAGE_HEIGHT = 8
 CHOICE_HEIGHT = 10
-_RETURN_INPUTS = (tk.Entry, tk.Listbox, tk.Checkbutton, ttk.Combobox)
 
 
 def _default_path_text(options: PathAskOptions) -> str:
     """Return the initial path text from the option's default."""
     return '' if options.default is None else str(options.default)
-
-
-def _bind_submit(widget: tk.Misc, on_ok: Callable[[], None]) -> None:
-    """Bind Return to the confirm action on every input inside widget.
-
-    A prompt builds its inputs before its buttons, so binding them all
-    from one place gives every prompt the same rule: Return in an input
-    does what the default OK button does. Only inputs are bound, which
-    both leaves the Browse, Pick and navigation buttons their own keys
-    and reaches the entry inside a two-widget input row.
-    """
-    if isinstance(widget, _RETURN_INPUTS):
-        widget.bind('<Return>', lambda _event: on_ok(), add='+')
-    for child in widget.winfo_children():
-        _bind_submit(child, on_ok)
 
 
 # pylint: disable-next=too-many-instance-attributes
@@ -232,6 +222,22 @@ class WizardWindow:
         assert isinstance(result, list)
         return result
 
+    def ask_matrix_form(self, request: MatrixRequest,
+                        re_ask: Optional[str]) -> AnswerCells:
+        """Ask a whole matrix form on one screen and return its answers.
+
+        The matrix editor binds Return in each input itself, also in a
+        row or column added later, so the content is not bound here.
+        """
+        self._begin(request.long_question, re_ask)
+        editor = MatrixEditor(self._content, request, self._finish)
+        box = self._ok_box(editor.submit)
+        editor.add_resize_buttons(box)
+        self._add_nav_buttons(box)
+        result = self._wait()
+        assert isinstance(result, list)
+        return result
+
     def ask_yes_no(self, question: str, default: bool,
                    re_ask: Optional[str]) -> bool:
         """Ask one yes/no question with dedicated buttons."""
@@ -375,11 +381,15 @@ class WizardWindow:
         The confirm button is marked as the default one, which is how a
         platform shows that pressing Return does the same thing.
         """
-        _bind_submit(self._content, on_ok)
+        bind_submit(self._content, on_ok)
+        self._add_nav_buttons(self._ok_box(on_ok))
+
+    def _ok_box(self, on_ok: Callable[[], None]) -> tk.Frame:
+        """Add the button frame holding the default OK button; return it."""
         box = self._button_box()
         tk.Button(box, text='OK', command=on_ok,
                   default='active').pack(side='left')
-        self._add_nav_buttons(box)
+        return box
 
     def _button_box(self) -> tk.Frame:
         """Add and return the frame holding a prompt's buttons."""

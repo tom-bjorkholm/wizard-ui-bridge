@@ -4,8 +4,9 @@
 :class:`WizardUiBridgeTk` is a concrete :class:`WizardUiBridge` that
 overrides every typed ask method with a real Tkinter control, including
 the GUI-recommended ones: ask_path() opens a native file or directory
-picker, and ask_form() shows a whole form on one screen so the user
-answers related fields together in any order. All questions of one
+picker, ask_form() shows a whole form on one screen so the user
+answers related fields together in any order, and ask_matrix_form()
+shows a whole grid of cells on one screen the same way. All questions of one
 wizard session are answered in a single reused
 :class:`~wizard_tk_bridge.wizard_window.WizardWindow`, so the session
 does not jump around the display.
@@ -36,9 +37,9 @@ its other content should stay usable while the wizard runs.
 from typing import Literal, Optional, Sequence, TextIO, overload
 from pathlib import Path
 import tkinter as tk
-from wizard_ui_bridge import AnswerFields, AskField, AskFields, PartialCheck, \
-    PartialFormValidator, PathAskOptions, TableCell, TableColumn, \
-    WizardUiBridge
+from wizard_ui_bridge import AnswerCells, AnswerFields, AskField, AskFields, \
+    MatrixRequest, PartialCheck, PartialFormValidator, PathAskOptions, \
+    TableCell, TableColumn, WizardUiBridge
 from wizard_ui_bridge.arg_types import check_nullable
 from wizard_ui_bridge.bridge_helpers import check_text_args
 from wizard_tk_bridge._no_text_io import NoTextIO
@@ -170,6 +171,25 @@ class WizardUiBridgeTk(WizardUiBridge):
         """Ask a whole form on one screen; see WizardUiBridge.ask_form."""
         return self._window_obj().ask_form(long_question, ask_fields,
                                            re_ask_reason, partial_validator)
+
+    def ask_matrix_form(self, request: MatrixRequest, *,
+                        re_ask_reason: Optional[str] = None) -> AnswerCells:
+        """Ask a whole matrix form on one screen; see ask_matrix_form.
+
+        Each AskLabelCell is shown as plain text and every other cell as
+        the input a form field of its type gets, with its help text and
+        any format hint as a hover tooltip. When the minimum and maximum
+        dimensions differ, buttons in the button row append or delete the
+        last row or column within the bounds. The partial validator is
+        called after each change of a cell, with its position, and after
+        each change of the shape, with None, but not when the matrix is
+        first shown. Its disabled cells are greyed out, its prefills are
+        written into the inputs, and its message is shown below the
+        matrix. OK first runs the partial validator, then needs every
+        enabled cell to hold a valid answer, and finally needs the
+        validator to accept the matrix.
+        """
+        return self._window_obj().ask_matrix_form(request, re_ask_reason)
 
     def supports_form_field(self, field: AskField) -> bool:
         """Report that the Tk form shows every current field type.

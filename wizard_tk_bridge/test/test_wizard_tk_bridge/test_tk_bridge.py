@@ -9,11 +9,14 @@ from pathlib import Path
 import tkinter as tk
 import pytest
 from wizard_ui_bridge import AskChoiceField, AskFloatField, AskTextField, \
-    PathAskOptions, TableCell, TableColumn, WizardPathKind
+    PathAskOptions, TableCell, TableColumn, WizardPathKind, AskLabelCell, \
+    AskIntCell, AnswerIntCell, MatrixConsoleQuestion, MatrixDimensions, \
+    MatrixRequest
 from wizard_tk_bridge import WizardUiBridgeTk
 from wizard_tk_bridge._no_text_io import NoTextIO
 from wizard_tk_bridge.wizard_window import WizardWindow
-from .gui_test_helpers import answer_entry, answer_list, gui_root
+from .gui_test_helpers import answer_entry, answer_list, click_button, \
+    content_of, gui_root
 
 
 def test_standalone_owns_root(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -276,4 +279,19 @@ def test_ask_form_delegates() -> None:
         root.after(0, _submit)
         answers = bridge.ask_form('Fill this in', [field])
         assert answers[0].value == 'Bob'
+        bridge.close()
+
+
+def test_ask_matrix_delegates() -> None:
+    """Test ask_matrix_form shows the matrix and returns its answers."""
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        hours = AskIntCell(None, default=8)
+        request = MatrixRequest('Hours?', [[AskLabelCell('Ann'), hours]],
+                                MatrixDimensions.fixed(1, 2),
+                                MatrixConsoleQuestion(False, True, True))
+        root.after(0, lambda: click_button(content_of(_window_of(bridge)),
+                                           'OK'))
+        answers = bridge.ask_matrix_form(request)
+        assert answers == [[None, AnswerIntCell(hours, 8)]]
         bridge.close()

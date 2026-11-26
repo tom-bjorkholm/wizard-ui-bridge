@@ -1,15 +1,16 @@
 #! /usr/local/bin/python3
-"""Placeholder-aware entries for the typed wizard form fields.
+"""Placeholder-aware entries for the typed form fields and matrix cells.
 
-The float, time and duration form fields are shown as a text entry that
-displays its accepted-format hint as greyed placeholder text while empty,
-so the user learns the format without cluttering the field label. A date
-or date-time field adds a Pick button that opens a month calendar, and
-typing the ``?`` token into the entry opens the same calendar.
+The float, time and duration fields and cells are shown as a text entry
+that displays its accepted-format hint as greyed placeholder text while
+empty, so the user learns the format without cluttering the field label.
+A date or date-time field or cell adds a Pick button that opens a month
+calendar, and typing the ``?`` token into the entry opens the same
+calendar.
 
 :class:`HintEntry` is the placeholder entry, and :class:`PickRow` bundles
 one with the calendar button. Both satisfy :class:`TypedInput`, the small
-interface the form editor uses to read, write, and enable a typed row.
+interface a cell input uses to read, write, and enable a typed input.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -18,7 +19,7 @@ interface the form editor uses to read, write, and enable a typed row.
 import tkinter as tk
 from datetime import date
 from typing import Callable, Optional, Protocol
-from wizard_ui_bridge import AskField
+from wizard_ui_bridge import AskCell
 from wizard_tk_bridge.gui_style import style_input
 from wizard_tk_bridge.wizard_calendar import CalendarPicker
 from wizard_tk_bridge.wizard_typed import calendar_seed, combined_text
@@ -107,7 +108,7 @@ class HintEntry:
 class PickRow:
     """A hint entry paired with a Pick button that opens a calendar."""
 
-    def __init__(self, parent: tk.Misc, field: AskField, hint: str,
+    def __init__(self, parent: tk.Misc, field: AskCell, hint: str,
                  initial: str, on_change: Callable[[], None]) -> None:
         """Build the entry and Pick button inside a new frame."""
         self._field = field

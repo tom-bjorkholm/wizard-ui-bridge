@@ -8,7 +8,7 @@ field and a thin border so it stands out. :func:`choice_combo` builds a
 styled read-only drop-down that a nullable choice can empty again.
 :func:`focus_first_input` puts the keyboard focus on the first editable
 widget of a window, so the user can start typing as soon as the window
-opens.
+opens. :func:`bind_submit` lets Return in an input confirm the prompt.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -16,10 +16,11 @@ opens.
 
 import tkinter as tk
 from tkinter import ttk
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 INPUT_BG = 'white'
 INPUT_STYLE = 'Input.TCombobox'
+_RETURN_INPUTS = (tk.Entry, tk.Listbox, tk.Checkbutton, ttk.Combobox)
 
 
 def style_input(widget: tk.Widget) -> None:
@@ -84,3 +85,19 @@ def _is_input(widget: tk.Misc) -> bool:
     if not isinstance(widget, (tk.Entry, tk.Listbox, tk.Text)):
         return False
     return str(widget.cget('state')) != 'disabled'
+
+
+def bind_submit(widget: tk.Misc, on_ok: Callable[[], None]) -> None:
+    """Bind Return to the confirm action on every input inside widget.
+
+    A prompt builds its inputs before its buttons, so binding them all
+    from one place gives every prompt the same rule: Return in an input
+    does what the default OK button does. Only inputs are bound, which
+    both leaves the Browse, Pick and navigation buttons their own keys
+    and reaches the entry inside a two-widget input row. An editor that
+    adds inputs later binds each of them itself when it builds it.
+    """
+    if isinstance(widget, _RETURN_INPUTS):
+        widget.bind('<Return>', lambda _event: on_ok(), add='+')
+    for child in widget.winfo_children():
+        bind_submit(child, on_ok)
