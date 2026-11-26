@@ -204,6 +204,10 @@ type CellNamer = Callable[[AnswerCells, CellPosition], str]
    such as 'Alice, start date'. An empty string falls back to the
    default name.
 
+   A console asks one cell at a time, and when
+   MatrixConsoleQuestion.use_cell_namer is True it also uses the
+   CellNamer to name the cell in the question of that cell.
+
    The partial validator writes its own messages, so it does not need a
    CellNamer.
 """
@@ -249,7 +253,12 @@ class MatrixConsoleQuestion(NamedTuple):
     """How to ask for cells in a matrix form in a console.
 
     The matrix form is not well-suited for console input, so this class
-    provides guidance on how to ask for cells in a console environment.
+    provides guidance on how to ask for cells in a console environment,
+    where the cells are asked one at a time. The question of each cell
+    names it by the parts that are switched on below, in the order row
+    label, column label and CellNamer name, joined with ' / ', such as
+    'Alice / Mon'. When no part is switched on, or all of them are
+    empty, the cell is named as by matrix_helpers.cell_name().
 
     Attributes:
         use_help_text: Whether to display the help text for each cell
@@ -261,23 +270,31 @@ class MatrixConsoleQuestion(NamedTuple):
             from the user.
         show_horizontal_label: If this is True, the label closest to
             the left of the cell asked for in the same row is displayed
-            for each cell asked for in the console.
+            for each cell asked for in the console, or the 1-based row
+            number, as in 'Row 2', when the row has no such label.
             If this is False, the horizontal label should not be displayed.
         show_vertical_label: If this is True, the label closest above
             the cell asked for in the same column is displayed for each
-            cell asked for in the console.
+            cell asked for in the console, or the 1-based column number,
+            as in 'Column 3', when the column has no such label.
             If this is False, the vertical label should not be displayed.
         row_order: If this is True, the cells should be asked for in
             row-major order, meaning that all cells in a row are asked for
             before moving on to the next row. If False, column-major order
             should be used, meaning that all cells in a column are asked for
             before moving on to the next column.
+        use_cell_namer: If this is True and the request has a cell_namer,
+            the name it gives is displayed for each cell asked for in the
+            console, after any labels. An empty name is left out. If this
+            is False, the cell_namer is only used in the messages the
+            bridge writes itself.
     """
 
     use_help_text: bool
     show_horizontal_label: bool
     show_vertical_label: bool
     row_order: bool = True
+    use_cell_namer: bool = False
 
 
 class MatrixRequest(NamedTuple):

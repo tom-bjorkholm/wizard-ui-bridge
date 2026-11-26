@@ -1,5 +1,7 @@
 # Table of Contents
 
+* [wizard\_ui\_bridge.\_ask\_cell](#wizard_ui_bridge._ask_cell)
+  * [ask\_cell\_value](#wizard_ui_bridge._ask_cell.ask_cell_value)
 * [wizard\_ui\_bridge.form\_defs](#wizard_ui_bridge.form_defs)
   * [value\_out\_of\_range](#wizard_ui_bridge.form_defs.value_out_of_range)
   * [AskFieldCommon](#wizard_ui_bridge.form_defs.AskFieldCommon)
@@ -44,6 +46,8 @@
   * [row\_label](#wizard_ui_bridge.matrix_helpers.row_label)
   * [column\_label](#wizard_ui_bridge.matrix_helpers.column_label)
   * [cell\_name](#wizard_ui_bridge.matrix_helpers.cell_name)
+  * [row\_name](#wizard_ui_bridge.matrix_helpers.row_name)
+  * [column\_name](#wizard_ui_bridge.matrix_helpers.column_name)
   * [message\_name](#wizard_ui_bridge.matrix_helpers.message_name)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [value\_out\_of\_range](#wizard_ui_bridge.matrix_cell_defs.value_out_of_range)
@@ -140,6 +144,10 @@
   * [fake\_field](#wizard_ui_bridge._parse.fake_field)
 * [wizard\_ui\_bridge.\_form\_prefill](#wizard_ui_bridge._form_prefill)
   * [apply\_prefills](#wizard_ui_bridge._form_prefill.apply_prefills)
+* [wizard\_ui\_bridge.\_matrix\_console](#wizard_ui_bridge._matrix_console)
+  * [ConsoleMatrix](#wizard_ui_bridge._matrix_console.ConsoleMatrix)
+    * [\_\_init\_\_](#wizard_ui_bridge._matrix_console.ConsoleMatrix.__init__)
+    * [run](#wizard_ui_bridge._matrix_console.ConsoleMatrix.run)
 * [wizard\_ui\_bridge.\_fake](#wizard_ui_bridge._fake)
   * [ask\_form\_faking](#wizard_ui_bridge._fake.ask_form_faking)
 * [wizard\_ui\_bridge.bridge\_helpers](#wizard_ui_bridge.bridge_helpers)
@@ -175,6 +183,33 @@
     * [supports\_form\_field](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.supports_form_field)
     * [error\_file](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.error_file)
     * [show](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.show)
+
+<a id="wizard_ui_bridge._ask_cell"></a>
+
+# wizard\_ui\_bridge.\_ask\_cell
+
+Ask one form field or matrix cell with the typed ask methods.
+
+The base WizardUiBridge.ask_form() and ask_matrix_form() both ask one
+question at a time. Every Ask*Field derives from its Ask*Cell, so a
+single function asks either, given the question to show, through the
+public typed ask methods of the bridge, which a derived bridge may
+override.
+
+<a id="wizard_ui_bridge._ask_cell.ask_cell_value"></a>
+
+#### ask\_cell\_value
+
+```python
+def ask_cell_value(bridge: 'WizardUiBridge', question: str,
+                   cell: AskCell) -> Optional[PrefillValueType]
+```
+
+Ask the value of an input cell or form field and return it.
+
+The value has the answer type of the cell (see PrefillValueType), or
+is None for an empty nullable answer. A label cell has no value and
+must not be passed.
 
 <a id="wizard_ui_bridge.form_defs"></a>
 
@@ -772,8 +807,9 @@ A bridge builds the cells of a matrix form from the MatrixCellSpec of the
 request with cell_at(), applies the prefills of a partial validator with
 valid_cell_prefills(), and names a cell in its own message with
 message_name(), which uses the CellNamer of the request and falls back
-to cell_name(). The cells of the current shape are given to the last
-three as a grid of AskCells, one sequence per row.
+to cell_name(). A bridge asking one cell at a time names it with
+row_name() and column_name(). The cells of the current shape are given
+to all but cell_at() as a grid of AskCells, one sequence per row.
 
 <a id="wizard_ui_bridge.matrix_helpers.cell_at"></a>
 
@@ -857,6 +893,28 @@ Return a name of a cell for a message shown to the user.
 The name is the row label and the column label of the cell joined
 with ' / ', such as 'Bob / Tue'. Where a label is missing, the 1-based
 row or column number takes its place, such as 'Row 2 / Start date'.
+
+<a id="wizard_ui_bridge.matrix_helpers.row_name"></a>
+
+#### row\_name
+
+```python
+def row_name(cells: Sequence[Sequence[AskCell]],
+             position: CellPosition) -> str
+```
+
+Return the row label of a cell, or its 1-based row as 'Row 2'.
+
+<a id="wizard_ui_bridge.matrix_helpers.column_name"></a>
+
+#### column\_name
+
+```python
+def column_name(cells: Sequence[Sequence[AskCell]],
+                position: CellPosition) -> str
+```
+
+Return the column label of a cell, or 'Column 3' when it has none.
 
 <a id="wizard_ui_bridge.matrix_helpers.message_name"></a>
 
@@ -1824,7 +1882,12 @@ class MatrixConsoleQuestion(NamedTuple)
 How to ask for cells in a matrix form in a console.
 
 The matrix form is not well-suited for console input, so this class
-provides guidance on how to ask for cells in a console environment.
+provides guidance on how to ask for cells in a console environment,
+where the cells are asked one at a time. The question of each cell
+names it by the parts that are switched on below, in the order row
+label, column label and CellNamer name, joined with ' / ', such as
+'Alice / Mon'. When no part is switched on, or all of them are
+empty, the cell is named as by matrix_helpers.cell_name().
 
 **Attributes**:
 
@@ -1837,17 +1900,24 @@ provides guidance on how to ask for cells in a console environment.
   from the user.
 - `show_horizontal_label` - If this is True, the label closest to
   the left of the cell asked for in the same row is displayed
-  for each cell asked for in the console.
+  for each cell asked for in the console, or the 1-based row
+  number, as in 'Row 2', when the row has no such label.
   If this is False, the horizontal label should not be displayed.
 - `show_vertical_label` - If this is True, the label closest above
   the cell asked for in the same column is displayed for each
-  cell asked for in the console.
+  cell asked for in the console, or the 1-based column number,
+  as in 'Column 3', when the column has no such label.
   If this is False, the vertical label should not be displayed.
 - `row_order` - If this is True, the cells should be asked for in
   row-major order, meaning that all cells in a row are asked for
   before moving on to the next row. If False, column-major order
   should be used, meaning that all cells in a column are asked for
   before moving on to the next column.
+- `use_cell_namer` - If this is True and the request has a cell_namer,
+  the name it gives is displayed for each cell asked for in the
+  console, after any labels. An empty name is left out. If this
+  is False, the cell_namer is only used in the messages the
+  bridge writes itself.
 
 <a id="wizard_ui_bridge.matrix_defs.MatrixRequest"></a>
 
@@ -1900,15 +1970,17 @@ one. Each bridge in this package supports it.
 #### initial\_answer
 
 ```python
-def initial_answer(field: AskField) -> AnswerField
+def initial_answer(field: AskCell) -> AnswerCell
 ```
 
-Return the starting answer for a field before the user edits it.
+Return the starting answer for a field or input cell.
 
 The value is the field's default, or the empty or not-yet-answered
 state when the field has no default. A choice field with no default
 starts as None, which tells a partial validator the choice is not
 answered yet; a bridge must not leave that None in a submitted form.
+A form field gets its Answer*Field and a matrix cell its Answer*Cell.
+A label cell has no answer and must not be passed.
 
 <a id="wizard_ui_bridge.form_helpers.answer_of"></a>
 
@@ -1970,19 +2042,20 @@ does not match cell.
 #### prefilled\_field
 
 ```python
-def prefilled_field(field: AskField, prefill: PrefillValueType) -> AskField
+def prefilled_field(field: AskCell, prefill: PrefillValueType) -> AskCell
 ```
 
-Return field with prefill as its default.
+Return a form field or input cell with prefill as its default.
 
-The console bridge offers a prefill as the row's default when the row
-is asked. A field may not be both nullable and have a default, so the
-returned field is not nullable: as for any default, an empty answer
-takes the prefill. A prefill that cannot serve as a valid default,
-such as an integer or date outside the field's bounds or a
-multi-choice selection of more than max_select choices, is ignored
-so the field keeps its own default. The prefill has already been checked
-against the field type by valid_prefills().
+The console bridge offers a prefill as the default of the field or
+cell when it is asked. A field may not be both nullable and have a
+default, so the returned field is not nullable: as for any default,
+an empty answer takes the prefill. A prefill that cannot serve as a
+valid default, such as an integer or date outside the field's bounds
+or a multi-choice selection of more than max_select choices, is
+ignored so the field keeps its own default. The prefill has already
+been checked against the field type by valid_prefills() or
+matrix_helpers.valid_cell_prefills(). A label cell must not be passed.
 
 <a id="wizard_ui_bridge.bridge"></a>
 
@@ -2001,10 +2074,10 @@ bridge implements ask_text(), ask_choice(), ask_multi(), ask_yes_no()
 and ask_table(); ask_path() has a permanent base implementation that a
 bridge may override for a native file or directory picker.
 
-A GUI, textual, curses or web application should override ask_form() to show
-the whole form at once, so the user sees every question together and answers
-them in any order. The base implementation is permanent and suitable for a
-console text interface.
+A GUI, textual, curses or web application should override ask_form() and
+ask_matrix_form() to show the whole form or matrix at once, so the user sees
+every question together and answers them in any order. The base
+implementations are permanent and suitable for a console text interface.
 
 A GUI, textual, curses or web application should also override ask_path() to
 provide a native file or directory picker. The base implementation asks for
@@ -2028,10 +2101,11 @@ interface.
 A concrete bridge implements ask_text(), ask_choice(), ask_multi(),
 ask_yes_no(), ask_table() and show(). It may override ask_path() for
 a native file or directory picker; otherwise the base implementation
-asks for text and validates the path. It may override ask_form() to
-show the whole form at once, so the user sees every question together
-and answers them in any order. Overriding ask_form() and ask_path()
-is strongly recommended for a GUI, textual, curses or web application.
+asks for text and validates the path. It may override ask_form() and
+ask_matrix_form() to show the whole form or matrix at once, so the
+user sees every question together and answers them in any order.
+Overriding ask_form(), ask_matrix_form() and ask_path() is strongly
+recommended for a GUI, textual, curses or web application.
 
 Any ask method may raise a WizardNavigation subclass to request back,
 cancel-level or abort instead of returning an answer.
@@ -2559,12 +2633,27 @@ by request.ask_cells, in the shape request.dimensions.default.
 When the minimum and maximum dimensions differ, the user may
 append or delete the last row or column within those bounds.
 
-The base implementation is not written yet and raises RuntimeError.
-It is deliberately not NotImplementedError, since a derived class
-need not override this method. When written the base implementation
-will be permanent and suitable for a console text interface: it will
-show request.long_question, then ask each input cell in turn with the
-typed ask methods, guided by request.console_question.
+The base implementation is permanent and suitable for a console
+text interface. It shows request.long_question and re_ask_reason,
+then asks each enabled input cell in turn with the typed ask
+methods, in the order and with the cell names that
+request.console_question gives. When the matrix may be resized,
+ask_choice() offers to append or delete the last row or column:
+at the end of the matrix, where an empty answer is done, and when
+the number of cells in a line may change, also after the first
+row (or column, in column order) with input cells, so the user
+can set the width before the other rows are asked. An appended
+row or column asks its new cells at once. WizardBack steps back
+to the previously asked cell, and from the first cell propagates
+so the wizard steps to the previous question.
+
+In the base implementation the partial validator is called first
+for the whole matrix, then after each cell is answered and after
+each change of shape. Its message is shown when the matrix is not
+valid, its disabled cells are skipped and keep their answers, and
+each prefill is offered as the default of its cell when that cell
+is asked. The message is advisory only: the matrix is returned
+even when it is not valid, so the wizard must check the answers.
 
 Any serious application or library using GUI, textual, curses or
 web interfaces should override this method to show the whole matrix
@@ -2600,7 +2689,6 @@ wizard_ui_bridge.matrix_defs for the request and its validator.
 
 **Raises**:
 
-- `RuntimeError` - The base implementation is not written yet.
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -2854,14 +2942,14 @@ Return the message shown when a typed value is out of range.
 #### ask\_typed
 
 ```python
-def ask_typed(ask_text: _AskText, field: _TypedField[_OrderedT],
+def ask_typed(ask_text: _AskText, question: str, field: _TypedCell[_OrderedT],
               parse: Callable[[str], Optional[_OrderedT]],
               hint: str) -> Optional[_OrderedT]
 ```
 
-Re-ask a typed field through ask_text until the value is usable.
+Re-ask a typed field or cell through ask_text until it is usable.
 
-The hint is shown in the question and repeated in the parse-error
+The hint is shown after the question and repeated in the parse-error
 message, so a console user learns the accepted text format. An empty
 answer yields the field default, or None when the field is nullable.
 
@@ -2962,6 +3050,78 @@ Write each valid prefill into its row's widget in form.
 A disabled row is written too, so the value shows greyed and takes
 effect if the row is later enabled. Writing a value equal to the one
 already there is a no-op, so a stable validator does not loop.
+
+<a id="wizard_ui_bridge._matrix_console"></a>
+
+# wizard\_ui\_bridge.\_matrix\_console
+
+Ask a matrix form one cell at a time, as a console does.
+
+The base WizardUiBridge.ask_matrix_form() cannot show a grid, so it asks
+each input cell in turn with the typed ask methods of the bridge, as the
+MatrixConsoleQuestion of the request directs. The cells are walked line
+by line: a line is a row in row order and a column in column order, and
+an item is one cell of a line.
+
+The walk is a queue of steps: a cell, a line that turns into its cells
+when it is reached (so a line asked after the width changed gets the new
+width), and a resize menu. When the matrix may be resized, ask_choice()
+offers a menu at two points:
+
+- after the first line with input cells, when the number of items may
+  change, so the user can set the width before the other lines are
+  asked and then fill each line completely, and
+- at the end, to append or delete the last line or item, or be done.
+
+An appended line or item asks its new input cells at once, before the
+menu is offered again; cells of lines still waiting in the queue are
+asked with those lines. WizardBack steps back to the previously asked
+cell that can still be asked, also from a menu, and propagates from the
+first cell. The cells passed on the way back are walked again, so a cell
+skipped as disabled is asked if it is enabled by then, as in the base
+WizardUiBridge.ask_form().
+
+A partial validator gets each answered cell, and the whole matrix after
+a shape change; its message is shown when the matrix is not valid, its
+disabled cells are skipped, and each prefill becomes the default of its
+cell when that cell is asked. The message is advisory only: the wizard
+checks the returned answers.
+
+<a id="wizard_ui_bridge._matrix_console.ConsoleMatrix"></a>
+
+## ConsoleMatrix Objects
+
+```python
+class ConsoleMatrix()
+```
+
+A matrix form asked one cell at a time through a bridge.
+
+<a id="wizard_ui_bridge._matrix_console.ConsoleMatrix.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__(bridge: 'WizardUiBridge', request: MatrixRequest) -> None
+```
+
+Build the cells of the default shape with their start answers.
+
+<a id="wizard_ui_bridge._matrix_console.ConsoleMatrix.run"></a>
+
+#### run
+
+```python
+def run() -> list[list[Optional[AnswerCell]]]
+```
+
+Ask the cells and menus and return the answers of the matrix.
+
+**Raises**:
+
+- `WizardBack` - The user stepped back from the first cell.
+- `WizardCancelLevel` - The user cancelled the current level.
+- `WizardAbort` - The user abandoned the whole wizard.
 
 <a id="wizard_ui_bridge._fake"></a>
 

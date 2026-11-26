@@ -58,7 +58,17 @@ is not a date, and names the cell in its message. By default the name
 comes from the nearest labels: the header label above the cell, and here
 the row number, since there is no label column, as in 'Row 3 / Start
 date'. The cell_namer of the request names the cell by the contractor's
-name instead, as in 'Alice, start date'.
+name instead, as in 'Alice, start date'. A console, which asks one cell
+at a time, can use the same name in the question of each cell.
+
+On a console
+------------
+A console cannot show the grid, so it asks one cell at a time and offers
+the resizing as menus: after the first contractor row it asks whether to
+append or delete a contract file column, so the width is set before the
+other contractors are asked, and after the last cell it asks whether to
+append or delete a contractor row or a contract file column, or be done.
+An empty answer to a menu goes on.
 
 The header labels ask to be shown in bold. That is only a hint, which a
 bridge that cannot show bold text ignores.
@@ -111,12 +121,14 @@ _HEADER: tuple[AskCell, ...] = tuple(AskLabelCell(text, bold=True)
                                      for text in _HEADER_TEXTS)
 
 # The console asks one cell at a time (see e08): here row by row, one
-# contractor after the other, naming each cell by the header label above
-# it. There is no label to the left of a cell, so no row label is shown.
+# contractor after the other. Each cell is named by the cell_namer of the
+# request (use_cell_namer=True), as in 'Alice, start date'. That name
+# already holds the column, so the label above the cell is not shown, and
+# there is no label to the left of a cell, so no row label is shown either.
 _CONSOLE_QUESTION = MatrixConsoleQuestion(use_help_text=False,
                                           show_horizontal_label=False,
-                                          show_vertical_label=True,
-                                          row_order=True)
+                                          show_vertical_label=False,
+                                          row_order=True, use_cell_namer=True)
 
 
 @dataclass(frozen=True)

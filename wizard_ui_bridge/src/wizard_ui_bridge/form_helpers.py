@@ -44,13 +44,23 @@ def nullable_choice(field: AskField) -> bool:
     return isinstance(field, AskChoiceField) and field.nullable
 
 
-def initial_answer(field: AskField) -> AnswerField:
-    """Return the starting answer for a field before the user edits it.
+@overload
+def initial_answer(field: AskField) -> AnswerField: ...
+
+
+@overload
+def initial_answer(field: AskCell) -> AnswerCell: ...
+
+
+def initial_answer(field: AskCell) -> AnswerCell:
+    """Return the starting answer for a field or input cell.
 
     The value is the field's default, or the empty or not-yet-answered
     state when the field has no default. A choice field with no default
     starts as None, which tells a partial validator the choice is not
     answered yet; a bridge must not leave that None in a submitted form.
+    A form field gets its Answer*Field and a matrix cell its Answer*Cell.
+    A label cell has no answer and must not be passed.
     """
     return answer_of(field, _default_value(field))
 
@@ -291,17 +301,28 @@ def _bad_type(where: str) -> NoReturn:
     raise TypeError(f'prefill value for {where} has the wrong type')
 
 
+@overload
 def prefilled_field(field: AskField, prefill: PrefillValueType) -> AskField:
-    """Return field with prefill as its default.
+    ...
 
-    The console bridge offers a prefill as the row's default when the row
-    is asked. A field may not be both nullable and have a default, so the
-    returned field is not nullable: as for any default, an empty answer
-    takes the prefill. A prefill that cannot serve as a valid default,
-    such as an integer or date outside the field's bounds or a
-    multi-choice selection of more than max_select choices, is ignored
-    so the field keeps its own default. The prefill has already been checked
-    against the field type by valid_prefills().
+
+@overload
+def prefilled_field(field: AskCell, prefill: PrefillValueType) -> AskCell:
+    ...
+
+
+def prefilled_field(field: AskCell, prefill: PrefillValueType) -> AskCell:
+    """Return a form field or input cell with prefill as its default.
+
+    The console bridge offers a prefill as the default of the field or
+    cell when it is asked. A field may not be both nullable and have a
+    default, so the returned field is not nullable: as for any default,
+    an empty answer takes the prefill. A prefill that cannot serve as a
+    valid default, such as an integer or date outside the field's bounds
+    or a multi-choice selection of more than max_select choices, is
+    ignored so the field keeps its own default. The prefill has already
+    been checked against the field type by valid_prefills() or
+    matrix_helpers.valid_cell_prefills(). A label cell must not be passed.
     """
     try:
         result = _default_a(field, prefill)
@@ -310,45 +331,44 @@ def prefilled_field(field: AskField, prefill: PrefillValueType) -> AskField:
         return field
 
 
-def _default_a(field: AskField,
-               prefill: PrefillValueType) -> Optional[AskField]:
+def _default_a(field: AskCell, prefill: PrefillValueType) -> Optional[AskCell]:
     """Return field with prefill as default for the first field group."""
-    if isinstance(field, AskPathField):
+    if isinstance(field, AskPathCell):
         assert isinstance(prefill, Path)
         options = replace(field.path_options, nullable=False, default=prefill)
         return replace(field, path_options=options)
-    if isinstance(field, AskIntField):
+    if isinstance(field, AskIntCell):
         assert isinstance(prefill, int)
         return replace(field, nullable=False, default=prefill)
-    if isinstance(field, AskFloatField):
+    if isinstance(field, AskFloatCell):
         assert isinstance(prefill, (int, float))
         return replace(field, nullable=False, default=prefill)
-    if isinstance(field, AskDateField):
+    if isinstance(field, AskDateCell):
         assert isinstance(prefill, date)
         return replace(field, nullable=False, default=prefill)
-    if isinstance(field, AskTimeField):
+    if isinstance(field, AskTimeCell):
         assert isinstance(prefill, time)
         return replace(field, nullable=False, default=prefill)
     return None
 
 
-def _default_b(field: AskField, prefill: PrefillValueType) -> AskField:
+def _default_b(field: AskCell, prefill: PrefillValueType) -> AskCell:
     """Return field with prefill as default for the second field group."""
-    if isinstance(field, AskDateTimeField):
+    if isinstance(field, AskDateTimeCell):
         assert isinstance(prefill, datetime)
         return replace(field, nullable=False, default=prefill)
-    if isinstance(field, AskDurationField):
+    if isinstance(field, AskDurationCell):
         assert isinstance(prefill, timedelta)
         return replace(field, nullable=False, default=prefill)
-    if isinstance(field, AskYesNoField):
+    if isinstance(field, AskYesNoCell):
         assert isinstance(prefill, bool)
         return replace(field, default=prefill)
-    if isinstance(field, AskChoiceField):
+    if isinstance(field, AskChoiceCell):
         assert isinstance(prefill, str)
         return replace(field, nullable=False, default=prefill)
-    if isinstance(field, AskTextField):
+    if isinstance(field, AskTextCell):
         assert isinstance(prefill, str)
         return replace(field, nullable=False, default=prefill)
-    assert isinstance(field, AskMultiChoiceField)
+    assert isinstance(field, AskMultiChoiceCell)
     assert isinstance(prefill, list)
     return replace(field, default=prefill)

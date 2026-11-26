@@ -2,10 +2,10 @@
 """Tests for the matrix form teaching examples e08 and e09.
 
 The tests that use the scripted _MatrixBridge check the examples' own
-logic. The console tests need the console implementation of
-ask_matrix_form() and are skipped until it exists. The Tk bridge
-implements ask_matrix_form(), and the tests of the wizard_tk_bridge
-examples run e08 through it.
+logic. The console tests run the examples on the console bridge, which
+uses the base implementation of ask_matrix_form() and asks one cell at a
+time. The Tk bridge implements ask_matrix_form(), and the tests of the
+wizard_tk_bridge examples run e08 through it.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -28,8 +28,6 @@ from .console_driver import drive
 
 _JAN = date(2027, 1, 1)
 _JUN = date(2027, 6, 30)
-_NO_MATRIX = pytest.mark.skip(
-    reason='ask_matrix_form() is not implemented by the console bridge yet')
 
 
 def _default_answers(request: MatrixRequest) -> AnswerCells:
@@ -149,7 +147,6 @@ def test_e08_ask_cancel() -> None:
     assert 'cancelled' in out_file.getvalue()
 
 
-@_NO_MATRIX
 def test_e08_console_defaults() -> None:
     """Accepting every default gives 8 hours a day to every member."""
     summary, _, _ = drive(e08_matrix_form.collect_and_summarize, [''] * 15)
@@ -158,7 +155,6 @@ def test_e08_console_defaults() -> None:
     assert 'Cleo: Mon 8, Tue 8, Wed 8, Thu 8, Fri 8 (total 40)' in summary
 
 
-@_NO_MATRIX
 def test_e08_console_hours() -> None:
     """Typed hours are asked row by row and reach the summary."""
     lines = ['1', '2', '3', '4', '5'] + [''] * 5 + ['0', '0', '0', '0', '24']
@@ -168,7 +164,6 @@ def test_e08_console_hours() -> None:
     assert 'Cleo: Mon 0, Tue 0, Wed 0, Thu 0, Fri 24 (total 24)' in summary
 
 
-@_NO_MATRIX
 def test_e08_console_range() -> None:
     """An hours value outside 0-24 is re-asked by the cell's bounds."""
     lines = ['25', '9'] + [''] * 14
@@ -177,7 +172,6 @@ def test_e08_console_range() -> None:
     assert 'Alice: Mon 9, Tue 8' in summary
 
 
-@_NO_MATRIX
 def test_e08_console_cancel() -> None:
     """Aborting at the first cell returns no summary."""
     summary, output, _ = drive(e08_matrix_form.collect_and_summarize, [':q'])
@@ -213,6 +207,7 @@ def test_e09_request_shape() -> None:
     assert all(isinstance(cell, AskLabelCell) and cell.bold
                for cell in cells[0])
     assert request.cell_namer is e09_resizable_matrix.contractor_cell_name
+    assert request.console_question.use_cell_namer
     assert e09_resizable_matrix.read_contractors(
         _default_answers(request)) == [Contractor('', None, None, (None,))]
     assert e09_resizable_matrix.build_parser().parse_args([]).ui == 'auto'
@@ -335,25 +330,50 @@ def test_e09_summary(tmp_path: Path) -> None:
         f'  Bob: 2027-01-01 to 2027-06-30, contracts: {first}'])
 
 
-@_NO_MATRIX
 def test_e09_console(tmp_path: Path) -> None:
-    """One contractor with one contract file is summarized."""
+    """One contractor with one contract file is summarized.
+
+    The empty answer after the cells accepts the end menu (Done).
+    """
     contract = tmp_path / 'alice.pdf'
     contract.write_text('signed')
-    lines = ['Alice', '2027-01-01', '2027-06-30', str(contract)]
-    summary, _, _ = drive(e09_resizable_matrix.collect_and_summarize, lines)
+    lines = ['Alice', '2027-01-01', '2027-06-30', str(contract), '']
+    summary, output, _ = drive(e09_resizable_matrix.collect_and_summarize,
+                               lines)
     assert summary is not None
     assert f'Alice: 2027-01-01 to 2027-06-30, contracts: {contract}' \
         in summary
+    assert 'Alice, start date' in output
 
 
-@_NO_MATRIX
+def test_e09_console_resize(tmp_path: Path) -> None:
+    """The end menu appends a contract column and a contractor row.
+
+    The appended column asks Alice's second contract at once. The
+    appended row asks Bob, with the new width, and then the end menu is
+    offered again and accepted.
+    """
+    first, second = tmp_path / 'a.pdf', tmp_path / 'b.pdf'
+    first.write_text('signed')
+    second.write_text('signed')
+    alice = ['Alice', '2027-01-01', '2027-06-30', str(first)]
+    bob = ['Bob', '2027-02-01', '2027-12-31', str(second), '']
+    lines = alice + ['3', str(second), '2'] + bob + ['']
+    summary, output, _ = drive(e09_resizable_matrix.collect_and_summarize,
+                               lines)
+    assert summary is not None
+    assert f'Alice: 2027-01-01 to 2027-06-30, contracts: {first}, {second}' \
+        in summary
+    assert f'Bob: 2027-02-01 to 2027-12-31, contracts: {second}' in summary
+    assert 'Alice, contract 2' in output
+
+
 def test_e09_console_reask(tmp_path: Path) -> None:
     """Swapped dates are reported and the matrix is asked again."""
     contract = tmp_path / 'alice.pdf'
     contract.write_text('signed')
-    bad = ['Alice', '2027-06-30', '2027-01-01', str(contract)]
-    good = ['', '2027-01-01', '2027-06-30', '']
+    bad = ['Alice', '2027-06-30', '2027-01-01', str(contract), '']
+    good = ['', '2027-01-01', '2027-06-30', '', '']
     collect = e09_resizable_matrix.collect_and_summarize
     summary, output, errors = drive(collect, bad + good)
     assert summary is not None
@@ -361,7 +381,6 @@ def test_e09_console_reask(tmp_path: Path) -> None:
     assert 'start date must be before' in output + errors
 
 
-@_NO_MATRIX
 def test_e09_console_cancel() -> None:
     """Aborting at the first cell returns no summary."""
     summary, output, _ = drive(e09_resizable_matrix.collect_and_summarize,

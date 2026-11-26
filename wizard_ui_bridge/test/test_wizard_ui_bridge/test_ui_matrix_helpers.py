@@ -26,9 +26,11 @@ from wizard_ui_bridge import AskCell, AnswerCell, AnswerCells, AskField, \
     AnswerDateTimeCell, AnswerDurationCell, AskTextField, AskFloatField, \
     AskMultiChoiceField, AnswerTextField, AnswerFloatField, \
     AnswerMultiChoiceField
-from wizard_ui_bridge.form_helpers import answer_of, prefill_value
+from wizard_ui_bridge.form_helpers import answer_of, initial_answer, \
+    prefill_value, prefilled_field
 from wizard_ui_bridge.matrix_helpers import cell_at, cell_name, \
-    column_label, message_name, row_label, valid_cell_prefills
+    column_label, column_name, message_name, row_label, row_name, \
+    valid_cell_prefills
 
 _POS = CellPosition
 _CORNER = AskLabelCell('')
@@ -151,6 +153,16 @@ def test_cell_name(position: CellPosition, name: str) -> None:
     assert cell_name(_GRID, position) == name
 
 
+@pytest.mark.parametrize('position, row, column', [
+    (_POS(1, 1), 'Alice', 'Mon'), (_POS(2, 2), 'Row 3', 'Tue'),
+    (_POS(0, 0), 'Row 1', 'Column 1')])
+def test_row_column_name(position: CellPosition, row: str,
+                         column: str) -> None:
+    """Each half of cell_name() is a label, or the 1-based number."""
+    assert row_name(_GRID, position) == row
+    assert column_name(_GRID, position) == column
+
+
 def test_cell_name_no_label() -> None:
     """A cell with no label, or only blank ones, is named by position."""
     cells: list[list[AskCell]] = [[_CORNER, _HOURS], [_HOURS, _HOURS]]
@@ -228,3 +240,21 @@ def test_answer_of_float_int() -> None:
     answer = answer_of(field, 2)
     assert answer == AnswerFloatField(field, 2.0)
     assert isinstance(answer.value, float)
+
+
+@pytest.mark.parametrize('cell, value', [
+    (AskTextCell(None), 'hi'), (AskIntCell(None), 7),
+    (AskPathCell(None, PathAskOptions()), Path('/tmp/x')),
+    (AskYesNoCell(None, False), True),
+    (AskChoiceCell(None, choices=('x', 'y')), 'y'),
+    (AskMultiChoiceCell(None, choices=('a', 'b')), ['a', 'b']),
+    (AskFloatCell(None), 4.0), (AskDateCell(None), date(2024, 5, 6)),
+    (AskTimeCell(None), time(9, 30)),
+    (AskDateTimeCell(None), datetime(2024, 5, 6, 9, 30)),
+    (AskDurationCell(None), timedelta(hours=2))])
+def test_prefilled_cell(cell: AskCell, value: PrefillValueType) -> None:
+    """A prefilled cell stays a cell, and its start answer is the value."""
+    assert initial_answer(cell).asking is cell
+    result = prefilled_field(cell, value)
+    assert type(result) is type(cell)
+    assert initial_answer(result).value == value

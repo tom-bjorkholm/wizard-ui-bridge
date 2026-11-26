@@ -206,13 +206,14 @@ def test_ask_typed_reask() -> None:
     """ask_typed re-asks until the entered text parses in range."""
     field = AskFloatField('R', None, min_value=0.0, max_value=10.0)
     reader = _reader(['abc', '99', '3.5'])
-    assert ask_typed(reader, field, parse_float, FLOAT_HINT) == 3.5
+    assert ask_typed(reader, 'R', field, parse_float, FLOAT_HINT) == 3.5
 
 
 def test_ask_typed_nullable() -> None:
     """ask_typed returns None for an empty nullable answer."""
     field = AskFloatField('R', None, nullable=True)
-    assert ask_typed(_reader([None]), field, parse_float, FLOAT_HINT) is None
+    reader = _reader([None])
+    assert ask_typed(reader, 'R', field, parse_float, FLOAT_HINT) is None
 
 
 @pytest.mark.parametrize('field_class, low, high', [

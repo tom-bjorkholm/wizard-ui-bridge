@@ -5,8 +5,9 @@ A bridge builds the cells of a matrix form from the MatrixCellSpec of the
 request with cell_at(), applies the prefills of a partial validator with
 valid_cell_prefills(), and names a cell in its own message with
 message_name(), which uses the CellNamer of the request and falls back
-to cell_name(). The cells of the current shape are given to the last
-three as a grid of AskCells, one sequence per row.
+to cell_name(). A bridge asking one cell at a time names it with
+row_name() and column_name(). The cells of the current shape are given
+to all but cell_at() as a grid of AskCells, one sequence per row.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -127,9 +128,19 @@ def cell_name(cells: Sequence[Sequence[AskCell]],
     with ' / ', such as 'Bob / Tue'. Where a label is missing, the 1-based
     row or column number takes its place, such as 'Row 2 / Start date'.
     """
-    row = row_label(cells, position) or f'Row {position.row + 1}'
-    column = column_label(cells, position) or f'Column {position.column + 1}'
-    return f'{row} / {column}'
+    return f'{row_name(cells, position)} / {column_name(cells, position)}'
+
+
+def row_name(cells: Sequence[Sequence[AskCell]],
+             position: CellPosition) -> str:
+    """Return the row label of a cell, or its 1-based row as 'Row 2'."""
+    return row_label(cells, position) or f'Row {position.row + 1}'
+
+
+def column_name(cells: Sequence[Sequence[AskCell]],
+                position: CellPosition) -> str:
+    """Return the column label of a cell, or 'Column 3' when it has none."""
+    return column_label(cells, position) or f'Column {position.column + 1}'
 
 
 def message_name(namer: Optional[CellNamer], answers: AnswerCells,

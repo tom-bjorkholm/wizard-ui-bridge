@@ -12,10 +12,10 @@ bridge implements ask_text(), ask_choice(), ask_multi(), ask_yes_no()
 and ask_table(); ask_path() has a permanent base implementation that a
 bridge may override for a native file or directory picker.
 
-A GUI, textual, curses or web application should override ask_form() to show
-the whole form at once, so the user sees every question together and answers
-them in any order. The base implementation is permanent and suitable for a
-console text interface.
+A GUI, textual, curses or web application should override ask_form() and
+ask_matrix_form() to show the whole form or matrix at once, so the user sees
+every question together and answers them in any order. The base
+implementations are permanent and suitable for a console text interface.
 
 A GUI, textual, curses or web application should also override ask_path() to
 provide a native file or directory picker. The base implementation asks for
@@ -32,20 +32,15 @@ from wizard_ui_bridge.arg_types import PartialCheck, \
     PathAskOptions, TableColumn, TableCell, WizardBack, check_nullable
 from wizard_ui_bridge.bridge_helpers import int_text, \
     out_of_range, range_error, path_answer, INT_ERROR
-from wizard_ui_bridge.form_helpers import initial_answer, \
+from wizard_ui_bridge.form_helpers import answer_of, initial_answer, \
     valid_prefills, prefilled_field, nullable_choice
-from wizard_ui_bridge._parse import ask_typed, parse_float, \
-    parse_date, parse_time, parse_datetime, parse_duration, FLOAT_HINT, \
-    DATE_HINT, TIME_HINT, DATETIME_HINT, DURATION_HINT
+from wizard_ui_bridge._ask_cell import ask_cell_value
 from wizard_ui_bridge._fake import ask_form_faking
+from wizard_ui_bridge._matrix_console import ConsoleMatrix
 from wizard_ui_bridge.form_defs import AskField, AskFields, \
     AnswerField, AnswerFields, PartialFormValidator, AskTextField, \
     AskIntField, AskPathField, AskYesNoField, AskChoiceField, \
-    AskMultiChoiceField, AskFloatField, AskDateField, AskTimeField, \
-    AskDateTimeField, AskDurationField, AnswerTextField, AnswerIntField, \
-    AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
-    AnswerMultiChoiceField, AnswerFloatField, AnswerDateField, \
-    AnswerTimeField, AnswerDateTimeField, AnswerDurationField
+    AskMultiChoiceField
 from wizard_ui_bridge.matrix_cell_defs import PrefillValueType, \
     check_bounds
 from wizard_ui_bridge.matrix_defs import MatrixRequest, AnswerCells
@@ -62,10 +57,11 @@ class WizardUiBridge:
     A concrete bridge implements ask_text(), ask_choice(), ask_multi(),
     ask_yes_no(), ask_table() and show(). It may override ask_path() for
     a native file or directory picker; otherwise the base implementation
-    asks for text and validates the path. It may override ask_form() to
-    show the whole form at once, so the user sees every question together
-    and answers them in any order. Overriding ask_form() and ask_path()
-    is strongly recommended for a GUI, textual, curses or web application.
+    asks for text and validates the path. It may override ask_form() and
+    ask_matrix_form() to show the whole form or matrix at once, so the
+    user sees every question together and answers them in any order.
+    Overriding ask_form(), ask_matrix_form() and ask_path() is strongly
+    recommended for a GUI, textual, curses or web application.
 
     Any ask method may raise a WizardNavigation subclass to request back,
     cancel-level or abort instead of returning an answer.
@@ -436,9 +432,7 @@ class WizardUiBridge:
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        self.show(long_question)
-        if re_ask_reason is not None:
-            self.show(re_ask_reason)
+        self._show_question(long_question, re_ask_reason)
         answers = [initial_answer(field) for field in ask_fields]
         self._fill_form(ask_fields, answers, partial_validator)
         return answers
@@ -516,12 +510,27 @@ class WizardUiBridge:
         When the minimum and maximum dimensions differ, the user may
         append or delete the last row or column within those bounds.
 
-        The base implementation is not written yet and raises RuntimeError.
-        It is deliberately not NotImplementedError, since a derived class
-        need not override this method. When written the base implementation
-        will be permanent and suitable for a console text interface: it will
-        show request.long_question, then ask each input cell in turn with the
-        typed ask methods, guided by request.console_question.
+        The base implementation is permanent and suitable for a console
+        text interface. It shows request.long_question and re_ask_reason,
+        then asks each enabled input cell in turn with the typed ask
+        methods, in the order and with the cell names that
+        request.console_question gives. When the matrix may be resized,
+        ask_choice() offers to append or delete the last row or column:
+        at the end of the matrix, where an empty answer is done, and when
+        the number of cells in a line may change, also after the first
+        row (or column, in column order) with input cells, so the user
+        can set the width before the other rows are asked. An appended
+        row or column asks its new cells at once. WizardBack steps back
+        to the previously asked cell, and from the first cell propagates
+        so the wizard steps to the previous question.
+
+        In the base implementation the partial validator is called first
+        for the whole matrix, then after each cell is answered and after
+        each change of shape. Its message is shown when the matrix is not
+        valid, its disabled cells are skipped and keep their answers, and
+        each prefill is offered as the default of its cell when that cell
+        is asked. The message is advisory only: the matrix is returned
+        even when it is not valid, so the wizard must check the answers.
 
         Any serious application or library using GUI, textual, curses or
         web interfaces should override this method to show the whole matrix
@@ -552,14 +561,19 @@ class WizardUiBridge:
             each label cell (AskLabelCell).
 
         Raises:
-            RuntimeError: The base implementation is not written yet.
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        _ = (request, re_ask_reason)
-        raise RuntimeError('ask_matrix_form() base implementation is not '
-                           'written yet')
+        self._show_question(request.long_question, re_ask_reason)
+        return ConsoleMatrix(self, request).run()
+
+    def _show_question(self, long_question: str,
+                       re_ask_reason: Optional[str]) -> None:
+        """Show the question of a form, and the reason when re-asked."""
+        self.show(long_question)
+        if re_ask_reason is not None:
+            self.show(re_ask_reason)
 
     def _fill_form(self, ask_fields: AskFields, answers: list[AnswerField],
                    validator: Optional[PartialFormValidator]) -> None:
@@ -626,70 +640,8 @@ class WizardUiBridge:
             field = prefilled_field(field, prefill)
         if field.help_text is not None:
             self.show(field.help_text)
-        answer = self._ask_new_field(field)
-        return answer if answer is not None else self._ask_basic_field(field)
-
-    def _ask_new_field(self, field: AskField) -> Optional[AnswerField]:
-        """Ask a float, date, time, date-time or duration field, else None.
-
-        Each typed field is read through the shared text re-ask loop, which
-        parses the entered text, checks the inclusive bounds and shows the
-        format hint until the value is accepted.
-        """
-        if isinstance(field, AskFloatField):
-            number = ask_typed(self.ask_text, field, parse_float, FLOAT_HINT)
-            return AnswerFloatField(field, number)
-        if isinstance(field, AskDateField):
-            day = ask_typed(self.ask_text, field, parse_date, DATE_HINT)
-            return AnswerDateField(field, day)
-        if isinstance(field, AskTimeField):
-            clock = ask_typed(self.ask_text, field, parse_time, TIME_HINT)
-            return AnswerTimeField(field, clock)
-        if isinstance(field, AskDateTimeField):
-            moment = ask_typed(self.ask_text, field, parse_datetime,
-                               DATETIME_HINT)
-            return AnswerDateTimeField(field, moment)
-        if isinstance(field, AskDurationField):
-            span = ask_typed(self.ask_text, field, parse_duration,
-                             DURATION_HINT)
-            return AnswerDurationField(field, span)
-        return None
-
-    def _ask_basic_field(self, field: AskField) -> AnswerField:
-        """Ask one of the original field kinds with its typed ask method."""
-        if isinstance(field, AskTextField):
-            return AnswerTextField(field, self.ask_text(
-                field.short_question, nullable=field.nullable,
-                default=field.default, sensitive=field.sensitive))
-        if isinstance(field, AskIntField):
-            return AnswerIntField(field, self.ask_int(
-                field.short_question, nullable=field.nullable,
-                min_value=field.min_value, max_value=field.max_value,
-                default=field.default))
-        if isinstance(field, AskPathField):
-            return AnswerPathField(field, self.ask_path(
-                field.short_question, options=field.path_options))
-        if isinstance(field, AskYesNoField):
-            return AnswerYesNoField(field, self.ask_yes_no(
-                field.short_question, field.default))
-        if isinstance(field, AskChoiceField):
-            return AnswerChoiceField(field, self._ask_choice_field(field))
-        assert isinstance(field, AskMultiChoiceField)
-        return AnswerMultiChoiceField(field, self.ask_multi(
-            field.short_question, choices=field.choices, default=field.default,
-            min_select=field.min_select, max_select=field.max_select))
-
-    def _ask_choice_field(self, field: AskChoiceField) -> Optional[str]:
-        """Ask a choice field, passing nullable only when it is set.
-
-        A bridge whose ask_choice() predates the nullable parameter still
-        asks a non-nullable choice field this way.
-        """
-        if field.nullable:
-            return self.ask_choice(field.short_question, choices=field.choices,
-                                   nullable=True)
-        return self.ask_choice(field.short_question, choices=field.choices,
-                               default=field.default)
+        return answer_of(field, ask_cell_value(self, field.short_question,
+                                               field))
 
     def error_file(self) -> TextIO:
         """Return the stream used for validation diagnostics."""

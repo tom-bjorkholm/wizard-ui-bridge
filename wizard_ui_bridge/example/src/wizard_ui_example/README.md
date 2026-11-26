@@ -497,9 +497,12 @@ for row in answers[1:]:                 # row 0 is the header
 A graphical bridge shows the whole grid at once; run `run_e08_matrix_form.py`
 from the
 [Tk examples](https://github.com/tom-bjorkholm/wizard-ui-bridge/blob/master/wizard_tk_bridge/example/src/wizard_tk_example/README.md)
-to see it. The console and Textual bridges of this package do not show a matrix
-form yet: `ask_matrix_form()` raises `RuntimeError` there, so the commands
-below fail with that error until it is written.
+to see it. The console bridge cannot show a grid, so it uses the base
+implementation of `ask_matrix_form()`, which asks one input cell at a time,
+named by its labels as in `Alice / Mon`. The `console_question` of the request
+chooses the order (row by row or column by column), which labels name a cell,
+and whether the help text of each cell is shown. The Textual bridge uses the
+same base implementation until it gets a grid of its own.
 
 ```sh
 python -m wizard_ui_example.e08_matrix_form
@@ -545,9 +548,18 @@ def contractor_cell_name(answers, position):
     return f'{who}, {_HEADER_TEXTS[position.column].lower()}'
 ```
 
-so the message reads `Alice, start date: ...`. Run `run_e09_resizable_matrix.py`
-from the Tk examples to try it; the console and Textual bridges do not show a
-matrix form yet, as noted for `e08`.
+so the message reads `Alice, start date: ...`. With
+`MatrixConsoleQuestion(..., use_cell_namer=True)` a console also uses the name
+in the question of each cell, so `e09` asks `Alice, start date` on the
+console. Run `run_e09_resizable_matrix.py` from the Tk examples to see the grid.
+
+**Resizing on a console.** A console cannot show resize buttons, so it offers
+menus instead. After the first contractor row it would ask whether to append or
+delete a contract file column, so the width is set before the other rows are
+asked (`e09` starts with a single contractor, so this menu is folded into the
+next one). After the last cell it asks whether to append or delete a
+contractor row or a contract file column, or be done. An appended row or column
+asks its new cells at once, and an empty answer to a menu goes on.
 
 ```sh
 python -m wizard_ui_example.e09_resizable_matrix

@@ -151,26 +151,25 @@ class _AskText(Protocol):
 
 
 # pylint: disable-next=too-few-public-methods
-class _TypedField(Protocol[_OrderedT]):
-    """The attributes shared by the ordered typed form fields."""
+class _TypedCell(Protocol[_OrderedT]):
+    """The attributes shared by the ordered typed cells and fields."""
 
-    short_question: str
     nullable: bool
     default: Optional[_OrderedT]
     min_value: Optional[_OrderedT]
     max_value: Optional[_OrderedT]
 
 
-def ask_typed(ask_text: _AskText, field: _TypedField[_OrderedT],
+def ask_typed(ask_text: _AskText, question: str, field: _TypedCell[_OrderedT],
               parse: Callable[[str], Optional[_OrderedT]],
               hint: str) -> Optional[_OrderedT]:
-    """Re-ask a typed field through ask_text until the value is usable.
+    """Re-ask a typed field or cell through ask_text until it is usable.
 
-    The hint is shown in the question and repeated in the parse-error
+    The hint is shown after the question and repeated in the parse-error
     message, so a console user learns the accepted text format. An empty
     answer yields the field default, or None when the field is nullable.
     """
-    question = f'{field.short_question} ({hint})'
+    question = f'{question} ({hint})'
     default_text = (None if field.default is None
                     else format_new_value(field.default))
     reason: Optional[str] = None
