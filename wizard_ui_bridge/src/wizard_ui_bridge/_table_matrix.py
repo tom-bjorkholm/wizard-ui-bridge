@@ -15,6 +15,15 @@ cell means, and so does an Ask*Cell: the value of an editable TableCell
 is the start_value of its matrix cell, and its nullable is kept. The
 matrix cell has no default, so an emptied cell means what an empty
 TableCell means.
+
+The partial check of a table is asked about one cell at a time, so the
+partial validator of the matrix remembers each cell the user has changed
+and checks the changed cell first, then the other changed cells in row
+order. The first rejection is the result, its message prefixed with the
+cell name when it is about another cell than the changed one. A bridge
+that blocks submitting an invalid matrix thus blocks while any changed
+cell is rejected, while a cell the user has not touched, such as an
+empty cell of a new row, does not complain before the user reaches it.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -57,6 +66,7 @@ class TableMatrix:
         self._columns = columns
         self._cells = cells
         self._check = partial_check
+        self._edited: set[CellPosition] = set()
         header: list[AskCell] = [AskLabelCell(column.header, bold=True)
                                  for column in columns]
         starting = [_starting_row(columns, row, help_text) for row in cells]
@@ -128,17 +138,40 @@ class TableMatrix:
 
     def _validate(self, answers: AnswerCells,
                   changed: Optional[CellPosition]) -> PartMatrixValidationRes:
-        """Run the partial check of the table on the changed cell.
+        """Run the partial check on the cells the user has changed.
 
-        A partial check needs the changed cell, so a matrix with no
-        changed cell yet, or with a changed shape, counts as valid. It is
-        only used as validator when the table has a partial check.
+        changed is remembered as changed by the user, and a remembered
+        cell outside the matrix, in a deleted row, is forgotten. A new row
+        later appended there starts unchanged, since a bridge calls the
+        validator after each change of shape. It is only used as validator
+        when the table has a partial check.
         """
-        if changed is None or self._check is None:
-            return PartMatrixValidationRes(True, '')
-        accepted, message = self._check(self.values(answers),
-                                        (changed.row - 1, changed.column))
-        return PartMatrixValidationRes(accepted, '' if accepted else message)
+        assert self._check is not None
+        if changed is not None:
+            self._edited.add(changed)
+        self._edited = {cell for cell in self._edited
+                        if cell.row < len(answers)}
+        table = self.values(answers)
+        for position in self._check_order(changed):
+            accepted, message = self._check(table, (position.row - 1,
+                                                    position.column))
+            if not accepted:
+                named = self._message(answers, position, changed, message)
+                return PartMatrixValidationRes(False, named)
+        return PartMatrixValidationRes(True, '')
+
+    def _check_order(self, changed: Optional[CellPosition]
+                     ) -> list[CellPosition]:
+        """Return the changed cell, then the other edited cells by row."""
+        others = sorted(self._edited - {changed})
+        return others if changed is None else [changed, *others]
+
+    def _message(self, answers: AnswerCells, position: CellPosition,
+                 changed: Optional[CellPosition], message: str) -> str:
+        """Return the message, naming its cell unless it is the changed one."""
+        if position == changed:
+            return message
+        return f'{self.cell_name(answers, position)}: {message}'
 
 
 def _starting_row(columns: Sequence[TableColumn], row: Sequence[TableCell],

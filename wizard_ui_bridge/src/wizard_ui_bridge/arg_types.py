@@ -17,6 +17,12 @@ type PartialCheck = Callable[
 It receives the whole table as it currently stands and the 0-based
 (row, column) position of the changed cell, and returns whether the
 value is accepted together with a message to show the user.
+
+Its verdict is advisory to the caller. A bridge should, where its user
+interface makes it reasonable, refuse to accept the table while the check
+rejects a cell the user has changed, but the caller must not rely on
+that: a bridge may only show the message, so the wizard must validate the
+final table.
 """
 
 

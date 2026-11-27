@@ -6,7 +6,9 @@ overrides every typed ask method with a real Tkinter control, including
 the GUI-recommended ones: ask_path() opens a native file or directory
 picker, ask_form() shows a whole form on one screen so the user
 answers related fields together in any order, and ask_matrix_form()
-shows a whole grid of cells on one screen the same way. All questions of one
+shows a whole grid of cells on one screen the same way. A table question
+is asked by the inherited WizardUiBridge.ask_table() through
+ask_matrix_form(), so it is a grid too. All questions of one
 wizard session are answered in a single reused
 :class:`~wizard_tk_bridge.wizard_window.WizardWindow`, so the session
 does not jump around the display.
@@ -38,8 +40,7 @@ from typing import Literal, Optional, Sequence, TextIO, overload
 from pathlib import Path
 import tkinter as tk
 from wizard_ui_bridge import AnswerCells, AnswerFields, AskField, AskFields, \
-    MatrixRequest, PartialCheck, PartialFormValidator, PathAskOptions, \
-    TableCell, TableColumn, WizardUiBridge
+    MatrixRequest, PartialFormValidator, PathAskOptions, WizardUiBridge
 from wizard_ui_bridge.arg_types import check_nullable, check_choice_args, \
     check_multi_args
 from wizard_ui_bridge.bridge_helpers import check_text_args
@@ -54,7 +55,7 @@ class WizardUiBridgeTk(WizardUiBridge):
 
     The ask methods accept help_text but ignore it; ask_form() and
     ask_matrix_form() show the help text of each field or cell as a
-    tooltip instead.
+    tooltip instead, and so does the inherited ask_table().
     """
 
     def __init__(self, parent: Optional[tk.Misc] = None,
@@ -179,26 +180,6 @@ class WizardUiBridgeTk(WizardUiBridge):
         return self._window_obj().ask_multi(question, choices, start,
                                             min_select, max_select,
                                             re_ask_reason)
-
-    # pylint: disable-next=too-many-arguments
-    def ask_table(self, columns: Sequence[TableColumn],
-                  cells: list[list[TableCell]], question: str, *,
-                  re_ask_reason: Optional[str] = None,
-                  partial_check: Optional[PartialCheck] = None,
-                  min_rows: Optional[int] = None,
-                  max_rows: Optional[int] = None,
-                  help_text: Optional[str] = None
-                  ) -> list[list[Optional[str]]]:
-        """Ask the user to fill an editable table of the given rows.
-
-        With both ``min_rows`` and ``max_rows`` given the table has a
-        variable number of rows: add-row and remove-row buttons grow the
-        table up to ``max_rows`` and shrink it down to ``min_rows``.
-        Otherwise the rows given in ``cells`` are fixed and only filled.
-        """
-        return self._window_obj().ask_table(columns, cells, question,
-                                            re_ask_reason, partial_check,
-                                            min_rows, max_rows)
 
     def ask_form(self, long_question: str, ask_fields: AskFields, *,
                  re_ask_reason: Optional[str] = None,

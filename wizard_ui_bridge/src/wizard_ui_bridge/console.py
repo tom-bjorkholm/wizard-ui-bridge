@@ -115,7 +115,8 @@ class WizardUiBridgeConsole(WizardUiBridge):
 
         With both min_rows and max_rows given the table has a variable
         number of rows, edited through a row-menu interface. Otherwise the
-        fixed rows in cells are filled one editable cell at a time.
+        fixed rows in cells are filled one editable cell at a time. A cell
+        that partial_check rejects is asked again until it is accepted.
         """
         if min_rows is not None and max_rows is not None:
             return _run_variable_table(self._ask_raw, self.show, columns,

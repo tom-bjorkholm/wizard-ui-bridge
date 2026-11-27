@@ -250,7 +250,7 @@ def test_ask_multi_delegates() -> None:
 
 
 def test_ask_table_delegates() -> None:
-    """Test ask_table reaches the wizard window and returns its rows."""
+    """Test the inherited ask_table asks a matrix in the wizard window."""
     columns = [TableColumn('Name')]
     cells = [[TableCell(value='a')]]
     with gui_root() as root:

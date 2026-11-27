@@ -453,10 +453,18 @@ class WizardUiBridge:
         and the (row, column) position of the changed cell, both 0-based.
         The callback returns (accepted, message); the bridge uses message
         to give early feedback. The callback must tolerate empty or partly
-        filled cells, and it gives advisory feedback only: the wizard
-        still validates the final table. In the base implementation a
-        message is shown when the cell is not accepted, as the partial
-        validator of ask_matrix_form() shows it.
+        filled cells. A bridge should, where its user interface makes it
+        reasonable, refuse to accept the table while the check rejects a
+        cell the user has changed, but the caller must not rely on that:
+        a bridge may only show the message, so the wizard must validate
+        the final table. In the base implementation the partial validator
+        of ask_matrix_form() checks the changed cell first, then the other
+        cells the user has changed, and gives the message of the first
+        cell rejected, prefixed with its cell name when it is not the
+        changed cell. A cell the user has not changed is not checked. So
+        a bridge whose ask_matrix_form() refuses an invalid matrix refuses
+        the table too, while the base console ask_matrix_form() only shows
+        the message.
 
         Args:
             columns: Description of each column, in left-to-right order.
@@ -536,6 +544,13 @@ class WizardUiBridge:
         field, which starts with the answer the user gave it; from the
         first field it propagates so the wizard steps to the previous
         question.
+
+        The verdict of partial_validator is advisory to the caller. A
+        bridge that overrides this method should, where its user interface
+        makes it reasonable, refuse to accept the form while the verdict
+        is not valid, but the caller must not rely on that: the base
+        implementation only shows the message, so the wizard must validate
+        the final answers.
 
         Args:
             long_question: The main question or instruction to the user,
@@ -675,7 +690,11 @@ class WizardUiBridge:
         or its labels (see wizard_ui_bridge.matrix_helpers). The partial
         validator is called when the matrix is first shown, to find the
         cells that start disabled, but its message is only shown once
-        the user has changed the matrix or tried to submit it.
+        the user has changed the matrix or tried to submit it. Such an
+        implementation should, where its user interface makes it
+        reasonable, refuse to submit the matrix while the partial
+        validator finds it not valid. The caller must not rely on that,
+        since the base implementation returns an invalid matrix too.
 
         See wizard_ui_bridge.matrix_cell_defs for the cell types and
         wizard_ui_bridge.matrix_defs for the request and its validator.

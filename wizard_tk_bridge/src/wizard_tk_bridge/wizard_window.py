@@ -3,19 +3,17 @@
 
 :class:`WizardWindow` lays out one question at a time: a text entry, an
 integer entry, a path entry with a native Browse button, a yes/no button
-pair, a single- and a multi-selection list, an editable table, a whole
-form and a whole matrix form on one screen, kept below a lasting message
-area. Every prompt also
+pair, a single- and a multi-selection list, a whole form and a whole
+matrix form on one screen, kept below a lasting message area. Every prompt also
 offers back, out-one-level and abort buttons, which raise the matching
 :class:`WizardNavigation` request so the wizard can step within its
 questions or be abandoned.
 
 Return pressed in an input confirms the prompt, exactly as its OK button
-does, which that button shows by being the marked default one. The
-editable table is the exception: a row added after the buttons were built
-would miss the binding, so a table is confirmed by its button alone. A
-matrix form binds Return in each input as it builds it, so a row or
-column it adds later confirms the matrix too.
+does, which that button shows by being the marked default one. A matrix
+form binds Return in each input as it builds it, so a row or column it
+adds later confirms the matrix too. A table question is asked by the
+inherited WizardUiBridge.ask_table() as a matrix form.
 
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
@@ -32,9 +30,8 @@ import tkinter as tk
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 from wizard_ui_bridge import AnswerCells, AnswerFields, AskFields, \
-    MatrixRequest, PartialCheck, PartialFormValidator, PathAskOptions, \
-    TableCell, TableColumn, WizardAbort, WizardBack, WizardCancelLevel, \
-    WizardNavigation
+    MatrixRequest, PartialFormValidator, PathAskOptions, WizardAbort, \
+    WizardBack, WizardCancelLevel, WizardNavigation
 from wizard_ui_bridge.bridge_helpers import multi_count_message, \
     offered_choices, path_answer, text_answer
 from wizard_tk_bridge.close_binding import bind_close
@@ -44,7 +41,6 @@ from wizard_tk_bridge.wizard_cell import int_answer
 from wizard_tk_bridge.wizard_form import FormEditor
 from wizard_tk_bridge.wizard_matrix import MatrixEditor
 from wizard_tk_bridge.wizard_path import PathRow
-from wizard_tk_bridge.wizard_table import TableEditor
 
 WIZARD_TITLE = 'Configuration wizard'
 WINDOW_SIZE = '720x620'
@@ -308,21 +304,6 @@ class WizardWindow:
             if reason is None:
                 return chosen
 
-    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
-    def ask_table(self, columns: Sequence[TableColumn],
-                  cells: Sequence[Sequence[TableCell]], question: str,
-                  re_ask: Optional[str], partial_check: Optional[PartialCheck],
-                  min_rows: Optional[int], max_rows: Optional[int]
-                  ) -> list[list[Optional[str]]]:
-        """Ask the user to fill the given table rows and return them."""
-        self._begin(question, re_ask)
-        editor = TableEditor(self._content, columns, cells, partial_check,
-                             min_rows, max_rows)
-        self._add_table_buttons(editor)
-        result = self._wait()
-        assert isinstance(result, list)
-        return result
-
     def _run_multi(self, question: str, re_ask: Optional[str],
                    choices: Sequence[str],
                    start: Optional[Sequence[str]]) -> list[str]:
@@ -412,23 +393,6 @@ class WizardWindow:
         box = tk.Frame(self._content)
         box.pack(side='bottom', anchor='w', pady=10)
         return box
-
-    def _add_table_buttons(self, editor: TableEditor) -> None:
-        """Add confirm, optional add/remove-row and navigation buttons.
-
-        A table binds no Return key, since a row added later would miss
-        the binding, so its confirm button is not marked as the default.
-        """
-        box = self._button_box()
-        tk.Button(box, text='OK',
-                  command=lambda: self._finish(editor.values())).pack(
-                      side='left')
-        if editor.is_variable():
-            tk.Button(box, text='Add row',
-                      command=editor.add_row).pack(side='left', padx=6)
-            tk.Button(box, text='Remove row',
-                      command=editor.remove_row).pack(side='left', padx=6)
-        self._add_nav_buttons(box)
 
     def _add_nav_buttons(self, box: tk.Frame) -> None:
         """Add the back, out-one-level and abort navigation buttons."""

@@ -3,7 +3,7 @@
 
 Every test here answers the prompt the way a user does: it fills in the
 widgets the prompt built and presses its real buttons, so the commands
-behind OK, Add row and the navigation buttons are exercised too.
+behind OK and the navigation buttons are exercised too.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -13,14 +13,13 @@ import tkinter as tk
 from pathlib import Path
 from typing import Callable, Optional
 import pytest
-from wizard_ui_bridge import PathAskOptions, TableCell, TableColumn, \
-    WizardAbort, WizardBack, WizardCancelLevel, WizardNavigation, \
-    WizardPathKind
+from wizard_ui_bridge import PathAskOptions, WizardAbort, WizardBack, \
+    WizardCancelLevel, WizardNavigation, WizardPathKind
 from wizard_ui_bridge.bridge_helpers import INT_ERROR
 from wizard_tk_bridge.wizard_window import WizardWindow
 from .gui_test_helpers import PromptDriver, answer_entry, answer_list, \
     click_button, content_of, find_widgets, first_entry, gui_root, \
-    label_texts, prompt_window, set_entry
+    label_texts, prompt_window
 
 
 def _seen_answer(window: WizardWindow, seen: list[str], text: str) -> None:
@@ -270,58 +269,6 @@ def test_multi_preselects() -> None:
         answer = window.ask_multi('Pick?', ['a', 'b', 'c'], ['a', 'c'], 1,
                                   None, None)
         assert answer == ['a', 'c']
-
-
-def test_table_filled() -> None:
-    """Test a fixed table returns the strings its cells hold."""
-    columns = [TableColumn('Name', read_only=True), TableColumn('Value')]
-    cells = [[TableCell(value='a'), TableCell(value='1')]]
-    with prompt_window() as (root, window):
-        PromptDriver(root, window, [lambda: answer_entry(window, '2')])
-        rows = window.ask_table(columns, cells, 'Fill?', None, None, None,
-                                None)
-        assert rows == [['a', '2']]
-
-
-def _grow_table(window: WizardWindow) -> None:
-    """Add two rows, fill and drop one again, then confirm the table."""
-    content = content_of(window)
-    click_button(content, 'Add row')
-    set_entry(find_widgets(content, tk.Entry)[1], 'b')
-    click_button(content, 'Add row')
-    click_button(content, 'Remove row')
-    click_button(content, 'OK')
-
-
-def test_table_add_and_remove() -> None:
-    """Test a variable table grows and shrinks with its own buttons."""
-    columns = [TableColumn('Name')]
-    cells = [[TableCell(value='a')]]
-    with prompt_window() as (root, window):
-        PromptDriver(root, window, [lambda: _grow_table(window)])
-        rows = window.ask_table(columns, cells, 'Fill?', None, None, 1, 3)
-        assert rows == [['a'], ['b']]
-
-
-@pytest.mark.parametrize('min_rows, max_rows, row_buttons', [
-    (None, None, False), (1, None, False), (None, 3, False), (1, 3, True)])
-def test_table_row_buttons(min_rows: Optional[int], max_rows: Optional[int],
-                           row_buttons: bool) -> None:
-    """Test row buttons are offered for a variable table only.
-
-    A table has a variable number of rows only when both a minimum and a
-    maximum row count are given; either bound alone leaves it fixed.
-    """
-    columns = [TableColumn('Name')]
-    cells = [[TableCell(value='a')]]
-    with prompt_window() as (root, window):
-        PromptDriver(root, window,
-                     [lambda: click_button(content_of(window), 'OK')])
-        window.ask_table(columns, cells, 'Fill?', None, None, min_rows,
-                         max_rows)
-        buttons = _buttons_of(window)
-        assert ('Add row' in buttons) is row_buttons
-        assert ('Remove row' in buttons) is row_buttons
 
 
 @pytest.mark.parametrize('pressed, expected', [('Yes', True), ('No', False)])

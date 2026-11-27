@@ -201,17 +201,19 @@ read-only columns. `e04_table_question.py` asks two table questions:
   *source column*, a free-text *rename to* column, and a per-row *data type*
   choice cell (showing that each `TableCell` can carry its own choices);
 - a **variable-row** guest list, where the user adds rows (`:+` on the
-  console, an Add-row button in a graphical bridge) and removes them
-  (`:- N` on the console) within a minimum and maximum row count.
+  console, an add-row button in a graphical bridge) and removes them
+  (`:- N` on the console, a remove-row button in a graphical bridge) within
+  a minimum and maximum row count.
 
 **Early feedback vs final verification.** The variable table passes a
-`PartialCheck`. It is *intended* as advisory early feedback: a graphical or
-Textual bridge shows the message beside the cell as the user types, without
-blocking, so the answer is guided rather than forced. A console has nowhere to
-show such an unobtrusive inline hint, so the console bridge instead re-asks
-the cell until the check passes (an optional-to-heed prompt reads badly on a
-console). Because a bridge might handle — or even skip — the check in different
-ways, **a wizard must not trust the bridge to enforce it.** After `ask_table()`
+`PartialCheck`. It gives early feedback while the table is edited: a
+graphical or Textual bridge shows the message as the user types. A bridge is
+recommended to block confirming the table while the check rejects a cell the
+user has changed, where its user interface makes that reasonable: the Tk
+bridge keeps its OK button from accepting the table, and the console bridge
+re-asks the cell until the check passes. Because a bridge might handle — or
+only show, or even skip — the check in different ways, **a wizard must not
+trust the bridge to enforce it.** After `ask_table()`
 returns, `ask_guest_list()` verifies the whole table itself and, when
 something is wrong, calls `ask_table()` again with a `re_ask_reason` and the
 user's current rows, so nothing is retyped. The final pass also enforces a

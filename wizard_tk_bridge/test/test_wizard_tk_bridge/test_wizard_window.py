@@ -6,12 +6,11 @@
 
 import tkinter as tk
 import pytest
-from wizard_ui_bridge import AskTextField, AnswerTextField, TableCell, \
-    TableColumn, WizardBack, MatrixConsoleQuestion, MatrixDimension, \
-    MatrixDimensions, MatrixRequest, AskLabelCell, AskIntCell, AnswerIntCell
+from wizard_ui_bridge import AskTextField, AnswerTextField, WizardBack, \
+    MatrixConsoleQuestion, MatrixDimension, MatrixDimensions, MatrixRequest, \
+    AskLabelCell, AskIntCell, AnswerIntCell
 from wizard_tk_bridge import wizard_window
 from wizard_tk_bridge.wizard_matrix import ADD_ROW, REMOVE_ROW
-from wizard_tk_bridge.wizard_table import TableEditor
 from wizard_tk_bridge.wizard_window import WizardWindow
 from .gui_test_helpers import CloseSpy, click_button, content_of, gui_root, \
     label_texts
@@ -33,7 +32,7 @@ def test_choice_list_shown() -> None:
 
 
 def test_window_resizable() -> None:
-    """Test the wizard window can be enlarged for large table questions."""
+    """Test the wizard window can be enlarged for large questions."""
     with gui_root() as root:
         window = WizardWindow(tk.Frame(root))
         # pylint: disable-next=protected-access
@@ -188,28 +187,6 @@ def test_ok_is_default() -> None:
         assert str(buttons[0].cget('text')) == 'OK'
         assert str(buttons[0].cget('default')) == 'active'
         assert all(str(w.cget('default')) != 'active' for w in buttons[1:])
-        window.close()
-
-
-def test_table_ok_plain() -> None:
-    """Test a table's confirm button is not marked as the default one.
-
-    A table binds no Return key, so promising the key on its button
-    would be wrong; see the module docstring for why it cannot.
-    """
-    with gui_root() as root:
-        window = WizardWindow(tk.Frame(root))
-        columns = [TableColumn('A')]
-        cells = [[TableCell(value='x')]]
-        # pylint: disable-next=protected-access
-        editor = TableEditor(window._content, columns, cells, None, None, None)
-        # pylint: disable-next=protected-access
-        window._add_table_buttons(editor)
-        # pylint: disable-next=protected-access
-        box = window._content.winfo_children()[-1]
-        buttons = [w for w in box.winfo_children() if isinstance(w, tk.Button)]
-        assert str(buttons[0].cget('text')) == 'OK'
-        assert str(buttons[0].cget('default')) != 'active'
         window.close()
 
 

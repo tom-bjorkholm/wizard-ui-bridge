@@ -18,8 +18,8 @@ import pytest
 from wizard_ui_bridge import AnswerCells, AnswerChoiceCell, AnswerTextCell, \
     AskCell, AskChoiceCell, AskLabelCell, AskTextCell, CellPosition, \
     MatrixConsoleQuestion, MatrixDimension, MatrixDimensions, MatrixRequest, \
-    PartialCheck, PartMatrixValidationRes, TableCell, TableColumn, \
-    WizardBack, WizardUiBridge, WizardUiBridgeConsole
+    PartialCheck, PartialMatrixValidator, PartMatrixValidationRes, \
+    TableCell, TableColumn, WizardBack, WizardUiBridge, WizardUiBridgeConsole
 
 _KINDS = ('text', 'number')
 _RENAME = (TableColumn('Source', read_only=True), TableColumn('Rename to'),
@@ -225,7 +225,7 @@ def test_partial_check(accepted: bool, message: str,
 
 
 def test_check_no_position() -> None:
-    """With no changed cell the table counts as valid, unchecked."""
+    """With no cell changed yet the table counts as valid, unchecked."""
     def check(_table: list[list[Optional[str]]],
               _position: tuple[int, int]) -> tuple[bool, str]:
         raise AssertionError('a partial check needs a changed cell')
@@ -233,6 +233,62 @@ def test_check_no_position() -> None:
     assert request.partial_validator is not None
     assert request.partial_validator([[None], [None]], None) \
         == PartMatrixValidationRes(True, '')
+
+
+def _guests(*names: str) -> AnswerCells:
+    """Return the matrix answers of a guest table with the given names."""
+    return [[None], *[[AnswerTextCell(AskTextCell(None), name)]
+                      for name in names]]
+
+
+def _guest_validator() -> PartialMatrixValidator:
+    """Return the validator of a three-guest table needing names."""
+    cells = [[TableCell('Ann')], [TableCell('Bo')], [TableCell('Cy')]]
+    validator = _request(_GUEST, cells, check=_named,
+                         rows=(0, 3)).partial_validator
+    assert validator is not None
+    return validator
+
+
+def test_check_order() -> None:
+    """The changed cell is checked first, then other changed cells."""
+    calls: list[tuple[int, int]] = []
+
+    def check(_table: list[list[Optional[str]]],
+              position: tuple[int, int]) -> tuple[bool, str]:
+        calls.append(position)
+        return (True, '')
+    request = _request(_GUEST, [[TableCell('a')]] * 3, check=check)
+    validator = request.partial_validator
+    assert validator is not None
+    for row in (3, 1, 2):
+        validator(_guests('a', 'b', 'c'), CellPosition(row, 0))
+    assert calls == [(2, 0), (0, 0), (2, 0), (1, 0), (0, 0), (2, 0)]
+
+
+@pytest.mark.parametrize('changed, expected', [
+    (CellPosition(2, 0), PartMatrixValidationRes(False, 'Need a name.')),
+    (CellPosition(3, 0),
+     PartMatrixValidationRes(False, 'Row 2 / Guest: Need a name.')),
+    (None, PartMatrixValidationRes(False, 'Row 2 / Guest: Need a name.'))])
+def test_check_edited(changed: Optional[CellPosition],
+                      expected: PartMatrixValidationRes) -> None:
+    """A rejected changed cell is reported, named unless just changed.
+
+    Row 2 was emptied earlier. Cell 1 is empty too, but never changed by
+    the user, so it is not checked.
+    """
+    validator = _guest_validator()
+    validator(_guests('', '', 'Cy'), CellPosition(2, 0))
+    assert validator(_guests('', '', 'Cy'), changed) == expected
+
+
+def test_check_deleted_row() -> None:
+    """A changed cell in a deleted row is forgotten, also when re-added."""
+    validator = _guest_validator()
+    validator(_guests('Ann', 'Bo', ''), CellPosition(3, 0))
+    assert validator(_guests('Ann', 'Bo'), None).is_valid
+    assert validator(_guests('Ann', 'Bo', ''), None).is_valid
 
 
 def _console(lines: Sequence[str]) -> tuple[WizardUiBridgeConsole, StringIO]:

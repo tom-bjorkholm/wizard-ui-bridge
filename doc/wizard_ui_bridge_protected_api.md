@@ -359,6 +359,8 @@
     * [\_dimensions](#wizard_ui_bridge._table_matrix.TableMatrix._dimensions)
     * [\_value](#wizard_ui_bridge._table_matrix.TableMatrix._value)
     * [\_validate](#wizard_ui_bridge._table_matrix.TableMatrix._validate)
+    * [\_check\_order](#wizard_ui_bridge._table_matrix.TableMatrix._check_order)
+    * [\_message](#wizard_ui_bridge._table_matrix.TableMatrix._message)
   * [\_starting\_row](#wizard_ui_bridge._table_matrix._starting_row)
   * [\_input\_cell](#wizard_ui_bridge._table_matrix._input_cell)
 * [wizard\_ui\_bridge.\_textual\_widgets](#wizard_ui_bridge._textual_widgets)
@@ -1422,7 +1424,8 @@ Ask the user to fill a table on the console; see ask_table.
 
 With both min_rows and max_rows given the table has a variable
 number of rows, edited through a row-menu interface. Otherwise the
-fixed rows in cells are filled one editable cell at a time.
+fixed rows in cells are filled one editable cell at a time. A cell
+that partial_check rejects is asked again until it is accepted.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole._ask_raw"></a>
 
@@ -4204,10 +4207,18 @@ changes a cell, passing the whole table as it currently stands
 and the (row, column) position of the changed cell, both 0-based.
 The callback returns (accepted, message); the bridge uses message
 to give early feedback. The callback must tolerate empty or partly
-filled cells, and it gives advisory feedback only: the wizard
-still validates the final table. In the base implementation a
-message is shown when the cell is not accepted, as the partial
-validator of ask_matrix_form() shows it.
+filled cells. A bridge should, where its user interface makes it
+reasonable, refuse to accept the table while the check rejects a
+cell the user has changed, but the caller must not rely on that:
+a bridge may only show the message, so the wizard must validate
+the final table. In the base implementation the partial validator
+of ask_matrix_form() checks the changed cell first, then the other
+cells the user has changed, and gives the message of the first
+cell rejected, prefixed with its cell name when it is not the
+changed cell. A cell the user has not changed is not checked. So
+a bridge whose ask_matrix_form() refuses an invalid matrix refuses
+the table too, while the base console ask_matrix_form() only shows
+the message.
 
 **Arguments**:
 
@@ -4297,6 +4308,13 @@ when that field is asked. WizardBack steps to the previous asked
 field, which starts with the answer the user gave it; from the
 first field it propagates so the wizard steps to the previous
 question.
+
+The verdict of partial_validator is advisory to the caller. A
+bridge that overrides this method should, where its user interface
+makes it reasonable, refuse to accept the form while the verdict
+is not valid, but the caller must not rely on that: the base
+implementation only shows the message, so the wizard must validate
+the final answers.
 
 **Arguments**:
 
@@ -4460,7 +4478,11 @@ about a single cell, which name the cell with request.cell_namer
 or its labels (see wizard_ui_bridge.matrix_helpers). The partial
 validator is called when the matrix is first shown, to find the
 cells that start disabled, but its message is only shown once
-the user has changed the matrix or tried to submit it.
+the user has changed the matrix or tried to submit it. Such an
+implementation should, where its user interface makes it
+reasonable, refuse to submit the matrix while the partial
+validator finds it not valid. The caller must not rely on that,
+since the base implementation returns an invalid matrix too.
 
 See wizard_ui_bridge.matrix_cell_defs for the cell types and
 wizard_ui_bridge.matrix_defs for the request and its validator.
@@ -5998,6 +6020,15 @@ is the start_value of its matrix cell, and its nullable is kept. The
 matrix cell has no default, so an emptied cell means what an empty
 TableCell means.
 
+The partial check of a table is asked about one cell at a time, so the
+partial validator of the matrix remembers each cell the user has changed
+and checks the changed cell first, then the other changed cells in row
+order. The first rejection is the result, its message prefixed with the
+cell name when it is about another cell than the changed one. A bridge
+that blocks submitting an invalid matrix thus blocks while any changed
+cell is rejected, while a cell the user has not touched, such as an
+empty cell of a new row, does not complain before the user reaches it.
+
 <a id="wizard_ui_bridge._table_matrix.TableMatrix"></a>
 
 ## TableMatrix Objects
@@ -6104,11 +6135,34 @@ def _validate(answers: AnswerCells,
               changed: Optional[CellPosition]) -> PartMatrixValidationRes
 ```
 
-Run the partial check of the table on the changed cell.
+Run the partial check on the cells the user has changed.
 
-A partial check needs the changed cell, so a matrix with no
-changed cell yet, or with a changed shape, counts as valid. It is
-only used as validator when the table has a partial check.
+changed is remembered as changed by the user, and a remembered
+cell outside the matrix, in a deleted row, is forgotten. A new row
+later appended there starts unchanged, since a bridge calls the
+validator after each change of shape. It is only used as validator
+when the table has a partial check.
+
+<a id="wizard_ui_bridge._table_matrix.TableMatrix._check_order"></a>
+
+#### \_check\_order
+
+```python
+def _check_order(changed: Optional[CellPosition]) -> list[CellPosition]
+```
+
+Return the changed cell, then the other edited cells by row.
+
+<a id="wizard_ui_bridge._table_matrix.TableMatrix._message"></a>
+
+#### \_message
+
+```python
+def _message(answers: AnswerCells, position: CellPosition,
+             changed: Optional[CellPosition], message: str) -> str
+```
+
+Return the message, naming its cell unless it is the changed one.
 
 <a id="wizard_ui_bridge._table_matrix._starting_row"></a>
 

@@ -189,6 +189,10 @@ type PartialMatrixValidator = Callable[[AnswerCells, Optional[CellPosition]],
    form because they are irrelevant given the current state of the matrix
    form, and any values to prefill into other cells.
    See PartMatrixValidationRes for the rules of each part.
+   Its verdict is advisory to the caller. A bridge should, where its user
+   interface makes it reasonable, refuse to accept the matrix while it is
+   not valid, but the caller must not rely on that: a bridge may only show
+   the message, so the wizard must validate the final answers.
 """
 
 

@@ -377,4 +377,8 @@ type PartialFormValidator = Callable[[AnswerFields, int],
    of row indexes that should be disabled in the form because they are
    irrelevant given the current state of the form, and any values to prefill
    into other rows. See PartFormValidationResult for the rules of each part.
+   Its verdict is advisory to the caller. A bridge should, where its user
+   interface makes it reasonable, refuse to accept the form while it is
+   not valid, but the caller must not rely on that: a bridge may only show
+   the message, so the wizard must validate the final answers.
 """

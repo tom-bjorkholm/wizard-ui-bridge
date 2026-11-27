@@ -249,9 +249,11 @@ returns a stream that discards what is written to it. Pass
 `WizardUiBridgeTk(log=stream)` to send those notes somewhere real, such as an
 open log file.
 
-**Widgets per question kind.** The Tk bridge overrides every ask method, the
-inheritable ones included — above all `ask_path()` and `ask_form()`, where a
-graphical interface beats the base class fallback outright:
+**Widgets per question kind.** The Tk bridge overrides every ask method except
+`ask_table()`, the inheritable ones included — above all `ask_path()`,
+`ask_form()` and `ask_matrix_form()`, where a graphical interface beats the
+base class fallback outright. The inherited `ask_table()` asks the table as a
+matrix form, so it is shown on one screen too:
 
 | Ask method | What the user gets |
 | ---------- | ------------------ |
@@ -260,7 +262,7 @@ graphical interface beats the base class fallback outright:
 | `ask_path` | an entry with a **Browse** button opening the native file or directory picker |
 | `ask_yes_no` | a **Yes** and a **No** button |
 | `ask_choice` / `ask_multi` | a single- / multi-selection list |
-| `ask_table` | an editable grid, with **Add row** and **Remove row** when the question allows a variable number of rows |
+| `ask_table` | an editable grid, with **+ Row** and **− Row** when the question allows a variable number of rows (inherited: the table is asked as a matrix form) |
 | `ask_form` | every field of the form on one screen, answered in any order |
 | `ask_matrix_form` | a grid of labels and inputs on one screen, with **+ Row**, **− Row**, **+ Column** and **− Column** buttons when the shape may change |
 

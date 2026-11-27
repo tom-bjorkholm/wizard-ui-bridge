@@ -77,10 +77,11 @@ and remove rows. That is correctness, not polish -- a wizard that expects
 the user to extend a table (a translation table, say) cannot receive those
 rows otherwise. The inherited ``ask_table`` covers it, since a matrix form
 may grow and shrink by whole rows, so this bridge needs no table code of its
-own. WizardUiBridgeConsole, WizardUiBridgeTextual and the WizardUiBridgeTk
-of the companion package wizard-tk-bridge override ``ask_table`` with table
-editors of their own, which is a user experience rung, not a correctness
-requirement.
+own. The WizardUiBridgeTk of the companion package wizard-tk-bridge relies
+on it too: its whole-screen ``ask_matrix_form`` makes the inherited
+``ask_table`` a whole-screen table. WizardUiBridgeConsole and
+WizardUiBridgeTextual override ``ask_table`` with table editors of their
+own, which is a user experience rung, not a correctness requirement.
 
 User experience second: the "override to improve" move
 ------------------------------------------------------

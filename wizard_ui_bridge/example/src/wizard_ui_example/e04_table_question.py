@@ -29,18 +29,21 @@ carry its own set of choices.
 Variable rows: a guest list
 ---------------------------
 The second table starts from a couple of example guests and lets the user
-add rows (``:+`` on the console, an Add-row button in a graphical bridge)
-and remove them (``:- N`` on the console), within a minimum and maximum row
-count.
+add rows (``:+`` on the console, an add-row button in a graphical bridge)
+and remove them (``:- N`` on the console, a remove-row button in a graphical
+bridge), within a minimum and maximum row count.
 
 Early feedback vs final verification
 -----------------------------------
-The variable table passes a PartialCheck. It is meant as *advisory* early
-feedback: a graphical or Textual bridge shows the message beside the cell
-as the user types, without blocking. A console has nowhere to show an
-unobtrusive inline hint, so in practice the console bridge re-asks the cell
-until the check passes. Either way the wizard must not trust the bridge to
-enforce anything: a bridge may skip the check entirely, so after
+The variable table passes a PartialCheck. It gives early feedback while
+the table is edited: a graphical or Textual bridge shows the message as
+the user types. A bridge is recommended to block confirming the table
+while the check rejects a cell the user has changed, where its user
+interface makes that reasonable, so the Tk bridge keeps its OK button from
+accepting the table, and the console bridge re-asks the cell until the
+check passes. Still, the check is advisory to the wizard, which must not
+trust the bridge to enforce anything: a bridge may only show the message,
+or skip the check entirely, so after
 ask_table() returns the wizard verifies the whole table itself and, if
 something is wrong, calls ask_table() again with a re_ask_reason.
 ask_guest_list() shows exactly this loop; it also enforces a rule a

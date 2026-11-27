@@ -77,14 +77,6 @@
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_calendar.CalendarPicker.__init__)
 * [wizard\_tk\_bridge.close\_binding](#wizard_tk_bridge.close_binding)
   * [bind\_close](#wizard_tk_bridge.close_binding.bind_close)
-* [wizard\_tk\_bridge.wizard\_table](#wizard_tk_bridge.wizard_table)
-  * [Cell](#wizard_tk_bridge.wizard_table.Cell)
-  * [TableEditor](#wizard_tk_bridge.wizard_table.TableEditor)
-    * [\_\_init\_\_](#wizard_tk_bridge.wizard_table.TableEditor.__init__)
-    * [is\_variable](#wizard_tk_bridge.wizard_table.TableEditor.is_variable)
-    * [values](#wizard_tk_bridge.wizard_table.TableEditor.values)
-    * [add\_row](#wizard_tk_bridge.wizard_table.TableEditor.add_row)
-    * [remove\_row](#wizard_tk_bridge.wizard_table.TableEditor.remove_row)
 * [wizard\_tk\_bridge.wizard\_form](#wizard_tk_bridge.wizard_form)
   * [handles\_field](#wizard_tk_bridge.wizard_form.handles_field)
   * [FormRow](#wizard_tk_bridge.wizard_form.FormRow)
@@ -101,7 +93,6 @@
     * [ask\_yes\_no](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_yes_no)
     * [ask\_choice](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_choice)
     * [ask\_multi](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_multi)
-    * [ask\_table](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_table)
     * [ask\_form](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_form)
     * [ask\_matrix\_form](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_matrix_form)
     * [supports\_form\_field](#wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.supports_form_field)
@@ -143,7 +134,6 @@
     * [ask\_yes\_no](#wizard_tk_bridge.wizard_window.WizardWindow.ask_yes_no)
     * [ask\_choice](#wizard_tk_bridge.wizard_window.WizardWindow.ask_choice)
     * [ask\_multi](#wizard_tk_bridge.wizard_window.WizardWindow.ask_multi)
-    * [ask\_table](#wizard_tk_bridge.wizard_window.WizardWindow.ask_table)
 
 <a id="wizard_tk_bridge.auto_scroll"></a>
 
@@ -1139,108 +1129,6 @@ Bind the close-window key to run the window's close action.
   A window that cancels or aborts on close passes its own
   handler, so the key matches its window close button.
 
-<a id="wizard_tk_bridge.wizard_table"></a>
-
-# wizard\_tk\_bridge.wizard\_table
-
-An editable grid of cells for one wizard table question.
-
-A table question shown by the wizard is rendered as a grid of cells. A
-fixed table fills its seed rows only; a variable table, asked with both a
-minimum and a maximum row count, offers add-row and remove-row buttons.
-Every table shows its grid in a scrolling area: it scrolls horizontally
-when its columns are wider than the window, and a variable table also
-scrolls vertically within a fixed height so a long table stays usable.
-:class:`TableEditor` builds the grid, reads the final cell strings back,
-and runs the optional per-cell partial check for early feedback.
-
-<a id="wizard_tk_bridge.wizard_table.Cell"></a>
-
-## Cell Objects
-
-```python
-@dataclass(frozen=True)
-class Cell()
-```
-
-One built table cell: its widget and how its value is read.
-
-A read-only cell keeps the fixed text it shows in its label. An
-editable cell keeps the widget the user types in or selects from, and
-whether an empty cell is reported as ``None``.
-
-<a id="wizard_tk_bridge.wizard_table.TableEditor"></a>
-
-## TableEditor Objects
-
-```python
-class TableEditor()
-```
-
-An editable grid of cells for one table question.
-
-A fixed table fills the seed rows only. A variable table, asked with
-both a minimum and a maximum row count, adds editable rows up to the
-maximum and removes the last row down to the minimum. Every table
-scrolls horizontally when its columns overflow the window, and a
-variable table also scrolls vertically within a fixed height, so a
-long or wide table stays usable while the wizard window is resized.
-
-<a id="wizard_tk_bridge.wizard_table.TableEditor.__init__"></a>
-
-#### \_\_init\_\_
-
-```python
-def __init__(parent: tk.Misc,
-             columns: Sequence[TableColumn],
-             rows: Sequence[Sequence[TableCell]],
-             partial_check: Optional[PartialCheck],
-             min_rows: Optional[int] = None,
-             max_rows: Optional[int] = None) -> None
-```
-
-Build the header and one widget per cell of the seed rows.
-
-<a id="wizard_tk_bridge.wizard_table.TableEditor.is_variable"></a>
-
-#### is\_variable
-
-```python
-def is_variable() -> bool
-```
-
-Return whether the table can add and remove rows.
-
-<a id="wizard_tk_bridge.wizard_table.TableEditor.values"></a>
-
-#### values
-
-```python
-def values() -> list[list[Optional[str]]]
-```
-
-Return the whole table as rows of final cell strings.
-
-<a id="wizard_tk_bridge.wizard_table.TableEditor.add_row"></a>
-
-#### add\_row
-
-```python
-def add_row() -> None
-```
-
-Append one editable row, up to the maximum row count.
-
-<a id="wizard_tk_bridge.wizard_table.TableEditor.remove_row"></a>
-
-#### remove\_row
-
-```python
-def remove_row() -> None
-```
-
-Remove the last row, down to the minimum row count.
-
 <a id="wizard_tk_bridge.wizard_form"></a>
 
 # wizard\_tk\_bridge.wizard\_form
@@ -1330,7 +1218,9 @@ overrides every typed ask method with a real Tkinter control, including
 the GUI-recommended ones: ask_path() opens a native file or directory
 picker, ask_form() shows a whole form on one screen so the user
 answers related fields together in any order, and ask_matrix_form()
-shows a whole grid of cells on one screen the same way. All questions of one
+shows a whole grid of cells on one screen the same way. A table question
+is asked by the inherited WizardUiBridge.ask_table() through
+ask_matrix_form(), so it is a grid too. All questions of one
 wizard session are answered in a single reused
 :class:`~wizard_tk_bridge.wizard_window.WizardWindow`, so the session
 does not jump around the display.
@@ -1366,7 +1256,7 @@ Bridge that answers wizard prompts through Tkinter widgets.
 
 The ask methods accept help_text but ignore it; ask_form() and
 ask_matrix_form() show the help text of each field or cell as a
-tooltip instead.
+tooltip instead, and so does the inherited ask_table().
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.__init__"></a>
 
@@ -1502,29 +1392,6 @@ def ask_multi(question: str,
 Ask the user to pick several choices from a multi-selection list.
 
 The start value, else the default, is preselected.
-
-<a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_table"></a>
-
-#### ask\_table
-
-```python
-def ask_table(columns: Sequence[TableColumn],
-              cells: list[list[TableCell]],
-              question: str,
-              *,
-              re_ask_reason: Optional[str] = None,
-              partial_check: Optional[PartialCheck] = None,
-              min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None,
-              help_text: Optional[str] = None) -> list[list[Optional[str]]]
-```
-
-Ask the user to fill an editable table of the given rows.
-
-With both ``min_rows`` and ``max_rows`` given the table has a
-variable number of rows: add-row and remove-row buttons grow the
-table up to ``max_rows`` and shrink it down to ``min_rows``.
-Otherwise the rows given in ``cells`` are fixed and only filled.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_form"></a>
 
@@ -1885,19 +1752,17 @@ A Tk host that asks every wizard prompt in turn, one at a time.
 
 :class:`WizardWindow` lays out one question at a time: a text entry, an
 integer entry, a path entry with a native Browse button, a yes/no button
-pair, a single- and a multi-selection list, an editable table, a whole
-form and a whole matrix form on one screen, kept below a lasting message
-area. Every prompt also
+pair, a single- and a multi-selection list, a whole form and a whole
+matrix form on one screen, kept below a lasting message area. Every prompt also
 offers back, out-one-level and abort buttons, which raise the matching
 :class:`WizardNavigation` request so the wizard can step within its
 questions or be abandoned.
 
 Return pressed in an input confirms the prompt, exactly as its OK button
-does, which that button shows by being the marked default one. The
-editable table is the exception: a row added after the buttons were built
-would miss the binding, so a table is confirmed by its button alone. A
-matrix form binds Return in each input as it builds it, so a row or
-column it adds later confirms the matrix too.
+does, which that button shows by being the marked default one. A matrix
+form binds Return in each input as it builds it, so a row or column it
+adds later confirms the matrix too. A table question is asked by the
+inherited WizardUiBridge.ask_table() as a matrix form.
 
 A WizardWindow either owns a new window of its own, built with ``parent``,
 or is embedded directly into an existing container the caller built,
@@ -2067,18 +1932,4 @@ def ask_multi(question: str, choices: Sequence[str],
 Ask the user to pick several choices within the count bounds.
 
 The choices in start are preselected.
-
-<a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_table"></a>
-
-#### ask\_table
-
-```python
-def ask_table(columns: Sequence[TableColumn],
-              cells: Sequence[Sequence[TableCell]], question: str,
-              re_ask: Optional[str], partial_check: Optional[PartialCheck],
-              min_rows: Optional[int],
-              max_rows: Optional[int]) -> list[list[Optional[str]]]
-```
-
-Ask the user to fill the given table rows and return them.
 
