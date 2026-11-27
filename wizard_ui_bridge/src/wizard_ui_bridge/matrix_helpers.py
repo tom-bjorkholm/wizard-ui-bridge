@@ -7,7 +7,10 @@ valid_cell_prefills(), and names a cell in its own message with
 message_name(), which uses the CellNamer of the request and falls back
 to cell_name(). A bridge asking one cell at a time names it with
 row_name() and column_name(). The cells of the current shape are given
-to all but cell_at() as a grid of AskCells, one sequence per row.
+to all but cell_at() and compact_width() as a grid of AskCells, one
+sequence per row. A bridge showing the whole matrix sizes an input with
+no width hint by compact_width(), so a matrix of many columns stays
+narrow and every such bridge agrees on the widths.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -16,9 +19,17 @@ to all but cell_at() as a grid of AskCells, one sequence per row.
 from typing import Iterable, Iterator, Optional, Sequence
 from wizard_ui_bridge.form_helpers import prefill_value
 from wizard_ui_bridge.matrix_cell_defs import ALL_ASK_CELL_TYPES, AskCell, \
-    AskLabelCell, PrefillValueType
+    AskLabelCell, PrefillValueType, AskTextCell, AskIntCell, AskPathCell, \
+    AskChoiceCell, AskMultiChoiceCell, AskFloatCell, AskDateCell, \
+    AskTimeCell, AskDateTimeCell, AskDurationCell
 from wizard_ui_bridge.matrix_defs import AnswerCells, CellNamer, \
     CellPosition, MatrixCellSpec, PrefillCellValues
+
+# The default text width of a compact input, which fits a typical value.
+_COMPACT_WIDTHS: tuple[tuple[type[AskCell], int], ...] = (
+    (AskTextCell, 20), (AskIntCell, 8), (AskFloatCell, 10),
+    (AskPathCell, 24), (AskDateCell, 12), (AskTimeCell, 10),
+    (AskDateTimeCell, 20), (AskDurationCell, 16))
 
 
 def cell_at(spec: MatrixCellSpec, position: CellPosition) -> AskCell:
@@ -153,3 +164,21 @@ def message_name(namer: Optional[CellNamer], answers: AnswerCells,
     """
     name = '' if namer is None else namer(answers, position)
     return name or cell_name(cells, position)
+
+
+def compact_width(cell: AskCell) -> Optional[int]:
+    """Return the default text width of a matrix input, in characters.
+
+    This is the width of the text part of the input of a cell that has
+    no width hint, narrower than a form row, since a matrix shows many
+    inputs side by side. A typed input fits a typical value rather than
+    its format hint, and a choice or multi-choice input fits its longest
+    choice. A yes/no check box has no text part and a label no input, so
+    both give None.
+    """
+    if isinstance(cell, (AskChoiceCell, AskMultiChoiceCell)):
+        return max((len(choice) for choice in cell.choices), default=1) + 2
+    for kind, width in _COMPACT_WIDTHS:
+        if isinstance(cell, kind):
+            return width
+    return None

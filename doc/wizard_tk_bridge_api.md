@@ -319,11 +319,11 @@ builds the :class:`CellInput` for one Ask*Cell (every Ask*Field is one
 too), which reads the current answer value, reports the input's own
 validation error, writes a prefill into the input, and enables or
 disables it. The width hint of a cell sizes the text part of its input;
-without one a compact input, as in a matrix, gets a narrower default
-than a form row. :class:`HelpTooltip` shows a help text on hover,
-:func:`scrolled_editor` builds the scrolling area and status line shared
-by the form and matrix editors, and :func:`scroll_into_view` scrolls that
-area to show one of its widgets.
+without one a compact input, as in a matrix, gets the narrower default
+of wizard_ui_bridge.matrix_helpers.compact_width(). :class:`HelpTooltip`
+shows a help text on hover, :func:`scrolled_editor` builds the scrolling
+area and status line shared by the form and matrix editors, and
+:func:`scroll_into_view` scrolls that area to show one of its widgets.
 
 Turning the raw text of an integer input into its answer is the same job
 in a cell and in a standalone question, so :func:`int_answer` lives here

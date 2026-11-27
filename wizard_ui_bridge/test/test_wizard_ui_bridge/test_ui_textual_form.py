@@ -15,7 +15,7 @@ are covered in test_ui_textual_typed.py.
 
 import asyncio
 from pathlib import Path
-from typing import Sequence
+from typing import Optional, Sequence
 
 import pytest
 from textual.widgets import Button, Checkbox, Input, Select, SelectionList, \
@@ -27,8 +27,8 @@ from wizard_ui_bridge import AskField, AskChoiceField, AskIntField, \
     PartFormValidationResult, PartialFormValidator, PathAskOptions, \
     PrefillValues, WizardBack, WizardCancelLevel, WizardPathKind
 from wizard_ui_bridge.textual_bridge import _FormApp
-from wizard_ui_bridge._textual_widgets import \
-    _browse_index, _field_index
+from wizard_ui_bridge._textual_widgets import _cell_position, \
+    _field_index
 from .ui_textual_support import drive, open_picker, submit_typed, \
     _CannedBridge, _submitted, disabled_after
 
@@ -371,18 +371,23 @@ def test_ask_form_messages() -> None:
     assert 'bad value' in app._messages
 
 
-def test_field_index() -> None:
-    """A field id parses to its index; other ids parse to None."""
-    assert _field_index('field_4') == 4
-    assert _field_index(None) is None
-    assert _field_index('label_2') is None
+@pytest.mark.parametrize('widget_id, index', [
+    ('field_4', 4), ('browse_3', 3), ('pick_12', 12), (None, None),
+    ('label_2', None), ('path_input', None), ('field_', None),
+    ('cell_1_2', None), ('submit', None)])
+def test_field_index(widget_id: Optional[str], index: Optional[int]) -> None:
+    """A field input or button id parses to its index, others to None."""
+    assert _field_index(widget_id) == index
 
 
-def test_browse_index() -> None:
-    """A browse id parses to its index; other ids parse to None."""
-    assert _browse_index('browse_3') == 3
-    assert _browse_index(None) is None
-    assert _browse_index('field_1') is None
+@pytest.mark.parametrize('widget_id, position', [
+    ('cell_1_2', (1, 2)), ('browse_0_3', (0, 3)), ('pick_10_0', (10, 0)),
+    ('field_4', None), ('cell_1_x', None), ('label_1_2', None),
+    (None, None)])
+def test_cell_position(widget_id: Optional[str],
+                       position: Optional[tuple[int, int]]) -> None:
+    """A cell input or button id parses to its position, others to None."""
+    assert _cell_position(widget_id) == position
 
 
 def test_form_path_default(tmp_path: Path) -> None:
@@ -437,21 +442,42 @@ def test_form_no_fields() -> None:
     assert driven.return_value == []
 
 
-def test_change_not_ready() -> None:
-    """A field change before the form is ready is ignored."""
-    app = _FormApp('H', [AskTextField('Name', None)], [], None)
-    app._changed('field_0')
-    assert app._last_changed == 0
+def test_mount_not_change() -> None:
+    """Mounting the inputs is not taken as a change by the user.
+
+    Textual posts a change event when it mounts an input or drop-down
+    holding a value, after the form's on_mount. The form must not run
+    the validator for it, nor open with the validator's complaint.
+    """
+    calls: list[int] = []
+
+    def rule(_answers: Sequence[AnswerField],
+             changed: int) -> PartFormValidationResult:
+        """Record the call and reject the form."""
+        calls.append(changed)
+        return PartFormValidationResult(False, 'Rejected.')
+    fields: list[AskField] = [
+        AskTextField('T', None, default='x'),
+        AskChoiceField('C', None, ('a', 'b'), default='b'),
+        AskIntField('I', None, default=3)]
+    app = _FormApp('H', fields, [], rule)
+
+    async def scenario() -> str:
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            return str(app.query_one('#form_status', Static).render())
+    assert asyncio.run(scenario()) == ''
+    assert not calls
 
 
 def test_form_browse_bad_id() -> None:
-    """A browse press whose id is not a browse id opens no picker."""
+    """A press whose id is not a field button id opens no picker."""
     field = AskPathField('File', None, PathAskOptions())
     app = _FormApp('H', [field], [], None)
 
     async def scenario() -> int:
         async with app.run_test():
-            app._browse_clicked(Button.Pressed(Button('x', id='submit')))
+            app._dialog_clicked(Button.Pressed(Button('x', id='label_0')))
             return len(app.screen_stack)
     assert asyncio.run(scenario()) == 1
 

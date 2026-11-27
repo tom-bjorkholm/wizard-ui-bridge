@@ -29,8 +29,8 @@ from wizard_ui_bridge import AskCell, AnswerCell, AnswerCells, AskField, \
 from wizard_ui_bridge.form_helpers import answer_of, initial_answer, \
     prefill_value, prefilled_field
 from wizard_ui_bridge.matrix_helpers import cell_at, cell_name, \
-    column_label, column_name, message_name, row_label, row_name, \
-    valid_cell_prefills
+    column_label, column_name, compact_width, message_name, row_label, \
+    row_name, valid_cell_prefills
 
 _POS = CellPosition
 _CORNER = AskLabelCell('')
@@ -258,3 +258,22 @@ def test_prefilled_cell(cell: AskCell, value: PrefillValueType) -> None:
     result = prefilled_field(cell, value)
     assert type(result) is type(cell)
     assert initial_answer(result).value == value
+
+
+@pytest.mark.parametrize('cell, width', [
+    (AskTextCell(None), 20), (AskIntCell(None), 8),
+    (AskPathCell(None, PathAskOptions()), 24), (AskFloatCell(None), 10),
+    (AskDateCell(None), 12), (AskTimeCell(None), 10),
+    (AskDateTimeCell(None), 20), (AskDurationCell(None), 16),
+    (AskChoiceCell(None, ('ab', 'abcd')), 6),
+    (AskMultiChoiceCell(None, ('abc',)), 5),
+    (AskMultiChoiceCell(None, ()), 3),
+    (AskYesNoCell(None, default=True), None), (AskLabelCell('x'), None),
+    (AskTextField('Q', None), 20)])
+def test_compact_width(cell: AskCell, width: Optional[int]) -> None:
+    """A matrix input fits a typical value or its longest choice.
+
+    A check box and a label have no text width, and a form field is
+    sized like its cell.
+    """
+    assert compact_width(cell) == width

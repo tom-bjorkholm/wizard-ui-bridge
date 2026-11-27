@@ -54,7 +54,6 @@
   * [\_typed\_input](#wizard_tk_bridge.wizard_cell._typed_input)
   * [\_basic\_input](#wizard_tk_bridge.wizard_cell._basic_input)
   * [build\_input](#wizard_tk_bridge.wizard_cell.build_input)
-  * [\_compact\_width](#wizard_tk_bridge.wizard_cell._compact_width)
   * [\_entry\_widget](#wizard_tk_bridge.wizard_cell._entry_widget)
   * [\_int\_value](#wizard_tk_bridge.wizard_cell._int_value)
   * [\_path\_value](#wizard_tk_bridge.wizard_cell._path_value)
@@ -639,11 +638,11 @@ builds the :class:`CellInput` for one Ask*Cell (every Ask*Field is one
 too), which reads the current answer value, reports the input's own
 validation error, writes a prefill into the input, and enables or
 disables it. The width hint of a cell sizes the text part of its input;
-without one a compact input, as in a matrix, gets a narrower default
-than a form row. :class:`HelpTooltip` shows a help text on hover,
-:func:`scrolled_editor` builds the scrolling area and status line shared
-by the form and matrix editors, and :func:`scroll_into_view` scrolls that
-area to show one of its widgets.
+without one a compact input, as in a matrix, gets the narrower default
+of wizard_ui_bridge.matrix_helpers.compact_width(). :class:`HelpTooltip`
+shows a help text on hover, :func:`scrolled_editor` builds the scrolling
+area and status line shared by the form and matrix editors, and
+:func:`scroll_into_view` scrolls that area to show one of its widgets.
 
 Turning the raw text of an integer input into its answer is the same job
 in a cell and in a standalone question, so :func:`int_answer` lives here
@@ -992,19 +991,6 @@ change is called whenever the user changes the input. A label cell
 has no input and must not be passed. The width hint of the cell sizes
 the text part of the input. Without one, a compact input, as in a
 matrix, gets a narrower default width than a form row.
-
-<a id="wizard_tk_bridge.wizard_cell._compact_width"></a>
-
-#### \_compact\_width
-
-```python
-def _compact_width(cell: AskCell) -> Optional[int]
-```
-
-Return the default width of a compact input, None for a check box.
-
-A typed input fits a typical value rather than its format hint, which
-the tooltip shows as well, and a choice input fits its longest choice.
 
 <a id="wizard_tk_bridge.wizard_cell._entry_widget"></a>
 

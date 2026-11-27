@@ -39,8 +39,8 @@ The variable table passes a PartialCheck. It gives early feedback while
 the table is edited: a graphical or Textual bridge shows the message as
 the user types. A bridge is recommended to block confirming the table
 while the check rejects a cell the user has changed, where its user
-interface makes that reasonable, so the Tk bridge keeps its OK button from
-accepting the table, and the console bridge re-asks the cell until the
+interface makes that reasonable, so the Tk and Textual bridges refuse to
+accept the table, and the console bridge re-asks the cell until the
 check passes. Still, the check is advisory to the wizard, which must not
 trust the bridge to enforce anything: a bridge may only show the message,
 or skip the check entirely, so after

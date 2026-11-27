@@ -40,7 +40,8 @@ class _VarTable:
     A row number edits that row cell by cell, ':+' appends a row and
     edits it, ':- N' deletes row N, and a blank answer accepts the table.
     A row added to the table is fully editable, even in a column that is
-    read-only in the template rows, mirroring the Textual bridge.
+    read-only in the template rows, as in the matrix form that the base
+    WizardUiBridge.ask_table() asks.
     """
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments

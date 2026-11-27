@@ -1,11 +1,13 @@
 #! /usr/local/bin/python3
-"""Text parsing and formatting for the typed form fields.
+"""Text parsing and formatting for the typed form fields and cells.
 
-The float, date, time, date-time and duration form fields all need to
-turn user text into a typed value and a typed value back into text. This
-module holds that shared conversion, together with the human-readable
-hints and error messages, so the console form, the Textual form and the
-ask_form_w_fake() fallback all agree on the accepted text.
+The float, date, time, date-time and duration form fields and matrix
+cells all need to turn user text into a typed value and a typed value
+back into text. This module holds that shared conversion, together with
+the human-readable hints and error messages, so the console form, the
+Textual form and matrix form and the ask_form_w_fake() fallback all agree
+on the accepted text. Every Ask*Field derives from its Ask*Cell, so each
+function taking a cell takes a field too.
 
 A duration is written as an optional day count and a clock part,
 ``<days> d <hours>:<minutes>:<seconds>``, where the seconds may carry a
@@ -22,7 +24,8 @@ import re
 from datetime import date, datetime, time, timedelta
 from typing import Callable, Optional, Protocol, TypeVar
 from wizard_ui_bridge.matrix_cell_defs import value_out_of_range, \
-    _OrderedValue
+    _OrderedValue, PrefillValueType, AskCell, AskFloatCell, AskDateCell, \
+    AskTimeCell, AskDateTimeCell, AskDurationCell
 from wizard_ui_bridge.form_defs import AskField, AnswerField, AskTextField, \
     AskFloatField, AskDateField, AskTimeField, AskDateTimeField, \
     AskDurationField, AnswerFloatField, AnswerDateField, AnswerTimeField, \
@@ -39,6 +42,10 @@ DURATION_HINT = "a duration as '<days> d HH:MM:SS' or a number of seconds"
 NEW_FIELD_TYPES = (AskFloatField, AskDateField, AskTimeField,
                    AskDateTimeField, AskDurationField)
 """The typed form field classes added on top of the original six."""
+
+NEW_CELL_TYPES = (AskFloatCell, AskDateCell, AskTimeCell, AskDateTimeCell,
+                  AskDurationCell)
+"""The typed cell classes, each the base of one of NEW_FIELD_TYPES."""
 
 _OrderedT = TypeVar('_OrderedT', bound=_OrderedValue)
 _DURATION_RE = re.compile(r'^(?:(\d+)\s*d\s+)?(\d+):(\d+):(\d+(?:\.\d+)?)$')
@@ -207,9 +214,9 @@ def _resolve(value: Optional[_OrderedT], minimum: Optional[_OrderedT],
     return (value, None)
 
 
-def resolve_new(field: AskField,
-                text: Optional[str]) -> tuple[Optional[object], Optional[str]]:
-    """Return the typed value for a typed field's text, and any error.
+def resolve_new(field: AskCell, text: Optional[str]
+                ) -> tuple[Optional[PrefillValueType], Optional[str]]:
+    """Return the typed value for a typed field's or cell's text, and error.
 
     A None text is an empty nullable answer, which is valid and has no
     value. Otherwise the text is parsed and range-checked for the field's
@@ -217,19 +224,19 @@ def resolve_new(field: AskField,
     """
     if text is None:
         return (None, None)
-    if isinstance(field, AskFloatField):
+    if isinstance(field, AskFloatCell):
         return _resolve(parse_float(text), field.min_value, field.max_value,
                         FLOAT_HINT)
-    if isinstance(field, AskDateField):
+    if isinstance(field, AskDateCell):
         return _resolve(parse_date(text), field.min_value, field.max_value,
                         DATE_HINT)
-    if isinstance(field, AskTimeField):
+    if isinstance(field, AskTimeCell):
         return _resolve(parse_time(text), field.min_value, field.max_value,
                         TIME_HINT)
-    if isinstance(field, AskDateTimeField):
+    if isinstance(field, AskDateTimeCell):
         return _resolve(parse_datetime(text), field.min_value, field.max_value,
                         DATETIME_HINT)
-    assert isinstance(field, AskDurationField)
+    assert isinstance(field, AskDurationCell)
     return _resolve(parse_duration(text), field.min_value, field.max_value,
                     DURATION_HINT)
 
@@ -253,28 +260,28 @@ def new_answer(field: AskField, value: Optional[object]) -> AnswerField:
     return AnswerDurationField(field, value)
 
 
-def field_hint(field: AskField) -> str:
-    """Return the format hint shown for a typed field."""
-    if isinstance(field, AskFloatField):
+def field_hint(field: AskCell) -> str:
+    """Return the format hint shown for a typed field or cell."""
+    if isinstance(field, AskFloatCell):
         return FLOAT_HINT
-    if isinstance(field, AskDateField):
+    if isinstance(field, AskDateCell):
         return DATE_HINT
-    if isinstance(field, AskTimeField):
+    if isinstance(field, AskTimeCell):
         return TIME_HINT
-    if isinstance(field, AskDateTimeField):
+    if isinstance(field, AskDateTimeCell):
         return DATETIME_HINT
-    assert isinstance(field, AskDurationField)
+    assert isinstance(field, AskDurationCell)
     return DURATION_HINT
 
 
-def _new_bounds(field: AskField) -> tuple[bool, Optional[object]]:
-    """Return the (nullable, default) pair of a typed field."""
-    assert isinstance(field, NEW_FIELD_TYPES)
+def _new_bounds(field: AskCell) -> tuple[bool, Optional[PrefillValueType]]:
+    """Return the (nullable, default) pair of a typed field or cell."""
+    assert isinstance(field, NEW_CELL_TYPES)
     return (field.nullable, field.default)
 
 
-def value_from_text(field: AskField, text: str) -> Optional[object]:
-    """Return the typed value of a typed field for widget text.
+def value_from_text(field: AskCell, text: str) -> Optional[PrefillValueType]:
+    """Return the typed value of a typed field or cell for widget text.
 
     An empty text yields the field default, matching how the console form
     treats an empty answer. A non-empty text is parsed; unparsable or
@@ -285,8 +292,8 @@ def value_from_text(field: AskField, text: str) -> Optional[object]:
     return _new_bounds(field)[1]
 
 
-def error_from_text(field: AskField, text: str) -> Optional[str]:
-    """Return the parse or range error of a typed field's widget text.
+def error_from_text(field: AskCell, text: str) -> Optional[str]:
+    """Return the parse or range error of a typed field's or cell's text.
 
     Empty text is accepted when the field is nullable or has a default,
     and otherwise reports that a value is required.

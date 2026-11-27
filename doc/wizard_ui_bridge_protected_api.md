@@ -98,6 +98,7 @@
   * [row\_name](#wizard_ui_bridge.matrix_helpers.row_name)
   * [column\_name](#wizard_ui_bridge.matrix_helpers.column_name)
   * [message\_name](#wizard_ui_bridge.matrix_helpers.message_name)
+  * [compact\_width](#wizard_ui_bridge.matrix_helpers.compact_width)
 * [wizard\_ui\_bridge.\_help](#wizard_ui_bridge._help)
   * [HelpKwargs](#wizard_ui_bridge._help.HelpKwargs)
   * [help\_kwargs](#wizard_ui_bridge._help.help_kwargs)
@@ -144,28 +145,6 @@
   * [AnswerTimeCell](#wizard_ui_bridge.matrix_cell_defs.AnswerTimeCell)
   * [AnswerDateTimeCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDateTimeCell)
   * [AnswerDurationCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDurationCell)
-* [wizard\_ui\_bridge.\_textual\_table](#wizard_ui_bridge._textual_table)
-  * [\_TableApp](#wizard_ui_bridge._textual_table._TableApp)
-    * [\_\_init\_\_](#wizard_ui_bridge._textual_table._TableApp.__init__)
-    * [compose](#wizard_ui_bridge._textual_table._TableApp.compose)
-    * [on\_mount](#wizard_ui_bridge._textual_table._TableApp.on_mount)
-    * [\_focus\_first\_cell](#wizard_ui_bridge._textual_table._TableApp._focus_first_cell)
-    * [\_grid\_cells](#wizard_ui_bridge._textual_table._TableApp._grid_cells)
-    * [\_row\_widgets](#wizard_ui_bridge._textual_table._TableApp._row_widgets)
-    * [\_is\_readonly](#wizard_ui_bridge._textual_table._TableApp._is_readonly)
-    * [\_cell\_widget](#wizard_ui_bridge._textual_table._TableApp._cell_widget)
-    * [\_on\_input](#wizard_ui_bridge._textual_table._TableApp._on_input)
-    * [\_on\_select](#wizard_ui_bridge._textual_table._TableApp._on_select)
-    * [\_recheck](#wizard_ui_bridge._textual_table._TableApp._recheck)
-    * [action\_submit](#wizard_ui_bridge._textual_table._TableApp.action_submit)
-    * [\_submit\_clicked](#wizard_ui_bridge._textual_table._TableApp._submit_clicked)
-    * [\_add\_clicked](#wizard_ui_bridge._textual_table._TableApp._add_clicked)
-    * [\_remove\_clicked](#wizard_ui_bridge._textual_table._TableApp._remove_clicked)
-    * [\_add\_row](#wizard_ui_bridge._textual_table._TableApp._add_row)
-    * [\_remove\_row](#wizard_ui_bridge._textual_table._TableApp._remove_row)
-    * [\_report](#wizard_ui_bridge._textual_table._TableApp._report)
-    * [\_set\_status](#wizard_ui_bridge._textual_table._TableApp._set_status)
-    * [\_read\_cell](#wizard_ui_bridge._textual_table._TableApp._read_cell)
 * [wizard\_ui\_bridge.arg\_types](#wizard_ui_bridge.arg_types)
   * [AskReader](#wizard_ui_bridge.arg_types.AskReader)
     * [\_\_call\_\_](#wizard_ui_bridge.arg_types.AskReader.__call__)
@@ -244,6 +223,7 @@
   * [\_is\_tty](#wizard_ui_bridge.factory._is_tty)
 * [wizard\_ui\_bridge.\_parse](#wizard_ui_bridge._parse)
   * [NEW\_FIELD\_TYPES](#wizard_ui_bridge._parse.NEW_FIELD_TYPES)
+  * [NEW\_CELL\_TYPES](#wizard_ui_bridge._parse.NEW_CELL_TYPES)
   * [parse\_float](#wizard_ui_bridge._parse.parse_float)
   * [parse\_date](#wizard_ui_bridge._parse.parse_date)
   * [parse\_time](#wizard_ui_bridge._parse.parse_time)
@@ -286,10 +266,52 @@
   * [\_column\_widths](#wizard_ui_bridge._table._column_widths)
   * [\_overview\_line](#wizard_ui_bridge._table._overview_line)
   * [\_cell\_text](#wizard_ui_bridge._table._cell_text)
-* [wizard\_ui\_bridge.\_form\_prefill](#wizard_ui_bridge._form_prefill)
-  * [apply\_prefills](#wizard_ui_bridge._form_prefill.apply_prefills)
-  * [\_set\_field](#wizard_ui_bridge._form_prefill._set_field)
-  * [\_set\_multi](#wizard_ui_bridge._form_prefill._set_multi)
+* [wizard\_ui\_bridge.\_textual\_matrix](#wizard_ui_bridge._textual_matrix)
+  * [\_MatrixCell](#wizard_ui_bridge._textual_matrix._MatrixCell)
+    * [answer](#wizard_ui_bridge._textual_matrix._MatrixCell.answer)
+    * [error](#wizard_ui_bridge._textual_matrix._MatrixCell.error)
+  * [\_build\_cell](#wizard_ui_bridge._textual_matrix._build_cell)
+  * [\_label](#wizard_ui_bridge._textual_matrix._label)
+  * [\_MatrixApp](#wizard_ui_bridge._textual_matrix._MatrixApp)
+    * [\_\_init\_\_](#wizard_ui_bridge._textual_matrix._MatrixApp.__init__)
+    * [answers](#wizard_ui_bridge._textual_matrix._MatrixApp.answers)
+    * [compose](#wizard_ui_bridge._textual_matrix._MatrixApp.compose)
+    * [\_resize\_buttons](#wizard_ui_bridge._textual_matrix._MatrixApp._resize_buttons)
+    * [on\_mount](#wizard_ui_bridge._textual_matrix._MatrixApp.on_mount)
+    * [\_input\_changed](#wizard_ui_bridge._textual_matrix._MatrixApp._input_changed)
+    * [\_select\_changed](#wizard_ui_bridge._textual_matrix._MatrixApp._select_changed)
+    * [\_checkbox\_changed](#wizard_ui_bridge._textual_matrix._MatrixApp._checkbox_changed)
+    * [\_multi\_changed](#wizard_ui_bridge._textual_matrix._MatrixApp._multi_changed)
+    * [\_dialog\_clicked](#wizard_ui_bridge._textual_matrix._MatrixApp._dialog_clicked)
+    * [\_submit\_clicked](#wizard_ui_bridge._textual_matrix._MatrixApp._submit_clicked)
+    * [action\_submit](#wizard_ui_bridge._textual_matrix._MatrixApp.action_submit)
+    * [\_add\_row](#wizard_ui_bridge._textual_matrix._MatrixApp._add_row)
+    * [\_add\_column](#wizard_ui_bridge._textual_matrix._MatrixApp._add_column)
+    * [\_remove\_row](#wizard_ui_bridge._textual_matrix._MatrixApp._remove_row)
+    * [\_remove\_column](#wizard_ui_bridge._textual_matrix._MatrixApp._remove_column)
+    * [\_new\_cell](#wizard_ui_bridge._textual_matrix._MatrixApp._new_cell)
+    * [\_grid](#wizard_ui_bridge._textual_matrix._MatrixApp._grid)
+    * [\_set\_grid\_columns](#wizard_ui_bridge._textual_matrix._MatrixApp._set_grid_columns)
+    * [\_remove](#wizard_ui_bridge._textual_matrix._MatrixApp._remove)
+    * [\_added](#wizard_ui_bridge._textual_matrix._MatrixApp._added)
+    * [\_reshaped](#wizard_ui_bridge._textual_matrix._MatrixApp._reshaped)
+    * [\_allowed](#wizard_ui_bridge._textual_matrix._MatrixApp._allowed)
+    * [\_update\_resizers](#wizard_ui_bridge._textual_matrix._MatrixApp._update_resizers)
+    * [\_settle](#wizard_ui_bridge._textual_matrix._MatrixApp._settle)
+    * [\_changed](#wizard_ui_bridge._textual_matrix._MatrixApp._changed)
+    * [\_input\_of](#wizard_ui_bridge._textual_matrix._MatrixApp._input_of)
+    * [\_validate](#wizard_ui_bridge._textual_matrix._MatrixApp._validate)
+    * [\_apply\_disabled](#wizard_ui_bridge._textual_matrix._MatrixApp._apply_disabled)
+    * [\_apply\_prefills](#wizard_ui_bridge._textual_matrix._MatrixApp._apply_prefills)
+    * [\_first\_invalid](#wizard_ui_bridge._textual_matrix._MatrixApp._first_invalid)
+    * [\_cell\_error](#wizard_ui_bridge._textual_matrix._MatrixApp._cell_error)
+    * [\_report](#wizard_ui_bridge._textual_matrix._MatrixApp._report)
+    * [\_focus\_first](#wizard_ui_bridge._textual_matrix._MatrixApp._focus_first)
+    * [\_focusable](#wizard_ui_bridge._textual_matrix._MatrixApp._focusable)
+    * [\_reveal](#wizard_ui_bridge._textual_matrix._MatrixApp._reveal)
+    * [\_positions](#wizard_ui_bridge._textual_matrix._MatrixApp._positions)
+    * [\_asks](#wizard_ui_bridge._textual_matrix._MatrixApp._asks)
+    * [\_cell](#wizard_ui_bridge._textual_matrix._MatrixApp._cell)
 * [wizard\_ui\_bridge.\_calendar](#wizard_ui_bridge._calendar)
   * [\_shift](#wizard_ui_bridge._calendar._shift)
   * [\_CalendarScreen](#wizard_ui_bridge._calendar._CalendarScreen)
@@ -367,25 +389,10 @@
   * [\_header\_widgets](#wizard_ui_bridge._textual_widgets._header_widgets)
   * [\_default\_index](#wizard_ui_bridge._textual_widgets._default_index)
   * [\_preselected](#wizard_ui_bridge._textual_widgets._preselected)
-  * [\_parse\_cell\_id](#wizard_ui_bridge._textual_widgets._parse_cell_id)
-  * [\_make\_select](#wizard_ui_bridge._textual_widgets._make_select)
-  * [\_choice\_select](#wizard_ui_bridge._textual_widgets._choice_select)
-  * [\_multi\_selection](#wizard_ui_bridge._textual_widgets._multi_selection)
-  * [\_path\_field\_row](#wizard_ui_bridge._textual_widgets._path_field_row)
-  * [\_pick\_field\_row](#wizard_ui_bridge._textual_widgets._pick_field_row)
-  * [\_make\_field\_widget](#wizard_ui_bridge._textual_widgets._make_field_widget)
-  * [\_new\_field\_widget](#wizard_ui_bridge._textual_widgets._new_field_widget)
-  * [\_optional\_text](#wizard_ui_bridge._textual_widgets._optional_text)
-  * [\_start\_text](#wizard_ui_bridge._textual_widgets._start_text)
-  * [\_basic\_field\_widget](#wizard_ui_bridge._textual_widgets._basic_field_widget)
-  * [\_apply\_width](#wizard_ui_bridge._textual_widgets._apply_width)
-  * [\_id\_index](#wizard_ui_bridge._textual_widgets._id_index)
+  * [\_id\_numbers](#wizard_ui_bridge._textual_widgets._id_numbers)
   * [\_field\_index](#wizard_ui_bridge._textual_widgets._field_index)
-  * [\_browse\_index](#wizard_ui_bridge._textual_widgets._browse_index)
-  * [\_pick\_index](#wizard_ui_bridge._textual_widgets._pick_index)
-  * [\_multi\_error](#wizard_ui_bridge._textual_widgets._multi_error)
+  * [\_cell\_position](#wizard_ui_bridge._textual_widgets._cell_position)
   * [\_field\_message](#wizard_ui_bridge._textual_widgets._field_message)
-  * [\_cell\_message](#wizard_ui_bridge._textual_widgets._cell_message)
   * [\_date\_of](#wizard_ui_bridge._textual_widgets._date_of)
   * [\_calendar\_setup](#wizard_ui_bridge._textual_widgets._calendar_setup)
   * [\_combined\_text](#wizard_ui_bridge._textual_widgets._combined_text)
@@ -467,28 +474,17 @@
     * [\_checkbox\_changed](#wizard_ui_bridge.textual_bridge._FormApp._checkbox_changed)
     * [\_multi\_changed](#wizard_ui_bridge.textual_bridge._FormApp._multi_changed)
     * [\_changed](#wizard_ui_bridge.textual_bridge._FormApp._changed)
-    * [\_maybe\_open\_calendar](#wizard_ui_bridge.textual_bridge._FormApp._maybe_open_calendar)
     * [\_apply\_validator](#wizard_ui_bridge.textual_bridge._FormApp._apply_validator)
     * [\_show\_live](#wizard_ui_bridge.textual_bridge._FormApp._show_live)
     * [\_apply\_disabled](#wizard_ui_bridge.textual_bridge._FormApp._apply_disabled)
     * [\_submit\_clicked](#wizard_ui_bridge.textual_bridge._FormApp._submit_clicked)
-    * [\_browse\_clicked](#wizard_ui_bridge.textual_bridge._FormApp._browse_clicked)
-    * [\_pick\_clicked](#wizard_ui_bridge.textual_bridge._FormApp._pick_clicked)
-    * [\_open\_picker](#wizard_ui_bridge.textual_bridge._FormApp._open_picker)
-    * [\_open\_calendar](#wizard_ui_bridge.textual_bridge._FormApp._open_calendar)
-    * [\_path\_picked](#wizard_ui_bridge.textual_bridge._FormApp._path_picked)
-    * [\_date\_picked](#wizard_ui_bridge.textual_bridge._FormApp._date_picked)
+    * [\_dialog\_clicked](#wizard_ui_bridge.textual_bridge._FormApp._dialog_clicked)
     * [action\_submit](#wizard_ui_bridge.textual_bridge._FormApp.action_submit)
     * [\_validator\_accepts](#wizard_ui_bridge.textual_bridge._FormApp._validator_accepts)
     * [\_first\_error](#wizard_ui_bridge.textual_bridge._FormApp._first_error)
     * [\_report](#wizard_ui_bridge.textual_bridge._FormApp._report)
     * [\_set\_status](#wizard_ui_bridge.textual_bridge._FormApp._set_status)
     * [\_read\_field](#wizard_ui_bridge.textual_bridge._FormApp._read_field)
-    * [\_read\_new\_field](#wizard_ui_bridge.textual_bridge._FormApp._read_new_field)
-    * [\_read\_basic\_field](#wizard_ui_bridge.textual_bridge._FormApp._read_basic_field)
-    * [\_int\_value](#wizard_ui_bridge.textual_bridge._FormApp._int_value)
-    * [\_field\_error](#wizard_ui_bridge.textual_bridge._FormApp._field_error)
-    * [\_int\_error](#wizard_ui_bridge.textual_bridge._FormApp._int_error)
   * [WizardUiBridgeTextual](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual)
     * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.__init__)
     * [ask\_text](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_text)
@@ -496,8 +492,8 @@
     * [ask\_yes\_no](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_yes_no)
     * [ask\_choice](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_choice)
     * [ask\_multi](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_multi)
-    * [ask\_table](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_table)
     * [ask\_form](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_form)
+    * [ask\_matrix\_form](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_matrix_form)
     * [supports\_form\_field](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.supports_form_field)
     * [\_run](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual._run)
     * [\_launch](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual._launch)
@@ -506,6 +502,34 @@
     * [error\_file](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.error_file)
     * [show](#wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.show)
   * [\_choice\_start](#wizard_ui_bridge.textual_bridge._choice_start)
+* [wizard\_ui\_bridge.\_textual\_cell](#wizard_ui_bridge._textual_cell)
+  * [CellInput](#wizard_ui_bridge._textual_cell.CellInput)
+    * [\_\_init\_\_](#wizard_ui_bridge._textual_cell.CellInput.__init__)
+    * [value](#wizard_ui_bridge._textual_cell.CellInput.value)
+    * [answer](#wizard_ui_bridge._textual_cell.CellInput.answer)
+    * [error](#wizard_ui_bridge._textual_cell.CellInput.error)
+    * [settle](#wizard_ui_bridge._textual_cell.CellInput.settle)
+    * [take\_change](#wizard_ui_bridge._textual_cell.CellInput.take_change)
+    * [write](#wizard_ui_bridge._textual_cell.CellInput.write)
+    * [set\_enabled](#wizard_ui_bridge._textual_cell.CellInput.set_enabled)
+    * [wants\_calendar](#wizard_ui_bridge._textual_cell.CellInput.wants_calendar)
+    * [open\_dialog](#wizard_ui_bridge._textual_cell.CellInput.open_dialog)
+    * [\_text](#wizard_ui_bridge._textual_cell.CellInput._text)
+    * [\_path\_picked](#wizard_ui_bridge._textual_cell.CellInput._path_picked)
+    * [\_date\_picked](#wizard_ui_bridge._textual_cell.CellInput._date_picked)
+  * [build\_input](#wizard_ui_bridge._textual_cell.build_input)
+  * [\_main\_widget](#wizard_ui_bridge._textual_cell._main_widget)
+  * [\_start\_text](#wizard_ui_bridge._textual_cell._start_text)
+  * [\_optional\_text](#wizard_ui_bridge._textual_cell._optional_text)
+  * [\_choice\_select](#wizard_ui_bridge._textual_cell._choice_select)
+  * [\_multi\_selection](#wizard_ui_bridge._textual_cell._multi_selection)
+  * [\_button\_for](#wizard_ui_bridge._textual_cell._button_for)
+  * [\_apply\_width](#wizard_ui_bridge._textual_cell._apply_width)
+  * [\_text\_value](#wizard_ui_bridge._textual_cell._text_value)
+  * [\_picked\_value](#wizard_ui_bridge._textual_cell._picked_value)
+  * [\_text\_error](#wizard_ui_bridge._textual_cell._text_error)
+  * [\_int\_error](#wizard_ui_bridge._textual_cell._int_error)
+  * [\_set\_multi](#wizard_ui_bridge._textual_cell._set_multi)
 
 <a id="wizard_ui_bridge"></a>
 
@@ -1693,7 +1717,10 @@ valid_cell_prefills(), and names a cell in its own message with
 message_name(), which uses the CellNamer of the request and falls back
 to cell_name(). A bridge asking one cell at a time names it with
 row_name() and column_name(). The cells of the current shape are given
-to all but cell_at() as a grid of AskCells, one sequence per row.
+to all but cell_at() and compact_width() as a grid of AskCells, one
+sequence per row. A bridge showing the whole matrix sizes an input with
+no width hint by compact_width(), so a matrix of many columns stays
+narrow and every such bridge agrees on the widths.
 
 <a id="wizard_ui_bridge.matrix_helpers.cell_at"></a>
 
@@ -1856,6 +1883,23 @@ Return the name of a cell for a message the bridge writes itself.
 
 The CellNamer of the request names the cell when it is given and
 returns a non-empty name; otherwise cell_name() does.
+
+<a id="wizard_ui_bridge.matrix_helpers.compact_width"></a>
+
+#### compact\_width
+
+```python
+def compact_width(cell: AskCell) -> Optional[int]
+```
+
+Return the default text width of a matrix input, in characters.
+
+This is the width of the text part of the input of a cell that has
+no width hint, narrower than a form row, since a matrix shows many
+inputs side by side. A typed input fits a typical value rather than
+its format hint, and a choice or multi-choice input fits its longest
+choice. A yes/no check box has no text part and a label no input, so
+both give None.
 
 <a id="wizard_ui_bridge._help"></a>
 
@@ -2631,258 +2675,6 @@ An answer to a duration cell in a matrix form.
   attributes of the cell.
 - `value` - The value of the answer, or None when the user did not fill in
   anything and the cell is nullable.
-
-<a id="wizard_ui_bridge._textual_table"></a>
-
-# wizard\_ui\_bridge.\_textual\_table
-
-The editable table screen of the Textual bridge.
-
-The screen shows a table question as a grid of inputs and drop-downs,
-with buttons to add and remove rows when the number of rows may vary.
-
-<a id="wizard_ui_bridge._textual_table._TableApp"></a>
-
-## \_TableApp Objects
-
-```python
-class _TableApp(_NavApp[list[list[Optional[str]]]])
-```
-
-Editable grid returning every cell the user left.
-
-Read-only columns show fixed text in the template rows. Editable
-cells are a text input, or a drop-down when the cell offers choices.
-An empty editable cell is reported as None when the cell is nullable
-and as an empty string for a free-text cell, while a drop-down is
-blank only when the cell is nullable.
-
-When min_rows and max_rows are both given the table has a variable
-number of rows: an Add row and a Remove row button grow the table up
-to max_rows and shrink it down to min_rows. Every cell in an added
-row is editable, even in a read-only column, and its descriptor comes
-from new_row_template().
-
-A rejected cell is framed in the error colour while the shared status
-line names it, so the user sees which cell of the grid to correct.
-
-<a id="wizard_ui_bridge._textual_table._TableApp.__init__"></a>
-
-#### \_\_init\_\_
-
-```python
-def __init__(columns: Sequence[TableColumn],
-             cells: list[list[TableCell]],
-             question: str,
-             messages: list[str],
-             partial_check: Optional[PartialCheck],
-             min_rows: Optional[int] = None,
-             max_rows: Optional[int] = None) -> None
-```
-
-Store the columns, starting rows, prompt, check and bounds.
-
-<a id="wizard_ui_bridge._textual_table._TableApp.compose"></a>
-
-#### compose
-
-```python
-def compose() -> ComposeResult
-```
-
-Lay out the header, the editable grid, the buttons and footer.
-
-<a id="wizard_ui_bridge._textual_table._TableApp.on_mount"></a>
-
-#### on\_mount
-
-```python
-def on_mount() -> None
-```
-
-Size the grid, keep the scroll unfocused, focus a cell.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._focus_first_cell"></a>
-
-#### \_focus\_first\_cell
-
-```python
-def _focus_first_cell() -> None
-```
-
-Move focus to the first editable cell of the first row.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._grid_cells"></a>
-
-#### \_grid\_cells
-
-```python
-def _grid_cells() -> Iterator[Widget]
-```
-
-Yield the header labels and then the rows, top to bottom.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._row_widgets"></a>
-
-#### \_row\_widgets
-
-```python
-def _row_widgets(row: int) -> Iterator[Widget]
-```
-
-Yield the widgets of one data row, left to right.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._is_readonly"></a>
-
-#### \_is\_readonly
-
-```python
-def _is_readonly(row: int, col: int) -> bool
-```
-
-Return whether a cell shows fixed text instead of a widget.
-
-Cells in added rows are always editable, even in a column that is
-read-only in the template rows.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._cell_widget"></a>
-
-#### \_cell\_widget
-
-```python
-def _cell_widget(row: int, col: int) -> Widget
-```
-
-Return the widget shown for one cell of the grid.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._on_input"></a>
-
-#### \_on\_input
-
-```python
-@on(Input.Changed)
-def _on_input(event: Input.Changed) -> None
-```
-
-Re-check the table after a text cell changes.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._on_select"></a>
-
-#### \_on\_select
-
-```python
-@on(Select.Changed)
-def _on_select(event: Select.Changed) -> None
-```
-
-Re-check the table after a drop-down cell changes.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._recheck"></a>
-
-#### \_recheck
-
-```python
-def _recheck(position: Optional[tuple[int, int]]) -> None
-```
-
-Update the changed cell and show any partial-check message.
-
-<a id="wizard_ui_bridge._textual_table._TableApp.action_submit"></a>
-
-#### action\_submit
-
-```python
-def action_submit() -> None
-```
-
-Exit returning every cell, including the read-only columns.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._submit_clicked"></a>
-
-#### \_submit\_clicked
-
-```python
-@on(Button.Pressed, '#submit')
-def _submit_clicked(_event: Button.Pressed) -> None
-```
-
-Submit the table when the submit button is pressed.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._add_clicked"></a>
-
-#### \_add\_clicked
-
-```python
-@on(Button.Pressed, '#add_row')
-def _add_clicked(_event: Button.Pressed) -> None
-```
-
-Add a row when the add-row button is pressed.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._remove_clicked"></a>
-
-#### \_remove\_clicked
-
-```python
-@on(Button.Pressed, '#remove_row')
-def _remove_clicked(_event: Button.Pressed) -> None
-```
-
-Remove the last row when the remove-row button is pressed.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._add_row"></a>
-
-#### \_add\_row
-
-```python
-def _add_row() -> None
-```
-
-Append one editable row, up to max_rows.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._remove_row"></a>
-
-#### \_remove\_row
-
-```python
-def _remove_row() -> None
-```
-
-Remove the last row, down to min_rows.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._report"></a>
-
-#### \_report
-
-```python
-def _report(position: Optional[tuple[int, int]], message: str) -> None
-```
-
-Show a message, naming and framing the cell it complains of.
-
-A message given no cell position, such as one about the number of
-rows, is about the whole table: it is shown unchanged and no cell
-is framed.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._set_status"></a>
-
-#### \_set\_status
-
-```python
-def _set_status(message: str) -> None
-```
-
-Show a status message below the table.
-
-<a id="wizard_ui_bridge._textual_table._TableApp._read_cell"></a>
-
-#### \_read\_cell
-
-```python
-def _read_cell(row: int, col: int) -> Optional[str]
-```
-
-Return the current value of one cell for the result table.
 
 <a id="wizard_ui_bridge.arg_types"></a>
 
@@ -4731,13 +4523,15 @@ Return whether a stream reports that it is a terminal.
 
 # wizard\_ui\_bridge.\_parse
 
-Text parsing and formatting for the typed form fields.
+Text parsing and formatting for the typed form fields and cells.
 
-The float, date, time, date-time and duration form fields all need to
-turn user text into a typed value and a typed value back into text. This
-module holds that shared conversion, together with the human-readable
-hints and error messages, so the console form, the Textual form and the
-ask_form_w_fake() fallback all agree on the accepted text.
+The float, date, time, date-time and duration form fields and matrix
+cells all need to turn user text into a typed value and a typed value
+back into text. This module holds that shared conversion, together with
+the human-readable hints and error messages, so the console form, the
+Textual form and matrix form and the ask_form_w_fake() fallback all agree
+on the accepted text. Every Ask*Field derives from its Ask*Cell, so each
+function taking a cell takes a field too.
 
 A duration is written as an optional day count and a clock part,
 ``<days> d <hours>:<minutes>:<seconds>``, where the seconds may carry a
@@ -4750,6 +4544,12 @@ library fromisoformat() parsers.
 #### NEW\_FIELD\_TYPES
 
 The typed form field classes added on top of the original six.
+
+<a id="wizard_ui_bridge._parse.NEW_CELL_TYPES"></a>
+
+#### NEW\_CELL\_TYPES
+
+The typed cell classes, each the base of one of NEW_FIELD_TYPES.
 
 <a id="wizard_ui_bridge._parse.parse_float"></a>
 
@@ -4927,11 +4727,12 @@ Return a parsed value and no error, or None and the reason why.
 #### resolve\_new
 
 ```python
-def resolve_new(field: AskField,
-                text: Optional[str]) -> tuple[Optional[object], Optional[str]]
+def resolve_new(
+        field: AskCell, text: Optional[str]
+) -> tuple[Optional[PrefillValueType], Optional[str]]
 ```
 
-Return the typed value for a typed field's text, and any error.
+Return the typed value for a typed field's or cell's text, and error.
 
 A None text is an empty nullable answer, which is valid and has no
 value. Otherwise the text is parsed and range-checked for the field's
@@ -4952,30 +4753,30 @@ Wrap a typed value in the answer matching a typed field.
 #### field\_hint
 
 ```python
-def field_hint(field: AskField) -> str
+def field_hint(field: AskCell) -> str
 ```
 
-Return the format hint shown for a typed field.
+Return the format hint shown for a typed field or cell.
 
 <a id="wizard_ui_bridge._parse._new_bounds"></a>
 
 #### \_new\_bounds
 
 ```python
-def _new_bounds(field: AskField) -> tuple[bool, Optional[object]]
+def _new_bounds(field: AskCell) -> tuple[bool, Optional[PrefillValueType]]
 ```
 
-Return the (nullable, default) pair of a typed field.
+Return the (nullable, default) pair of a typed field or cell.
 
 <a id="wizard_ui_bridge._parse.value_from_text"></a>
 
 #### value\_from\_text
 
 ```python
-def value_from_text(field: AskField, text: str) -> Optional[object]
+def value_from_text(field: AskCell, text: str) -> Optional[PrefillValueType]
 ```
 
-Return the typed value of a typed field for widget text.
+Return the typed value of a typed field or cell for widget text.
 
 An empty text yields the field default, matching how the console form
 treats an empty answer. A non-empty text is parsed; unparsable or
@@ -4986,10 +4787,10 @@ out-of-range text yields None, and the caller reports the error.
 #### error\_from\_text
 
 ```python
-def error_from_text(field: AskField, text: str) -> Optional[str]
+def error_from_text(field: AskCell, text: str) -> Optional[str]
 ```
 
-Return the parse or range error of a typed field's widget text.
+Return the parse or range error of a typed field's or cell's text.
 
 Empty text is accepted when the field is nullable or has a default,
 and otherwise reports that a value is required.
@@ -5059,7 +4860,8 @@ Mutable state and editing for a variable-row console table.
 A row number edits that row cell by cell, ':+' appends a row and
 edits it, ':- N' deletes row N, and a blank answer accepts the table.
 A row added to the table is fully editable, even in a column that is
-read-only in the template rows, mirroring the Textual bridge.
+read-only in the template rows, as in the matrix form that the base
+WizardUiBridge.ask_table() asks.
 
 <a id="wizard_ui_bridge._table._VarTable.__init__"></a>
 
@@ -5220,57 +5022,546 @@ def _cell_text(value: Optional[str]) -> str
 
 Return the overview display text for one cell value.
 
-<a id="wizard_ui_bridge._form_prefill"></a>
+<a id="wizard_ui_bridge._textual_matrix"></a>
 
-# wizard\_ui\_bridge.\_form\_prefill
+# wizard\_ui\_bridge.\_textual\_matrix
 
-Apply a partial validator's prefills to a Textual form's widgets.
+The matrix form screen of the Textual bridge.
 
-The Textual form bridge asks the partial validator after every change and
-then places the prefill values it returns into the matching field widgets,
-exactly as if the user had typed them. This module holds that write-back,
-kept apart from the large Textual bridge module.
+A matrix form asks a grid of cells at once. :class:`_MatrixApp` shows one
+widget per cell of the current shape in a grid that scrolls both ways: a
+label for an AskLabelCell, in bold or italics when the cell asks for it,
+and for every other cell a compact input built by
+wizard_ui_bridge._textual_cell, the same input a form row shows but
+narrower by default and with a narrow '…' button for a path or date.
 
-<a id="wizard_ui_bridge._form_prefill.apply_prefills"></a>
+The optional partial validator runs when the matrix is first shown and
+after every change of a cell and of the shape, to disable irrelevant
+cells, apply prefills and show advisory feedback. Its message is first
+shown once the user changes the matrix or submits it, so a fresh matrix
+does not open with a complaint. On submit every enabled cell is
+validated, so a submitted matrix is always complete, and the keyboard
+focus moves to the first cell that fails its own check. Such a cell is
+framed in the error colour and named in the shared status line by the
+CellNamer of the request, or else by its labels.
 
-#### apply\_prefills
+When the minimum and maximum dimensions of the request differ, buttons
+append or delete the last row or column, each disabled at its bound. The
+first enabled input of an appended row or column gets the keyboard focus
+and is scrolled into view. A delete button keeps the focus, as a pressed
+Textual button takes it, so the user can delete again, until it is
+disabled at its bound and the focus passes to the first enabled input.
 
-```python
-def apply_prefills(form: DOMNode, fields: Sequence[AskField], changed: int,
-                   prefill_values: PrefillValues) -> None
-```
+<a id="wizard_ui_bridge._textual_matrix._MatrixCell"></a>
 
-Write each valid prefill into its row's widget in form.
-
-A disabled row is written too, so the value shows greyed and takes
-effect if the row is later enabled. Writing a value equal to the one
-already there is a no-op, so a stable validator does not loop.
-
-<a id="wizard_ui_bridge._form_prefill._set_field"></a>
-
-#### \_set\_field
-
-```python
-def _set_field(form: DOMNode, field: AskField, index: int,
-               value: PrefillValueType) -> None
-```
-
-Write a prefill value into one field's widget, by field type.
-
-Setting the widget value raises the framework's change event, so the
-answer, the disabled set and any own-field error refresh as if the
-user had typed it, exactly like the directory picker write-back.
-
-<a id="wizard_ui_bridge._form_prefill._set_multi"></a>
-
-#### \_set\_multi
+## \_MatrixCell Objects
 
 ```python
-def _set_multi(form: DOMNode, index: int, field: AskMultiChoiceField,
-               members: Sequence[str]) -> None
+@dataclass(frozen=True)
+class _MatrixCell()
 ```
 
-Select exactly the given members in a multi-choice widget.
+One built matrix cell: its AskCell, widget and input.
+
+A label cell has no input.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixCell.answer"></a>
+
+#### answer
+
+```python
+def answer() -> Optional[AnswerCell]
+```
+
+Return the current answer of the cell, or None for a label.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixCell.error"></a>
+
+#### error
+
+```python
+def error() -> Optional[str]
+```
+
+Return the cell's own validation error, or None when valid.
+
+<a id="wizard_ui_bridge._textual_matrix._build_cell"></a>
+
+#### \_build\_cell
+
+```python
+def _build_cell(ask: AskCell, position: CellPosition) -> _MatrixCell
+```
+
+Return the label or compact input of one cell, not yet mounted.
+
+Both get the id 'cell_{row}_{column}'.
+
+<a id="wizard_ui_bridge._textual_matrix._label"></a>
+
+#### \_label
+
+```python
+def _label(ask: AskLabelCell, widget_id: str) -> Static
+```
+
+Return the label of a label cell, wrapped at its width hint.
+
+The text is shown as it is, not as Textual markup.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp"></a>
+
+## \_MatrixApp Objects
+
+```python
+class _MatrixApp(_NavApp[AnswerCells])
+```
+
+A grid of label and input cells that asks a whole matrix form.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__(request: MatrixRequest, messages: list[str]) -> None
+```
+
+Store the request; the cells are built when composed.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp.answers"></a>
+
+#### answers
+
+```python
+def answers() -> list[list[Optional[AnswerCell]]]
+```
+
+Return the current answers, one list per row of the shape.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp.compose"></a>
+
+#### compose
+
+```python
+def compose() -> ComposeResult
+```
+
+Lay out the header, the grid, the buttons, status and footer.
+
+The cells of the default shape are built here, since a Textual
+input can only be built while the app is running.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._resize_buttons"></a>
+
+#### \_resize\_buttons
+
+```python
+def _resize_buttons() -> list[Button]
+```
+
+Return the resize buttons of each dimension that may change.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp.on_mount"></a>
+
+#### on\_mount
+
+```python
+def on_mount() -> None
+```
+
+Size the grid, validate it, and focus the first enabled input.
+
+The validator's message is not shown yet. The inputs record their
+answers as seen, also after its prefills, so neither the change
+event Textual posts as it mounts an input nor a first prefill is
+taken as an edit by the user.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._input_changed"></a>
+
+#### \_input\_changed
+
+```python
+@on(Input.Changed)
+def _input_changed(event: Input.Changed) -> None
+```
+
+React to a change of a text-like cell.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._select_changed"></a>
+
+#### \_select\_changed
+
+```python
+@on(Select.Changed)
+def _select_changed(event: Select.Changed) -> None
+```
+
+React to a change of a choice cell.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._checkbox_changed"></a>
+
+#### \_checkbox\_changed
+
+```python
+@on(Checkbox.Changed)
+def _checkbox_changed(event: Checkbox.Changed) -> None
+```
+
+React to a change of a yes/no cell.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._multi_changed"></a>
+
+#### \_multi\_changed
+
+```python
+@on(SelectionList.SelectedChanged)
+def _multi_changed(event: SelectionList.SelectedChanged[int]) -> None
+```
+
+React to a change of a multi-choice cell.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._dialog_clicked"></a>
+
+#### \_dialog\_clicked
+
+```python
+@on(Button.Pressed, '.browse, .pick')
+def _dialog_clicked(event: Button.Pressed) -> None
+```
+
+Open the directory picker or calendar of the clicked cell.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._submit_clicked"></a>
+
+#### \_submit\_clicked
+
+```python
+@on(Button.Pressed, '#submit')
+def _submit_clicked(_event: Button.Pressed) -> None
+```
+
+Submit the matrix when the submit button is pressed.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp.action_submit"></a>
+
+#### action\_submit
+
+```python
+def action_submit() -> None
+```
+
+Validate the whole matrix and exit with its answers when valid.
+
+The partial validator runs first, so the cells it disables are not
+checked. Every enabled cell must then pass its own check, and the
+first that does not gets the keyboard focus. Last the validator
+must accept the matrix.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._add_row"></a>
+
+#### \_add\_row
+
+```python
+@on(Button.Pressed, f'#{ADD_ROW}')
+async def _add_row(_event: Button.Pressed) -> None
+```
+
+Append a row of fresh cells, up to the maximum row count.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._add_column"></a>
+
+#### \_add\_column
+
+```python
+@on(Button.Pressed, f'#{ADD_COLUMN}')
+async def _add_column(_event: Button.Pressed) -> None
+```
+
+Append a column of fresh cells, up to the maximum column count.
+
+Each new cell is mounted after the last cell of its row, since
+the grid places its children row by row.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._remove_row"></a>
+
+#### \_remove\_row
+
+```python
+@on(Button.Pressed, f'#{REMOVE_ROW}')
+async def _remove_row(_event: Button.Pressed) -> None
+```
+
+Delete the last row, down to the minimum row count.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._remove_column"></a>
+
+#### \_remove\_column
+
+```python
+@on(Button.Pressed, f'#{REMOVE_COLUMN}')
+async def _remove_column(_event: Button.Pressed) -> None
+```
+
+Delete the last column, down to the minimum column count.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._new_cell"></a>
+
+#### \_new\_cell
+
+```python
+def _new_cell(position: CellPosition) -> _MatrixCell
+```
+
+Return the cell the request gives for a position, not mounted.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._grid"></a>
+
+#### \_grid
+
+```python
+def _grid() -> Grid
+```
+
+Return the grid holding the cell widgets.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._set_grid_columns"></a>
+
+#### \_set\_grid\_columns
+
+```python
+def _set_grid_columns() -> None
+```
+
+Lay the grid out in as many columns as the current shape.
+
+A shape with no columns has no cells, so one grid column is kept.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._remove"></a>
+
+#### \_remove
+
+```python
+async def _remove(cells: Sequence[_MatrixCell]) -> None
+```
+
+Remove the widgets of deleted cells from the grid.
+
+The removal is awaited, so a cell appended later may reuse an id.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._added"></a>
+
+#### \_added
+
+```python
+def _added(line: Sequence[CellPosition]) -> None
+```
+
+Settle an appended row or column, re-validate and focus it.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._reshaped"></a>
+
+#### \_reshaped
+
+```python
+def _reshaped() -> None
+```
+
+Update the resize buttons and re-validate the whole matrix.
+
+The focus stays on the resize button the user just pressed, unless
+an appended row or column takes it. A button disabled at its
+bound cannot keep the focus, so it passes to the first enabled
+input, as when the matrix is first shown.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._allowed"></a>
+
+#### \_allowed
+
+```python
+def _allowed() -> dict[str, bool]
+```
+
+Return for each resize action whether the bounds allow it.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._update_resizers"></a>
+
+#### \_update\_resizers
+
+```python
+def _update_resizers() -> None
+```
+
+Disable each resize button whose action the bounds forbid.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._settle"></a>
+
+#### \_settle
+
+```python
+def _settle(positions: Iterable[CellPosition]) -> None
+```
+
+Record the answers of mounted input cells as seen.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._changed"></a>
+
+#### \_changed
+
+```python
+def _changed(widget_id: Optional[str]) -> None
+```
+
+React to a cell change with live feedback and cell enabling.
+
+Typing the '?' token into a date cell opens its calendar.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._input_of"></a>
+
+#### \_input\_of
+
+```python
+def _input_of(widget_id: Optional[str]) -> Optional[CellInput]
+```
+
+Return the input a widget id belongs to, None if it is gone.
+
+An event of a cell in a row or column just deleted has a position
+outside the current shape.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._validate"></a>
+
+#### \_validate
+
+```python
+def _validate(changed: Optional[CellPosition], live: bool) -> Optional[str]
+```
+
+Run the partial validator and return its message when invalid.
+
+The disabled cells of its result are applied, and while the user
+edits (live) its prefills too, which are ignored on submit.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._apply_disabled"></a>
+
+#### \_apply\_disabled
+
+```python
+def _apply_disabled(positions: tuple[CellPosition, ...]) -> None
+```
+
+Enable or disable each input to match the validator result.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._apply_prefills"></a>
+
+#### \_apply\_prefills
+
+```python
+def _apply_prefills(prefills: PrefillCellValues,
+                    changed: Optional[CellPosition]) -> None
+```
+
+Write the validator's valid prefills into their cell inputs.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._first_invalid"></a>
+
+#### \_first\_invalid
+
+```python
+def _first_invalid() -> Optional[CellPosition]
+```
+
+Return the first enabled cell failing its own check, or None.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._cell_error"></a>
+
+#### \_cell\_error
+
+```python
+def _cell_error(position: CellPosition) -> Optional[str]
+```
+
+Return one cell's own error, prefixed with the cell's name.
+
+The whole matrix shares one status line, so naming the cell, by
+the CellNamer of the request or by its labels, makes clear which
+cell a message refers to.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._report"></a>
+
+#### \_report
+
+```python
+def _report(position: Optional[CellPosition], message: str) -> None
+```
+
+Show a message, framing the input of the cell it complains of.
+
+A message given no position, such as one from the partial
+validator, is about the whole matrix, so no cell is framed.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._focus_first"></a>
+
+#### \_focus\_first
+
+```python
+def _focus_first(positions: Sequence[CellPosition]) -> None
+```
+
+Reveal the first enabled input, else the first of the cells.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._focusable"></a>
+
+#### \_focusable
+
+```python
+def _focusable(position: CellPosition) -> bool
+```
+
+Return whether a cell is an enabled input.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._reveal"></a>
+
+#### \_reveal
+
+```python
+def _reveal(position: CellPosition) -> None
+```
+
+Scroll a cell into view, focusing it when it is focusable.
+
+The scroll waits for the next refresh, so a cell just appended
+has been laid out and has a place to scroll to.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._positions"></a>
+
+#### \_positions
+
+```python
+def _positions() -> Iterator[CellPosition]
+```
+
+Yield every position of the current shape, row by row.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._asks"></a>
+
+#### \_asks
+
+```python
+def _asks() -> list[list[AskCell]]
+```
+
+Return the AskCells of the current shape, one list per row.
+
+<a id="wizard_ui_bridge._textual_matrix._MatrixApp._cell"></a>
+
+#### \_cell
+
+```python
+def _cell(position: CellPosition) -> _MatrixCell
+```
+
+Return the built cell at a position of the current shape.
 
 <a id="wizard_ui_bridge._calendar"></a>
 
@@ -6189,21 +6480,19 @@ Return the matrix input cell of one editable table cell.
 
 # wizard\_ui\_bridge.\_textual\_widgets
 
-Widget builders, id helpers and message helpers for Textual.
+Header, id, message and calendar helpers for the Textual screens.
 
-The Textual bridge builds one input widget per form field and per menu,
-and it maps widget ids back to field indexes and table positions. These
-pure builders and id helpers are kept apart from the screen classes so
-the main bridge module stays small; they hold no screen state and only
-turn field descriptions into widgets and widget ids into indexes.
+The Textual screens show a header of messages above each question, and
+they map widget ids back to form field indexes and matrix cell positions.
+These pure helpers are kept apart from the screen classes so the main
+bridge module stays small; they hold no screen state. The input of a
+field or cell is built by wizard_ui_bridge._textual_cell.
 
-A form and a table screen show every field at once but report validation
-in one shared status line, so the message helpers here name the field or
-the cell a message complains about; without that name the user cannot
-tell which of the fields on the screen to correct.
-
-The width hint of a field sizes its input with _apply_width(), once the
-input is mounted.
+A form screen shows every field at once but reports validation in one
+shared status line, so the message helper here names the field a message
+complains about; without that name the user cannot tell which of the
+fields on the screen to correct. A matrix screen names a cell with
+wizard_ui_bridge.matrix_helpers.message_name() instead.
 
 <a id="wizard_ui_bridge._textual_widgets._header_widgets"></a>
 
@@ -6237,155 +6526,20 @@ def _preselected(choices: Sequence[str],
 
 Return the indexes of the default values within choices.
 
-<a id="wizard_ui_bridge._textual_widgets._parse_cell_id"></a>
+<a id="wizard_ui_bridge._textual_widgets._id_numbers"></a>
 
-#### \_parse\_cell\_id
-
-```python
-def _parse_cell_id(widget_id: Optional[str]) -> Optional[tuple[int, int]]
-```
-
-Return the (row, column) encoded in an editable cell id.
-
-<a id="wizard_ui_bridge._textual_widgets._make_select"></a>
-
-#### \_make\_select
+#### \_id\_numbers
 
 ```python
-def _make_select(cell: TableCell, widget_id: str) -> Select[str]
+def _id_numbers(widget_id: Optional[str]) -> tuple[int, ...]
 ```
 
-Return a drop-down for one cell, blank only when nullable.
+Return the numbers in the id of a field or cell input or its button.
 
-<a id="wizard_ui_bridge._textual_widgets._choice_select"></a>
-
-#### \_choice\_select
-
-```python
-def _choice_select(field: AskChoiceField, widget_id: str) -> Select[str]
-```
-
-Return a drop-down for a choice field, blank when no default.
-
-It starts with the start value, else the default, else blank.
-
-<a id="wizard_ui_bridge._textual_widgets._multi_selection"></a>
-
-#### \_multi\_selection
-
-```python
-def _multi_selection(field: AskMultiChoiceField,
-                     widget_id: str) -> SelectionList[int]
-```
-
-Return a check-box list for a multi-choice field.
-
-<a id="wizard_ui_bridge._textual_widgets._path_field_row"></a>
-
-#### \_path\_field\_row
-
-```python
-def _path_field_row(value: str, index: int) -> Horizontal
-```
-
-Return a path input paired with a Browse button.
-
-The input keeps the plain field id so the form reads and validates
-it like any other field, while the button carries a browse class so
-the form can open the directory picker for this row.
-
-<a id="wizard_ui_bridge._textual_widgets._pick_field_row"></a>
-
-#### \_pick\_field\_row
-
-```python
-def _pick_field_row(value: str, index: int) -> Horizontal
-```
-
-Return a text input paired with a calendar Pick button.
-
-The input keeps the plain field id so the form reads and validates it
-like any other text field, while the button carries a pick class so
-the form can open the calendar for this row.
-
-<a id="wizard_ui_bridge._textual_widgets._make_field_widget"></a>
-
-#### \_make\_field\_widget
-
-```python
-def _make_field_widget(field: AskField, index: int) -> Widget
-```
-
-Return the input widget shown for one form field.
-
-<a id="wizard_ui_bridge._textual_widgets._new_field_widget"></a>
-
-#### \_new\_field\_widget
-
-```python
-def _new_field_widget(field: AskField, index: int) -> Optional[Widget]
-```
-
-Return the widget for a typed field, or None for the basic kinds.
-
-A date or date-time field shows a text input with a Pick button that
-opens the calendar; a float, time or duration field shows a plain
-text input parsed on change. Each starts from its formatted start
-value, else its default.
-
-<a id="wizard_ui_bridge._textual_widgets._optional_text"></a>
-
-#### \_optional\_text
-
-```python
-def _optional_text(value: Optional[Union[int, Path]]) -> str
-```
-
-Return the input text of an integer or path, or '' for None.
-
-<a id="wizard_ui_bridge._textual_widgets._start_text"></a>
-
-#### \_start\_text
-
-```python
-def _start_text(field: AskField) -> str
-```
-
-Return the formatted start value, else default, of a typed field.
-
-<a id="wizard_ui_bridge._textual_widgets._basic_field_widget"></a>
-
-#### \_basic\_field\_widget
-
-```python
-def _basic_field_widget(field: AskField, index: int) -> Widget
-```
-
-Return the input widget for one of the original field kinds.
-
-<a id="wizard_ui_bridge._textual_widgets._apply_width"></a>
-
-#### \_apply\_width
-
-```python
-def _apply_width(widget: Widget, width: Optional[int]) -> None
-```
-
-Size a field input to a width hint in characters, if one is given.
-
-The hint is the width of the text part, so the border and padding
-of the input are added. A check box has no text part and keeps its
-size.
-
-<a id="wizard_ui_bridge._textual_widgets._id_index"></a>
-
-#### \_id\_index
-
-```python
-def _id_index(widget_id: Optional[str], prefix: str) -> Optional[int]
-```
-
-Return the integer index following prefix in a widget id.
+Such an id is its kind followed by one number for a form field, as in
+'field_3', or by a row and a column for a matrix cell, as in
+'pick_1_2'. Any other id, such as 'label_2' or 'path_input', gives no
+numbers.
 
 <a id="wizard_ui_bridge._textual_widgets._field_index"></a>
 
@@ -6395,37 +6549,17 @@ Return the integer index following prefix in a widget id.
 def _field_index(widget_id: Optional[str]) -> Optional[int]
 ```
 
-Return the field index encoded in a field widget id.
+Return the field index encoded in a field input or button id.
 
-<a id="wizard_ui_bridge._textual_widgets._browse_index"></a>
+<a id="wizard_ui_bridge._textual_widgets._cell_position"></a>
 
-#### \_browse\_index
-
-```python
-def _browse_index(widget_id: Optional[str]) -> Optional[int]
-```
-
-Return the field index encoded in a browse button id.
-
-<a id="wizard_ui_bridge._textual_widgets._pick_index"></a>
-
-#### \_pick\_index
+#### \_cell\_position
 
 ```python
-def _pick_index(widget_id: Optional[str]) -> Optional[int]
+def _cell_position(widget_id: Optional[str]) -> Optional[CellPosition]
 ```
 
-Return the field index encoded in a calendar Pick button id.
-
-<a id="wizard_ui_bridge._textual_widgets._multi_error"></a>
-
-#### \_multi\_error
-
-```python
-def _multi_error(count: int, field: AskMultiChoiceField) -> Optional[str]
-```
-
-Return the multi-choice count error, or None when acceptable.
+Return the cell position encoded in a cell input or button id.
 
 <a id="wizard_ui_bridge._textual_widgets._field_message"></a>
 
@@ -6436,19 +6570,6 @@ def _field_message(field: AskField, message: str) -> str
 ```
 
 Return message named for the form field it complains about.
-
-<a id="wizard_ui_bridge._textual_widgets._cell_message"></a>
-
-#### \_cell\_message
-
-```python
-def _cell_message(header: str, row: int, message: str) -> str
-```
-
-Return message named for the table cell it complains about.
-
-The 0-based row index is shown as a 1-based row number, so it counts
-the rows the way the user sees them on the screen.
 
 <a id="wizard_ui_bridge._textual_widgets._date_of"></a>
 
@@ -6465,21 +6586,22 @@ Return the date part of a date or datetime, or None.
 #### \_calendar\_setup
 
 ```python
-def _calendar_setup(field: AskField,
+def _calendar_setup(field: AskCell,
                     text: str) -> tuple[date, Optional[date], Optional[date]]
 ```
 
 Return the calendar seed date and its inclusive day bounds.
 
-A date-time field's bounds are its date parts, so the calendar offers
-the acceptable days and the field validates the exact date-time.
+A date-time field's or cell's bounds are its date parts, so the
+calendar offers the acceptable days and the input validates the exact
+date-time.
 
 <a id="wizard_ui_bridge._textual_widgets._combined_text"></a>
 
 #### \_combined\_text
 
 ```python
-def _combined_text(field: AskField, picked: date, current: str) -> str
+def _combined_text(field: AskCell, picked: date, current: str) -> str
 ```
 
 Return the input text for a picked date, keeping any typed time.
@@ -7121,8 +7243,9 @@ This module provides the concrete Textual bridge used when the wizard
 talks to a user through a real terminal. Each ask method runs a short
 lived Textual application for one question and returns its result, which
 keeps the one-question-at-a-time contract of WizardUiBridge while giving
-the user a full-screen interface with selectable lists, check boxes and
-editable tables.
+the user a full-screen interface with selectable lists, check boxes,
+whole forms and matrix forms. A table question is asked by the inherited
+WizardUiBridge.ask_table() through ask_matrix_form().
 
 Navigation keys exit a screen with no value and record which
 WizardNavigation request to raise, so the bridge re-raises it after the
@@ -7398,6 +7521,9 @@ def _field_widgets() -> Iterator[Widget]
 
 Yield a label and an input widget for each field.
 
+The inputs are built here, since a Textual input can only be
+built while the app is running.
+
 <a id="wizard_ui_bridge.textual_bridge._FormApp.on_mount"></a>
 
 #### on\_mount
@@ -7406,10 +7532,10 @@ Yield a label and an input widget for each field.
 def on_mount() -> None
 ```
 
-Size the grid and inputs, focus the first field, not the scroll.
+Size the grid, focus the first field, not the scroll.
 
-An input with a width hint keeps that width; the others fill
-their grid column.
+Each input records its mounted answer as seen, so the change
+event Textual posts as it mounts an input is not taken as an edit.
 
 <a id="wizard_ui_bridge.textual_bridge._FormApp._input_changed"></a>
 
@@ -7465,20 +7591,7 @@ def _changed(widget_id: Optional[str]) -> None
 
 Update the changed answer and refresh the shown feedback.
 
-<a id="wizard_ui_bridge.textual_bridge._FormApp._maybe_open_calendar"></a>
-
-#### \_maybe\_open\_calendar
-
-```python
-def _maybe_open_calendar(index: int) -> bool
-```
-
-Open the calendar when a date field holds the pick token.
-
-Typing the '?' token into a date or date-time input is an
-alternative to pressing the Pick button. The token is left in the
-input until the calendar closes, when it is replaced by the picked
-date or cleared on cancel.
+Typing the '?' token into a date field opens its calendar.
 
 <a id="wizard_ui_bridge.textual_bridge._FormApp._apply_validator"></a>
 
@@ -7516,6 +7629,9 @@ def _apply_disabled(disable_row_idxs: tuple[int, ...]) -> None
 
 Enable or disable each row to match the validator result.
 
+A prefill aimed at a disabled row is still written, so the value
+shows greyed and takes effect if the row is later enabled.
+
 <a id="wizard_ui_bridge.textual_bridge._FormApp._submit_clicked"></a>
 
 #### \_submit\_clicked
@@ -7527,74 +7643,16 @@ def _submit_clicked(_event: Button.Pressed) -> None
 
 Submit the form when the submit button is pressed.
 
-<a id="wizard_ui_bridge.textual_bridge._FormApp._browse_clicked"></a>
+<a id="wizard_ui_bridge.textual_bridge._FormApp._dialog_clicked"></a>
 
-#### \_browse\_clicked
-
-```python
-@on(Button.Pressed, '.browse')
-def _browse_clicked(event: Button.Pressed) -> None
-```
-
-Open the directory picker for the clicked path field.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._pick_clicked"></a>
-
-#### \_pick\_clicked
+#### \_dialog\_clicked
 
 ```python
-@on(Button.Pressed, '.pick')
-def _pick_clicked(event: Button.Pressed) -> None
+@on(Button.Pressed, '.browse, .pick')
+def _dialog_clicked(event: Button.Pressed) -> None
 ```
 
-Open the calendar for the clicked date field.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._open_picker"></a>
-
-#### \_open\_picker
-
-```python
-def _open_picker(index: int) -> None
-```
-
-Push the picker seeded with the field's current text.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._open_calendar"></a>
-
-#### \_open\_calendar
-
-```python
-def _open_calendar(index: int) -> None
-```
-
-Push the calendar seeded from the date field's current text.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._path_picked"></a>
-
-#### \_path\_picked
-
-```python
-def _path_picked(index: int, result: Optional[str]) -> None
-```
-
-Fill the path input with the picked path, if any.
-
-Setting the input value raises Input.Changed, so the answer and
-the partial validator update as if the user had typed the path.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._date_picked"></a>
-
-#### \_date\_picked
-
-```python
-def _date_picked(index: int, result: Optional[date]) -> None
-```
-
-Fill the date input with the picked date, if any.
-
-A cancelled calendar clears a lingering pick token; a picked date
-replaces the input, keeping any time part of a date-time field.
-Setting the value raises Input.Changed, so the answer refreshes.
+Open the directory picker or calendar of the clicked field.
 
 <a id="wizard_ui_bridge.textual_bridge._FormApp.action_submit"></a>
 
@@ -7660,56 +7718,6 @@ def _read_field(index: int) -> AnswerField
 
 Return the current answer of one field read from its widget.
 
-<a id="wizard_ui_bridge.textual_bridge._FormApp._read_new_field"></a>
-
-#### \_read\_new\_field
-
-```python
-def _read_new_field(index: int, field: AskField) -> Optional[AnswerField]
-```
-
-Return a typed field's answer from its text input, else None.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._read_basic_field"></a>
-
-#### \_read\_basic\_field
-
-```python
-def _read_basic_field(index: int, field: AskField) -> AnswerField
-```
-
-Return one original field kind's answer read from its widget.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._int_value"></a>
-
-#### \_int\_value
-
-```python
-def _int_value(widget_id: str, field: AskIntField) -> Optional[int]
-```
-
-Return the integer value of a field, or None when unparsed.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._field_error"></a>
-
-#### \_field\_error
-
-```python
-def _field_error(index: int, field: AskField) -> Optional[str]
-```
-
-Return one field's own validation error, or None when valid.
-
-<a id="wizard_ui_bridge.textual_bridge._FormApp._int_error"></a>
-
-#### \_int\_error
-
-```python
-def _int_error(widget_id: str, field: AskIntField) -> Optional[str]
-```
-
-Return the integer field's validation error, or None.
-
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual"></a>
 
 ## WizardUiBridgeTextual Objects
@@ -7730,8 +7738,10 @@ This bridge draws on the controlling terminal itself, so it takes no
 streams. Use make_text_ui_bridge() to obtain this bridge when a
 terminal is available and a console bridge otherwise.
 
-The ask methods accept help_text but ignore it; ask_form() shows the
-help text of each field as a tooltip instead.
+The ask methods accept help_text but ignore it; ask_form() and
+ask_matrix_form() show the help text of each field or cell as a
+tooltip instead, and so does the inherited ask_table(), which asks
+a table as a matrix form.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.__init__"></a>
 
@@ -7834,24 +7844,6 @@ Ask the user to pick several choices; see ask_multi.
 
 The start value, else the default, is preselected.
 
-<a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_table"></a>
-
-#### ask\_table
-
-```python
-def ask_table(columns: Sequence[TableColumn],
-              cells: list[list[TableCell]],
-              question: str,
-              *,
-              re_ask_reason: Optional[str] = None,
-              partial_check: Optional[PartialCheck] = None,
-              min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None,
-              help_text: Optional[str] = None) -> list[list[Optional[str]]]
-```
-
-Ask the user to fill a table; see WizardUiBridge.ask_table.
-
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_form"></a>
 
 #### ask\_form
@@ -7867,6 +7859,21 @@ def ask_form(
 ```
 
 Ask the user to fill a whole form on one screen; see ask_form.
+
+<a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_matrix_form"></a>
+
+#### ask\_matrix\_form
+
+```python
+def ask_matrix_form(request: MatrixRequest,
+                    *,
+                    re_ask_reason: Optional[str] = None) -> AnswerCells
+```
+
+Ask the user to fill a whole matrix on one screen; see base.
+
+The matrix is shown as a grid of labels and inputs, with buttons
+to resize it when its bounds allow, see _MatrixApp.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.supports_form_field"></a>
 
@@ -7967,4 +7974,357 @@ Return the index of the offered choice to highlight, or None.
 That is the start value, else '(none)' when nullable, else the
 default. A nullable choice offers '(none)' first, so the start value
 is one further down.
+
+<a id="wizard_ui_bridge._textual_cell"></a>
+
+# wizard\_ui\_bridge.\_textual\_cell
+
+The input of one form field or matrix cell in the Textual bridge.
+
+A form row and a matrix cell show the same kinds of input: a text input
+for text, integers and the typed values, a path input with a Browse
+button, a check box, a drop-down, a check-box list, and a date or
+date-time input with a calendar Pick button. :func:`build_input` builds
+the :class:`CellInput` for one Ask*Cell (every Ask*Field is one too),
+which reads the current answer value, reports the input's own validation
+error, writes a prefill into the input, enables or disables it, and opens
+the directory picker or the calendar of a path or date input.
+
+The input gets the id '{prefix}_{key}', such as 'field_3' in a form or
+'cell_1_2' in a matrix, and its Browse or Pick button the id
+'browse_{key}' or 'pick_{key}' and the class 'browse' or 'pick', so a
+screen maps the id of an event's widget back to its field or cell.
+
+The width hint of a cell sizes the text part of its input. Without one,
+a compact input, as in a matrix, gets the width of
+wizard_ui_bridge.matrix_helpers.compact_width(), and a compact path or
+date input gets a narrow '…' button instead of Browse or Pick.
+
+Textual posts a Changed event when an Input or a Select holding a value
+is mounted, which reaches the screen after its on_mount, so such an
+event is not a change by the user. :meth:`CellInput.settle` records the
+answer and error of a mounted input, and :meth:`CellInput.take_change`
+tells whether an event really changed them.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput"></a>
+
+## CellInput Objects
+
+```python
+class CellInput()
+```
+
+The built input of one field or cell, and how to use it.
+
+main is the input the user types in or selects from, which carries
+the id of the field or cell, and button the Browse or Pick button of
+a path or date input. widget is the widget to mount: main, or a row
+of main and its button.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__(cell: AskCell,
+             main: Widget,
+             button: Optional[Button] = None) -> None
+```
+
+Store the cell and its widgets, with no answer seen yet.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.value"></a>
+
+#### value
+
+```python
+def value() -> Optional[PrefillValueType]
+```
+
+Return the current answer value read from the input.
+
+An empty input gives the default, None when nullable, or an empty
+string for text. Text that is not a valid answer gives None, and
+error() tells why.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.answer"></a>
+
+#### answer
+
+```python
+def answer() -> AnswerCell
+```
+
+Return the current answer of the field or cell.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.error"></a>
+
+#### error
+
+```python
+def error() -> Optional[str]
+```
+
+Return the input's own validation error, or None when valid.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.settle"></a>
+
+#### settle
+
+```python
+def settle() -> None
+```
+
+Record the current answer and error as seen, once mounted.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.take_change"></a>
+
+#### take\_change
+
+```python
+def take_change() -> bool
+```
+
+Return whether the answer or error changed since last seen.
+
+The current answer and error are recorded as seen, so an event
+that only repeats them, such as the one Textual posts when the
+input is mounted, is not taken as a change.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.write"></a>
+
+#### write
+
+```python
+def write(value: PrefillValueType) -> None
+```
+
+Write a prefill value into the input, even when it is disabled.
+
+The value has been checked against the cell type, see
+wizard_ui_bridge.form_helpers.prefill_value(). Setting the widget
+value raises the framework's change event, so the screen updates
+as if the user had typed it; an equal value raises none.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.set_enabled"></a>
+
+#### set\_enabled
+
+```python
+def set_enabled(enabled: bool) -> None
+```
+
+Enable or disable the input and any button beside it.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.wants_calendar"></a>
+
+#### wants\_calendar
+
+```python
+def wants_calendar() -> bool
+```
+
+Return whether a date input holds the calendar pick token.
+
+Typing the '?' token into a date or date-time input is an
+alternative to pressing the Pick button. The token is left in the
+input until the calendar closes, when it is replaced by the
+picked date or cleared on cancel.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput.open_dialog"></a>
+
+#### open\_dialog
+
+```python
+def open_dialog() -> None
+```
+
+Open the directory picker or the calendar of the input.
+
+The picker is seeded with the path typed so far and the calendar
+with the date typed so far.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput._text"></a>
+
+#### \_text
+
+```python
+def _text() -> str
+```
+
+Return the text of a text input.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput._path_picked"></a>
+
+#### \_path\_picked
+
+```python
+def _path_picked(result: Optional[str]) -> None
+```
+
+Fill the path input with the picked path, if any.
+
+Setting the input value raises Input.Changed, so the answer and
+the partial validator update as if the user had typed the path.
+
+<a id="wizard_ui_bridge._textual_cell.CellInput._date_picked"></a>
+
+#### \_date\_picked
+
+```python
+def _date_picked(result: Optional[date]) -> None
+```
+
+Fill the date input with the picked date, if any.
+
+A cancelled calendar clears a lingering pick token; a picked date
+replaces the input, keeping any time part of a date-time input.
+Setting the value raises Input.Changed, so the answer refreshes.
+
+<a id="wizard_ui_bridge._textual_cell.build_input"></a>
+
+#### build\_input
+
+```python
+def build_input(cell: AskCell,
+                prefix: str,
+                key: str,
+                compact: bool = False) -> CellInput
+```
+
+Build the input of an input cell or field, see the module docstring.
+
+A label cell has no input and must not be passed. The help text of
+the cell is the tooltip of the input.
+
+<a id="wizard_ui_bridge._textual_cell._main_widget"></a>
+
+#### \_main\_widget
+
+```python
+def _main_widget(cell: AskCell, widget_id: str) -> Widget
+```
+
+Return the input the user types in or selects from for a cell.
+
+<a id="wizard_ui_bridge._textual_cell._start_text"></a>
+
+#### \_start\_text
+
+```python
+def _start_text(cell: AskCell) -> Optional[str]
+```
+
+Return the start text of a cell shown as a text input, else None.
+
+That is the formatted start value, else the default, else ''.
+
+<a id="wizard_ui_bridge._textual_cell._optional_text"></a>
+
+#### \_optional\_text
+
+```python
+def _optional_text(value: Optional[Union[int, Path]]) -> str
+```
+
+Return the input text of an integer or path, or '' for None.
+
+<a id="wizard_ui_bridge._textual_cell._choice_select"></a>
+
+#### \_choice\_select
+
+```python
+def _choice_select(cell: AskChoiceCell, widget_id: str) -> Select[str]
+```
+
+Return a drop-down for a choice cell, blank when no default.
+
+It starts with the start value, else the default, else blank.
+
+<a id="wizard_ui_bridge._textual_cell._multi_selection"></a>
+
+#### \_multi\_selection
+
+```python
+def _multi_selection(cell: AskMultiChoiceCell,
+                     widget_id: str) -> SelectionList[int]
+```
+
+Return a check-box list for a multi-choice cell.
+
+<a id="wizard_ui_bridge._textual_cell._button_for"></a>
+
+#### \_button\_for
+
+```python
+def _button_for(cell: AskCell, key: str, compact: bool) -> Optional[Button]
+```
+
+Return the Browse or Pick button of a path or date cell, else None.
+
+<a id="wizard_ui_bridge._textual_cell._apply_width"></a>
+
+#### \_apply\_width
+
+```python
+def _apply_width(widget: Widget, width: Optional[int]) -> None
+```
+
+Size an input to a width hint in characters, if one is given.
+
+The hint is the width of the text part, so the border and padding
+of the input are added. A check box has no text part and keeps its
+size. The minimum width is set too, since an auto-sized grid column,
+as in a matrix, is as wide as its widgets' content and minimum width.
+
+<a id="wizard_ui_bridge._textual_cell._text_value"></a>
+
+#### \_text\_value
+
+```python
+def _text_value(cell: AskCell, text: str) -> Optional[PrefillValueType]
+```
+
+Return the answer value of a cell shown as a text input.
+
+<a id="wizard_ui_bridge._textual_cell._picked_value"></a>
+
+#### \_picked\_value
+
+```python
+def _picked_value(cell: AskCell, main: Widget) -> Optional[PrefillValueType]
+```
+
+Return the answer value of a check box, drop-down or list.
+
+<a id="wizard_ui_bridge._textual_cell._text_error"></a>
+
+#### \_text\_error
+
+```python
+def _text_error(cell: AskCell, text: str) -> Optional[str]
+```
+
+Return the own error of a cell shown as a text input, or None.
+
+<a id="wizard_ui_bridge._textual_cell._int_error"></a>
+
+#### \_int\_error
+
+```python
+def _int_error(cell: AskIntCell, text: str) -> Optional[str]
+```
+
+Return the integer input's validation error, or None.
+
+<a id="wizard_ui_bridge._textual_cell._set_multi"></a>
+
+#### \_set\_multi
+
+```python
+def _set_multi(selection: SelectionList[int], cell: AskCell,
+               members: Union[list[str], tuple[str, ...]]) -> None
+```
+
+Select exactly the given members in a check-box list.
 

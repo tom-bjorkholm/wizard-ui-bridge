@@ -209,8 +209,8 @@ read-only columns. `e04_table_question.py` asks two table questions:
 `PartialCheck`. It gives early feedback while the table is edited: a
 graphical or Textual bridge shows the message as the user types. A bridge is
 recommended to block confirming the table while the check rejects a cell the
-user has changed, where its user interface makes that reasonable: the Tk
-bridge keeps its OK button from accepting the table, and the console bridge
+user has changed, where its user interface makes that reasonable: the Tk and
+Textual bridges refuse to accept the table, and the console bridge
 re-asks the cell until the check passes. Because a bridge might handle — or
 only show, or even skip — the check in different ways, **a wizard must not
 trust the bridge to enforce it.** After `ask_table()`
@@ -408,10 +408,12 @@ correctness, not polish, since a wizard that expects the user to extend a
 table (a translation table, say) has no way to receive those rows otherwise.
 The inherited `ask_table()` describes the table as a matrix form, which may
 grow and shrink by whole rows, and asks it with `ask_matrix_form()`, so this
-bridge needs no table code of its own. `WizardUiBridgeConsole`,
-`WizardUiBridgeTextual` and the `WizardUiBridgeTk` of the companion package
-`wizard-tk-bridge` override `ask_table()` with table editors of their own — a
-user experience rung, not a correctness requirement.
+bridge needs no table code of its own. `WizardUiBridgeTextual` and the
+`WizardUiBridgeTk` of the companion package `wizard-tk-bridge` rely on it too:
+their whole-screen `ask_matrix_form()` makes the inherited `ask_table()` a
+whole-screen table. `WizardUiBridgeConsole` overrides `ask_table()` with a
+table editor of its own — a user experience rung, not a correctness
+requirement.
 
 ### Help on request
 

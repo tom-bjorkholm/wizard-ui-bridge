@@ -276,7 +276,7 @@ def test_pick_bad_id() -> None:
 
     async def scenario() -> int:
         async with app.run_test():
-            app._pick_clicked(Button.Pressed(Button('x', id='submit')))
+            app._dialog_clicked(Button.Pressed(Button('x', id='submit')))
             return len(app.screen_stack)
     assert asyncio.run(scenario()) == 1
 

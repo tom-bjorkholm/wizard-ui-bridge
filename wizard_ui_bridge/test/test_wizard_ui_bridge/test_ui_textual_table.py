@@ -1,308 +1,211 @@
 #! /usr/bin/env python3
-"""Tests for the Textual table screen and its variable-row editor."""
+"""Tests for table questions in the Textual bridge.
+
+The Textual bridge inherits WizardUiBridge.ask_table(), which asks the
+table as a matrix form, so a table is shown by the Textual matrix screen.
+The bridge tests answer the table on that screen the way a user does,
+and the screen tests show the matrix request of a table directly, to
+read the screen while the partial check rejects a cell.
+"""
 
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-# pylint: disable=protected-access
-
-import asyncio
-from typing import Optional
-
+from typing import Awaitable, Callable, Optional
 import pytest
-from textual.widgets import Input, Static
-from wizard_ui_bridge import TableCell, TableColumn, WizardBack, \
-    WizardCancelLevel
-from wizard_ui_bridge._textual_table import _TableApp
-from wizard_ui_bridge._textual_widgets import _parse_cell_id
-from .ui_textual_support import drive, _CannedBridge
+from textual.pilot import Pilot
+from textual.widgets import Button, Input, Static
+from wizard_ui_bridge import AnswerCells, TableCell, TableColumn, WizardBack
+from wizard_ui_bridge._table_matrix import TableMatrix
+from wizard_ui_bridge._textual_matrix import _MatrixApp, ADD_ROW, \
+    REMOVE_ROW
+from .textual_matrix_support import ScriptedBridge, run_matrix, status, \
+    type_in
+
+_GUEST = (TableColumn('Guest'),)
+_RENAME = (TableColumn('Source', read_only=True), TableColumn('Rename to'))
+_NEED_NAME = 'Need a name.'
 
 
-def _status(app: _TableApp) -> str:
-    """Return the text currently shown in the table status line."""
-    return str(app.query_one('#table_status', Static).render())
+def _ask(columns: tuple[TableColumn, ...], cells: list[list[TableCell]],
+         script: Callable[[_MatrixApp, Pilot[AnswerCells]], Awaitable[None]],
+         rows: tuple[Optional[int], Optional[int]] = (None, None)
+         ) -> list[list[Optional[str]]]:
+    """Ask a table through the Textual bridge, answering it with script."""
+    bridge = ScriptedBridge(script)
+    return bridge.ask_table(columns, cells, 'Fill?', min_rows=rows[0],
+                            max_rows=rows[1])
 
 
-def test_table_prefilled() -> None:
-    """Submitting unchanged returns the pre-filled cells and headers."""
-    columns = (TableColumn('Parameter', read_only=True),
-               TableColumn('Value'))
-    cells = [[TableCell(value='alpha'), TableCell(value='one')],
-             [TableCell(value='beta'),
-              TableCell(value='y', choices=('x', 'y'), nullable=True)]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None), ['ctrl+s'])
-    assert driven.return_value == [['alpha', 'one'], ['beta', 'y']]
+def test_table_fixed() -> None:
+    """A read-only cell keeps its text and an editable cell is filled.
 
-
-def test_table_clear_null() -> None:
-    """A cleared nullable text cell is reported as None."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(value='one', nullable=True)]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None),
-                   ['end', 'ctrl+u', 'ctrl+s'])
-    assert driven.return_value == [[None]]
-
-
-def test_table_empty_freetext() -> None:
-    """A cleared non-nullable text cell is reported as an empty string."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(value='one')]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None),
-                   ['end', 'ctrl+u', 'ctrl+s'])
-    assert driven.return_value == [['']]
-
-
-def test_table_select_blank() -> None:
-    """A nullable drop-down left blank is reported as None."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(choices=('x', 'y'), nullable=True)]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None), ['ctrl+s'])
-    assert driven.return_value == [[None]]
-
-
-def test_table_select_pick() -> None:
-    """Choosing a drop-down option returns that choice."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(choices=('x', 'y'), nullable=True)]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None),
-                   ['enter', 'down', 'enter', 'ctrl+s'])
-    assert driven.return_value == [['x']]
-
-
-def test_table_nav_back() -> None:
-    """ctrl+b in the table records a back request and exits."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(value='one')]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None), ['ctrl+b'])
-    assert driven.return_value is None
-    assert driven.nav is WizardBack
-
-
-def test_table_partial_check() -> None:
-    """The partial check sees each cell change with the changed position."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(nullable=True)]]
-    calls: list[tuple[list[list[Optional[str]]], tuple[int, int]]] = []
-
-    def check(table: list[list[Optional[str]]],
-              position: tuple[int, int]) -> tuple[bool, str]:
-        calls.append(([row[:] for row in table], position))
-        value = table[position[0]][position[1]]
-        return (value != 'bad', '' if value != 'bad' else 'no good')
-    app = _TableApp(columns, cells, 'q', [], check)
-    driven = drive(app, ['b', 'a', 'd', 'end', 'ctrl+u', 'o', 'k', 'ctrl+s'])
-    assert driven.return_value == [['ok']]
-    assert ([['bad']], (0, 0)) in calls
-    assert ([['ok']], (0, 0)) in calls
-
-
-def test_cell_message_named() -> None:
-    """A rejected cell is named and framed, until it is fixed.
-
-    The grid shows every cell at once and shares one status line, so a
-    bare partial-check message leaves the user guessing which cell it is
-    about. The rejected cell is in the second row and in the column after
-    a read-only one, so neither number may be taken from the first cell.
+    The header row holds the column headers as bold labels, and the
+    first editable cell has the focus.
     """
-    columns = (TableColumn('Guest', read_only=True), TableColumn('Meal'))
-    cells = [[TableCell(value='Ann'), TableCell(value='ok')],
-             [TableCell(value='Bo'), TableCell(value='ok')]]
+    shown: list[object] = []
 
-    def check(table: list[list[Optional[str]]],
-              position: tuple[int, int]) -> tuple[bool, str]:
-        value = table[position[0]][position[1]]
-        return (value != 'bad', '' if value != 'bad' else 'Unknown meal.')
-    app = _TableApp(columns, cells, 'q', [], check)
-
-    async def scenario() -> tuple[str, bool, bool]:
-        async with app.run_test() as pilot:
-            app.query_one('#cell_1_1', Input).value = 'bad'
-            await pilot.pause()
-            shown = (_status(app),
-                     app.query_one('#cell_1_1').has_class('cell_error'))
-            app.query_one('#cell_1_1', Input).value = 'fish'
-            await pilot.pause()
-            return shown + (app.query_one('#cell_1_1'
-                                          ).has_class('cell_error'),)
-    assert asyncio.run(scenario()) == \
-        ("Row 2, field 'Meal': Unknown meal.", True, False)
+    async def fill(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Read the header and focus, replace the value, and submit."""
+        header = app.query_one('#cell_0_0', Static)
+        shown.extend([str(header.render()), header.styles.text_style.bold,
+                      app.focused is app.query_one('#cell_1_1')])
+        await pilot.press('end', 'ctrl+u', *'town', 'ctrl+s')
+    cells = [[TableCell('city'), TableCell('city')]]
+    assert _ask(_RENAME, cells, fill) == [['city', 'town']]
+    assert shown == ['Source', True, True]
 
 
-def test_row_count_unnamed() -> None:
-    """A message about the row count names no cell and frames none."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(value='a')]]
-    app = _TableApp(columns, cells, 'q', [], None, 1, 1)
-
-    async def scenario() -> tuple[str, int]:
-        async with app.run_test() as pilot:
-            await pilot.click('#add_row')
-            await pilot.pause()
-            return (_status(app), len(app.query('.cell_error')))
-    assert asyncio.run(scenario()) == ('At most 1 rows allowed.', 0)
-
-
-def test_ask_table_canned() -> None:
-    """ask_table() returns the table the screen produced."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(value='one')]]
-    bridge = _CannedBridge([[['one']]])
-    assert bridge.ask_table(columns, cells, 'q') == [['one']]
+def test_table_add_remove() -> None:
+    """A variable table grows and shrinks with the matrix row buttons."""
+    async def grow(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Add two rows, fill one, drop the other, and submit."""
+        await pilot.click(f'#{ADD_ROW}')
+        await pilot.pause()
+        await pilot.press('b')
+        # A second click this soon would fall within the button's press
+        # animation, which ignores clicks, so the button is pressed.
+        app.query_one(f'#{ADD_ROW}', Button).press()
+        await pilot.pause()
+        await pilot.click(f'#{REMOVE_ROW}')
+        await pilot.pause()
+        await pilot.press('ctrl+s')
+    assert _ask(_GUEST, [[TableCell('a')]], grow, (1, 3)) == [['a'], ['b']]
 
 
-def test_ask_table_nav() -> None:
-    """ask_table() re-raises a navigation request from the screen."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(value='one')]]
-    bridge = _CannedBridge([WizardCancelLevel])
-    with pytest.raises(WizardCancelLevel):
-        bridge.ask_table(columns, cells, 'q')
+@pytest.mark.parametrize('rows, row_buttons', [
+    ((None, None), False), ((1, None), False), ((None, 3), False),
+    ((1, 3), True)])
+def test_table_row_buttons(rows: tuple[Optional[int], Optional[int]],
+                           row_buttons: bool) -> None:
+    """Row buttons are offered only when both row bounds are given."""
+    shown: list[int] = []
+
+    async def confirm(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Count the row buttons and submit."""
+        shown.append(len(app.query(f'#{ADD_ROW}, #{REMOVE_ROW}')))
+        await pilot.press('ctrl+s')
+    _ask(_GUEST, [[TableCell('a')]], confirm, rows)
+    assert shown == [2 if row_buttons else 0]
 
 
-def test_table_add_row() -> None:
-    """Adding a row, filling it, and submitting returns the new row."""
-    columns = (TableColumn('V'),)
-    cells = [[TableCell(value='a')], [TableCell(value='b')]]
-    app = _TableApp(columns, cells, 'q', [], None, 2, 4)
-
-    async def scenario() -> None:
-        async with app.run_test() as pilot:
-            await pilot.click('#add_row')
-            await pilot.pause()
-            app.query_one('#cell_2_0').focus()
-            await pilot.press('c')
-            await pilot.click('#submit')
-    asyncio.run(scenario())
-    assert app.return_value == [['a'], ['b'], ['c']]
+@pytest.mark.parametrize('nullable, expected', [(True, None), (False, '')])
+def test_table_cleared(nullable: bool, expected: Optional[str]) -> None:
+    """A cleared text cell is None when nullable, else an empty string."""
+    async def clear(_app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Clear the cell and submit."""
+        await pilot.press('end', 'ctrl+u', 'ctrl+s')
+    cells = [[TableCell('one', nullable=nullable)]]
+    assert _ask(_GUEST, cells, clear) == [[expected]]
 
 
-def test_add_row_readonly() -> None:
-    """A read-only column becomes editable in an added row."""
-    columns = (TableColumn('P', read_only=True), TableColumn('V'))
-    cells = [[TableCell(value='p1'), TableCell(value='x')],
-             [TableCell(value='p2'), TableCell(value='y')]]
-    app = _TableApp(columns, cells, 'q', [], None, 2, 4)
-
-    async def scenario() -> None:
-        async with app.run_test() as pilot:
-            await pilot.click('#add_row')
-            await pilot.pause()
-            app.query_one('#cell_2_0').focus()
-            await pilot.press('z')
-            await pilot.click('#submit')
-    asyncio.run(scenario())
-    assert app.return_value == [['p1', 'x'], ['p2', 'y'], ['z', '']]
+def test_table_nav() -> None:
+    """ctrl+b on a table re-raises a back request from ask_table()."""
+    async def back(_app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Press the back key."""
+        await pilot.press('ctrl+b')
+    with pytest.raises(WizardBack):
+        _ask(_GUEST, [[TableCell('a')]], back)
 
 
-def test_table_remove_row() -> None:
-    """Removing the last row drops it from the result."""
-    columns = (TableColumn('V'),)
-    cells = [[TableCell(value='a')], [TableCell(value='b')]]
-    app = _TableApp(columns, cells, 'q', [], None, 1, 3)
-
-    async def scenario() -> None:
-        async with app.run_test() as pilot:
-            await pilot.click('#remove_row')
-            await pilot.pause()
-            await pilot.click('#submit')
-    asyncio.run(scenario())
-    assert app.return_value == [['a']]
+def _named(table: list[list[Optional[str]]],
+           position: tuple[int, int]) -> tuple[bool, str]:
+    """Accept a cell that is not empty."""
+    return (bool(table[position[0]][position[1]]), _NEED_NAME)
 
 
-def test_table_row_bounds() -> None:
-    """The table will not shrink below min_rows or grow past max_rows."""
-    columns = (TableColumn('V'),)
-    cells = [[TableCell(value='a')]]
-    app = _TableApp(columns, cells, 'q', [], None, 1, 2)
-
-    async def scenario() -> None:
-        async with app.run_test() as pilot:
-            await pilot.click('#remove_row')
-            await pilot.pause()
-            await pilot.click('#add_row')
-            await pilot.pause()
-            await pilot.click('#add_row')
-            await pilot.pause()
-            await pilot.click('#submit')
-    asyncio.run(scenario())
-    result = app.return_value
-    assert result is not None
-    assert len(result) == 2
+def _guests(cells: list[list[TableCell]],
+            script: Callable[[_MatrixApp, Pilot[AnswerCells]],
+                             Awaitable[None]],
+            rows: tuple[Optional[int], Optional[int]] = (None, None)
+            ) -> _MatrixApp:
+    """Show the matrix of a guest table with a name check by script."""
+    table = TableMatrix(_GUEST, cells, _named, None)
+    return run_matrix(table.request('Q', *rows), script)[0]
 
 
-def test_fixed_no_buttons() -> None:
-    """A fixed table has no Add row or Remove row button."""
-    columns = (TableColumn('V'),)
-    cells = [[TableCell(value='a')]]
-    app = _TableApp(columns, cells, 'q', [], None)
-
-    async def scenario() -> tuple[int, int]:
-        async with app.run_test():
-            return (len(app.query('#add_row')), len(app.query('#remove_row')))
-    assert asyncio.run(scenario()) == (0, 0)
+async def _submit(_app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+    """Submit the table as it is."""
+    await pilot.press('ctrl+s')
 
 
-def test_ask_table_variable() -> None:
-    """ask_table passes the row bounds through to the table screen."""
-    columns = (TableColumn('V'),)
-    cells = [[TableCell(value='a')]]
-    bridge = _CannedBridge([[['a']]])
-    bridge.ask_table(columns, cells, 'q', min_rows=1, max_rows=3)
-    app = bridge.launched[0]
-    assert isinstance(app, _TableApp)
-    assert app._variable is True
-    assert (app._min_rows, app._max_rows) == (1, 3)
+def test_check_untouched() -> None:
+    """A cell the user has not changed does not block the table."""
+    app = _guests([[TableCell('')]], _submit)
+    assert app.return_value is not None
 
 
-def test_parse_cell_id() -> None:
-    """A cell id parses to its position; other ids parse to None."""
-    assert _parse_cell_id('cell_2_3') == (2, 3)
-    assert _parse_cell_id(None) is None
-    assert _parse_cell_id('submit') is None
+def test_check_blocks() -> None:
+    """A changed cell the check rejects blocks the table until fixed."""
+    found: list[object] = []
+
+    async def edit(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Empty the name, submit, fix it and submit again."""
+        await type_in(app, pilot, (1, 0), '')
+        found.append(status(app))
+        await pilot.press('ctrl+s')
+        found.append(app.return_value)
+        await type_in(app, pilot, (1, 0), 'Bo')
+        found.append(status(app))
+        await pilot.press('ctrl+s')
+    app = _guests([[TableCell('Ann')]], edit)
+    assert found == [_NEED_NAME, None, '']
+    assert app.return_value is not None
 
 
-def test_make_select_nonnull() -> None:
-    """A non-nullable empty drop-down defaults to its first choice."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(choices=('x', 'y'))]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None), ['ctrl+s'])
-    assert driven.return_value == [['x']]
+def test_check_earlier_cell() -> None:
+    """An earlier changed cell still blocks, named in the message."""
+    found: list[str] = []
+
+    async def edit(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Empty the first name, change the second and submit."""
+        await type_in(app, pilot, (1, 0), '')
+        await type_in(app, pilot, (2, 0), 'Cy')
+        found.append(status(app))
+        await pilot.press('ctrl+s')
+    app = _guests([[TableCell('Ann')], [TableCell('Bo')]], edit)
+    assert found == [f'Row 1 / Guest: {_NEED_NAME}']
+    assert app.return_value is None
 
 
-def test_focus_empty_rows() -> None:
-    """A table with no rows mounts and submits an empty result."""
-    columns = (TableColumn('Value'),)
-    driven = drive(_TableApp(columns, [], 'q', [], None, 0, 2), ['ctrl+s'])
-    assert driven.return_value == []
+def test_check_new_row() -> None:
+    """The empty cell of an appended row does not complain or block."""
+    found: list[str] = []
+
+    async def add(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Add a row and submit."""
+        await pilot.click(f'#{ADD_ROW}')
+        await pilot.pause()
+        found.append(status(app))
+        await pilot.press('ctrl+s')
+    app = _guests([[TableCell('Ann')], [TableCell('Bo')]], add, (1, 3))
+    assert found == ['']
+    assert app.return_value is not None
+    assert len(app.return_value) == 4
 
 
-def test_focus_all_readonly() -> None:
-    """A first row of only read-only cells leaves nothing focused."""
-    columns = (TableColumn('P', read_only=True),)
-    cells = [[TableCell(value='x')]]
-    driven = drive(_TableApp(columns, cells, 'q', [], None), ['ctrl+s'])
-    assert driven.return_value == [['x']]
+def test_choice_required() -> None:
+    """An empty choice cell that is not nullable blocks the table."""
+    found: list[str] = []
+
+    async def submit(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Submit the fresh table and read the status."""
+        await pilot.press('ctrl+s')
+        found.append(status(app))
+    cells = [[TableCell(None, choices=('x', 'y'))]]
+    table = TableMatrix(_GUEST, cells, None, None)
+    app = run_matrix(table.request('Q', None, None), submit)[0]
+    assert app.return_value is None
+    assert found == ['Row 1 / Guest: Please choose a value.']
 
 
-def test_recheck_none() -> None:
-    """A cell change with no parsed position is ignored."""
-    columns = (TableColumn('Value'),)
-    app = _TableApp(columns, [[TableCell(value='a')]], 'q', [], None)
-    app._recheck(None)
-    assert app._table == [['a']]
+def test_cell_typed() -> None:
+    """Typing into a focused table cell edits that cell."""
+    found: list[str] = []
 
-
-def test_add_past_max() -> None:
-    """Adding beyond max_rows is refused and the row count holds."""
-    columns = (TableColumn('Value'),)
-    cells = [[TableCell(value='a')]]
-    app = _TableApp(columns, cells, 'q', [], None, 1, 2)
-
-    async def scenario() -> int:
-        async with app.run_test() as pilot:
-            app._add_row()
-            await pilot.pause()
-            app._add_row()
-            await pilot.pause()
-            return len(app._rows)
-    assert asyncio.run(scenario()) == 2
+    async def edit(app: _MatrixApp, pilot: Pilot[AnswerCells]) -> None:
+        """Type after the start value and read the cell."""
+        await pilot.press('end', '!')
+        found.append(app.query_one('#cell_1_0', Input).value)
+    _guests([[TableCell('Ann')]], edit)
+    assert found == ['Ann!']

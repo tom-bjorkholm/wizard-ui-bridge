@@ -5,8 +5,9 @@ This module provides the concrete Textual bridge used when the wizard
 talks to a user through a real terminal. Each ask method runs a short
 lived Textual application for one question and returns its result, which
 keeps the one-question-at-a-time contract of WizardUiBridge while giving
-the user a full-screen interface with selectable lists, check boxes and
-editable tables.
+the user a full-screen interface with selectable lists, check boxes,
+whole forms and matrix forms. A table question is asked by the inherited
+WizardUiBridge.ask_table() through ask_matrix_form().
 
 Navigation keys exit a screen with no value and record which
 WizardNavigation request to raise, so the bridge re-raises it after the
@@ -20,8 +21,6 @@ corrupt the Textual display.
 # MIT License
 
 from __future__ import annotations
-from datetime import date
-from functools import partial
 from io import StringIO
 from pathlib import Path
 from typing import ClassVar, Iterator, Literal, Optional, Sequence, \
@@ -35,36 +34,24 @@ from textual.widgets import Button, Checkbox, Footer, Input, \
     OptionList, Select, SelectionList, Static
 from textual.widgets.selection_list import Selection
 from wizard_ui_bridge.bridge import WizardUiBridge
-from wizard_ui_bridge.bridge_helpers import check_text_args, INT_ERROR, \
-    int_text, multi_count_message, out_of_range, path_answer, range_error, \
-    text_answer, offered_choices
-from wizard_ui_bridge.form_helpers import initial_answer
-from wizard_ui_bridge._form_prefill import apply_prefills
-from wizard_ui_bridge._parse import NEW_FIELD_TYPES, \
-    value_from_text, error_from_text, new_answer
-from wizard_ui_bridge._calendar import _CalendarScreen
+from wizard_ui_bridge.bridge_helpers import check_text_args, \
+    multi_count_message, path_answer, text_answer, offered_choices
+from wizard_ui_bridge.form_helpers import answer_of, initial_answer, \
+    valid_prefills
+from wizard_ui_bridge.matrix_defs import AnswerCells, MatrixRequest
+from wizard_ui_bridge._textual_cell import CellInput, build_input
+from wizard_ui_bridge._textual_matrix import _MatrixApp
 from wizard_ui_bridge._textual_nav import _NavApp
-from wizard_ui_bridge._textual_table import _TableApp
 from wizard_ui_bridge._textual_widgets import \
-    _header_widgets, _default_index, _preselected, _make_field_widget, \
-    _field_index, _browse_index, _pick_index, _multi_error, \
-    _calendar_setup, _combined_text, _field_message, _apply_width
-from wizard_ui_bridge._path import _PathPick, \
-    _PickerScreen, _start_dir, _start_value
-from wizard_ui_bridge.arg_types import PartialCheck, WizardAbort, \
-    PathAskOptions, TableColumn, TableCell, check_choice_args, \
-    check_multi_args
+    _header_widgets, _default_index, _preselected, _field_index, \
+    _field_message
+from wizard_ui_bridge._path import _PathPick, _start_dir, _start_value
+from wizard_ui_bridge.arg_types import WizardAbort, PathAskOptions, \
+    check_choice_args, check_multi_args
 from wizard_ui_bridge.form_defs import AskField, AskFields, \
-    ALL_ASK_FIELD_TYPES, AnswerField, AnswerFields, PartialFormValidator, \
-    AskTextField, AskIntField, AskPathField, AskYesNoField, AskChoiceField, \
-    AskMultiChoiceField, AskDateField, AskDateTimeField, AnswerTextField, \
-    AnswerIntField, AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
-    AnswerMultiChoiceField
-
-_CAL_TOKEN = '?'
+    ALL_ASK_FIELD_TYPES, AnswerField, AnswerFields, PartialFormValidator
 
 _T = TypeVar('_T')
-_CHOICE_REQUIRED = 'Please choose a value.'
 
 
 class _TextApp(_NavApp[str]):
@@ -243,10 +230,10 @@ class _FormApp(_NavApp[list[AnswerField]]):
         self._fields = fields
         self._messages = messages
         self._validator = validator
+        self._inputs: list[CellInput] = []
         self._answers = [initial_answer(field) for field in fields]
         self._disabled: set[int] = set()
         self._last_changed = 0
-        self._form_ready = False
 
     def compose(self) -> ComposeResult:
         """Lay out the header, the field grid, submit and footer."""
@@ -258,29 +245,31 @@ class _FormApp(_NavApp[list[AnswerField]]):
         yield Footer()
 
     def _field_widgets(self) -> Iterator[Widget]:
-        """Yield a label and an input widget for each field."""
+        """Yield a label and an input widget for each field.
+
+        The inputs are built here, since a Textual input can only be
+        built while the app is running.
+        """
+        self._inputs = [build_input(field, 'field', str(index))
+                        for index, field in enumerate(self._fields)]
         for index, field in enumerate(self._fields):
             label = Static(field.short_question, id=f'label_{index}')
-            widget = _make_field_widget(field, index)
-            if field.help_text is not None:
-                label.tooltip = field.help_text
-                widget.tooltip = field.help_text
+            label.tooltip = field.help_text
             yield label
-            yield widget
+            yield self._inputs[index].widget
 
     def on_mount(self) -> None:
-        """Size the grid and inputs, focus the first field, not the scroll.
+        """Size the grid, focus the first field, not the scroll.
 
-        An input with a width hint keeps that width; the others fill
-        their grid column.
+        Each input records its mounted answer as seen, so the change
+        event Textual posts as it mounts an input is not taken as an edit.
         """
         self.query_one('#form_scroll').can_focus = False
         self.query_one('#form_grid', Grid).styles.grid_size_columns = 2
-        for index, field in enumerate(self._fields):
-            _apply_width(self.query_one(f'#field_{index}'), field.width)
+        for cell_input in self._inputs:
+            cell_input.settle()
         if self._fields:
-            self.query_one('#field_0').focus()
-        self._form_ready = True
+            self._inputs[0].main.focus()
 
     @on(Input.Changed)
     def _input_changed(self, event: Input.Changed) -> None:
@@ -304,34 +293,23 @@ class _FormApp(_NavApp[list[AnswerField]]):
         self._changed(event.control.id)
 
     def _changed(self, widget_id: Optional[str]) -> None:
-        """Update the changed answer and refresh the shown feedback."""
-        if not self._form_ready:
-            return
+        """Update the changed answer and refresh the shown feedback.
+
+        Typing the '?' token into a date field opens its calendar.
+        """
         index = _field_index(widget_id)
         if index is None:
             return
-        if self._maybe_open_calendar(index):
+        cell_input = self._inputs[index]
+        if cell_input.wants_calendar():
+            cell_input.open_dialog()
+            return
+        if not cell_input.take_change():
             return
         self._last_changed = index
         self._answers[index] = self._read_field(index)
         validator_message = self._apply_validator(index)
         self._show_live(index, validator_message)
-
-    def _maybe_open_calendar(self, index: int) -> bool:
-        """Open the calendar when a date field holds the pick token.
-
-        Typing the '?' token into a date or date-time input is an
-        alternative to pressing the Pick button. The token is left in the
-        input until the calendar closes, when it is replaced by the picked
-        date or cleared on cancel.
-        """
-        field = self._fields[index]
-        if not isinstance(field, (AskDateField, AskDateTimeField)):
-            return False
-        if self.query_one(f'#field_{index}', Input).value != _CAL_TOKEN:
-            return False
-        self._open_calendar(index)
-        return True
 
     def _apply_validator(self, index: int) -> str:
         """Apply the validator's disabled rows and prefills, return message."""
@@ -339,7 +317,9 @@ class _FormApp(_NavApp[list[AnswerField]]):
             return ''
         result = self._validator(self._answers, index)
         self._apply_disabled(result.disable_row_idxs)
-        apply_prefills(self, self._fields, index, result.prefill_values)
+        for target, value in valid_prefills(self._fields, index,
+                                            result.prefill_values):
+            self._inputs[target].write(value)
         return '' if result.is_valid else result.message
 
     def _show_live(self, index: int, validator_message: str) -> None:
@@ -352,84 +332,35 @@ class _FormApp(_NavApp[list[AnswerField]]):
         re-asking, instead of waiting for submit.
         """
         error = None if index in self._disabled \
-            else self._field_error(index, self._fields[index])
+            else self._inputs[index].error()
         if error is None:
             self._report(None, validator_message)
         else:
             self._report(index, error)
 
     def _apply_disabled(self, disable_row_idxs: tuple[int, ...]) -> None:
-        """Enable or disable each row to match the validator result."""
+        """Enable or disable each row to match the validator result.
+
+        A prefill aimed at a disabled row is still written, so the value
+        shows greyed and takes effect if the row is later enabled.
+        """
         self._disabled = set(disable_row_idxs)
-        for index in range(len(self._fields)):
+        for index, cell_input in enumerate(self._inputs):
             off = index in self._disabled
-            self.query_one(f'#field_{index}').disabled = off
+            cell_input.set_enabled(not off)
             self.query_one(f'#label_{index}').disabled = off
-            for button in self.query(f'#browse_{index}'):
-                button.disabled = off
-            for button in self.query(f'#pick_{index}'):
-                button.disabled = off
 
     @on(Button.Pressed, '#submit')
     def _submit_clicked(self, _event: Button.Pressed) -> None:
         """Submit the form when the submit button is pressed."""
         self.action_submit()
 
-    @on(Button.Pressed, '.browse')
-    def _browse_clicked(self, event: Button.Pressed) -> None:
-        """Open the directory picker for the clicked path field."""
-        index = _browse_index(event.button.id)
+    @on(Button.Pressed, '.browse, .pick')
+    def _dialog_clicked(self, event: Button.Pressed) -> None:
+        """Open the directory picker or calendar of the clicked field."""
+        index = _field_index(event.button.id)
         if index is not None:
-            self._open_picker(index)
-
-    @on(Button.Pressed, '.pick')
-    def _pick_clicked(self, event: Button.Pressed) -> None:
-        """Open the calendar for the clicked date field."""
-        index = _pick_index(event.button.id)
-        if index is not None:
-            self._open_calendar(index)
-
-    def _open_picker(self, index: int) -> None:
-        """Push the picker seeded with the field's current text."""
-        field = self._fields[index]
-        assert isinstance(field, AskPathField)
-        text = self.query_one(f'#field_{index}', Input).value
-        self.push_screen(_PickerScreen(field.path_options, text),
-                         partial(self._path_picked, index))
-
-    def _open_calendar(self, index: int) -> None:
-        """Push the calendar seeded from the date field's current text."""
-        field = self._fields[index]
-        assert isinstance(field, (AskDateField, AskDateTimeField))
-        text = self.query_one(f'#field_{index}', Input).value
-        seed, minimum, maximum = _calendar_setup(field, text)
-        self.push_screen(_CalendarScreen(seed, minimum, maximum),
-                         partial(self._date_picked, index))
-
-    def _path_picked(self, index: int, result: Optional[str]) -> None:
-        """Fill the path input with the picked path, if any.
-
-        Setting the input value raises Input.Changed, so the answer and
-        the partial validator update as if the user had typed the path.
-        """
-        if result is not None:
-            self.query_one(f'#field_{index}', Input).value = result
-
-    def _date_picked(self, index: int, result: Optional[date]) -> None:
-        """Fill the date input with the picked date, if any.
-
-        A cancelled calendar clears a lingering pick token; a picked date
-        replaces the input, keeping any time part of a date-time field.
-        Setting the value raises Input.Changed, so the answer refreshes.
-        """
-        field = self._fields[index]
-        assert isinstance(field, (AskDateField, AskDateTimeField))
-        widget = self.query_one(f'#field_{index}', Input)
-        if result is None:
-            if widget.value == _CAL_TOKEN:
-                widget.value = ''
-            return
-        widget.value = _combined_text(field, result, widget.value)
+            self._inputs[index].open_dialog()
 
     def action_submit(self) -> None:
         """Validate every enabled field and exit with the answers."""
@@ -455,10 +386,10 @@ class _FormApp(_NavApp[list[AnswerField]]):
 
     def _first_error(self) -> Optional[tuple[int, str]]:
         """Return the first enabled field's index and error, or None."""
-        for index, field in enumerate(self._fields):
+        for index, cell_input in enumerate(self._inputs):
             if index in self._disabled:
                 continue
-            error = self._field_error(index, field)
+            error = cell_input.error()
             if error is not None:
                 return (index, error)
         return None
@@ -483,85 +414,7 @@ class _FormApp(_NavApp[list[AnswerField]]):
 
     def _read_field(self, index: int) -> AnswerField:
         """Return the current answer of one field read from its widget."""
-        field = self._fields[index]
-        answer = self._read_new_field(index, field)
-        return answer if answer is not None \
-            else self._read_basic_field(index, field)
-
-    def _read_new_field(self, index: int,
-                        field: AskField) -> Optional[AnswerField]:
-        """Return a typed field's answer from its text input, else None."""
-        if not isinstance(field, NEW_FIELD_TYPES):
-            return None
-        text = self.query_one(f'#field_{index}', Input).value
-        return new_answer(field, value_from_text(field, text))
-
-    def _read_basic_field(self, index: int, field: AskField) -> AnswerField:
-        """Return one original field kind's answer read from its widget."""
-        widget_id = f'#field_{index}'
-        if isinstance(field, AskTextField):
-            text = self.query_one(widget_id, Input).value
-            answer = text_answer(text, field.nullable, field.default)
-            return AnswerTextField(field, answer)
-        if isinstance(field, AskIntField):
-            return AnswerIntField(field, self._int_value(widget_id, field))
-        if isinstance(field, AskPathField):
-            text = self.query_one(widget_id, Input).value
-            _, path, _ = path_answer(text, field.path_options)
-            return AnswerPathField(field, path)
-        if isinstance(field, AskYesNoField):
-            checked = self.query_one(widget_id, Checkbox).value
-            return AnswerYesNoField(field, bool(checked))
-        if isinstance(field, AskChoiceField):
-            select = self.query_one(widget_id, Select)
-            value = None if select.is_blank() else str(select.value)
-            return AnswerChoiceField(field, value)
-        assert isinstance(field, AskMultiChoiceField)
-        selection = self.query_one(widget_id, SelectionList)
-        chosen = sorted(selection.selected)
-        values = [field.choices[i] for i in chosen]
-        return AnswerMultiChoiceField(field, values)
-
-    def _int_value(self, widget_id: str, field: AskIntField) -> Optional[int]:
-        """Return the integer value of a field, or None when unparsed."""
-        text = self.query_one(widget_id, Input).value
-        if text == '':
-            return field.default
-        return int_text(text)
-
-    def _field_error(self, index: int, field: AskField) -> Optional[str]:
-        """Return one field's own validation error, or None when valid."""
-        widget_id = f'#field_{index}'
-        if isinstance(field, NEW_FIELD_TYPES):
-            text = self.query_one(widget_id, Input).value
-            return error_from_text(field, text)
-        if isinstance(field, AskIntField):
-            return self._int_error(widget_id, field)
-        if isinstance(field, AskPathField):
-            text = self.query_one(widget_id, Input).value
-            done, _, reason = path_answer(text, field.path_options)
-            return None if done else reason
-        if isinstance(field, AskChoiceField):
-            blank = self.query_one(widget_id, Select).is_blank()
-            return _CHOICE_REQUIRED if blank and not field.nullable else None
-        if isinstance(field, AskMultiChoiceField):
-            count = len(self.query_one(widget_id, SelectionList).selected)
-            return _multi_error(count, field)
-        return None
-
-    def _int_error(self, widget_id: str, field: AskIntField) -> Optional[str]:
-        """Return the integer field's validation error, or None."""
-        text = self.query_one(widget_id, Input).value
-        if text == '':
-            if field.nullable or field.default is not None:
-                return None
-            return INT_ERROR
-        value = int_text(text)
-        if value is None:
-            return INT_ERROR
-        if out_of_range(value, field.min_value, field.max_value):
-            return range_error(field.min_value, field.max_value)
-        return None
+        return answer_of(self._fields[index], self._inputs[index].value())
 
 
 class WizardUiBridgeTextual(WizardUiBridge):
@@ -577,8 +430,10 @@ class WizardUiBridgeTextual(WizardUiBridge):
     streams. Use make_text_ui_bridge() to obtain this bridge when a
     terminal is available and a console bridge otherwise.
 
-    The ask methods accept help_text but ignore it; ask_form() shows the
-    help text of each field as a tooltip instead.
+    The ask methods accept help_text but ignore it; ask_form() and
+    ask_matrix_form() show the help text of each field or cell as a
+    tooltip instead, and so does the inherited ask_table(), which asks
+    a table as a matrix form.
     """
 
     def __init__(self) -> None:
@@ -687,20 +542,6 @@ class WizardUiBridgeTextual(WizardUiBridge):
                                      max_select, messages))
         return [choices[index] for index in sorted(chosen)]
 
-    # pylint: disable-next=too-many-arguments
-    def ask_table(self, columns: Sequence[TableColumn],
-                  cells: list[list[TableCell]], question: str, *,
-                  re_ask_reason: Optional[str] = None,
-                  partial_check: Optional[PartialCheck] = None,
-                  min_rows: Optional[int] = None,
-                  max_rows: Optional[int] = None,
-                  help_text: Optional[str] = None
-                  ) -> list[list[Optional[str]]]:
-        """Ask the user to fill a table; see WizardUiBridge.ask_table."""
-        messages = self._collect(re_ask_reason)
-        return self._run(_TableApp(columns, cells, question, messages,
-                                   partial_check, min_rows, max_rows))
-
     def ask_form(self, long_question: str, ask_fields: AskFields, *,
                  re_ask_reason: Optional[str] = None,
                  partial_validator: Optional[PartialFormValidator] = None) \
@@ -709,6 +550,16 @@ class WizardUiBridgeTextual(WizardUiBridge):
         messages = self._collect(re_ask_reason)
         return self._run(_FormApp(long_question, list(ask_fields), messages,
                                   partial_validator))
+
+    def ask_matrix_form(self, request: MatrixRequest, *,
+                        re_ask_reason: Optional[str] = None) -> AnswerCells:
+        """Ask the user to fill a whole matrix on one screen; see base.
+
+        The matrix is shown as a grid of labels and inputs, with buttons
+        to resize it when its bounds allow, see _MatrixApp.
+        """
+        messages = self._collect(re_ask_reason)
+        return self._run(_MatrixApp(request, messages))
 
     def supports_form_field(self, field: AskField) -> bool:
         """Show every form field type; see WizardUiBridge.

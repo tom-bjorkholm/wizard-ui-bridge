@@ -3,8 +3,8 @@
 
 This covers the float, date, time, date-time and duration text parsers,
 the duration formatter, the range messages, the resolve/read helpers used
-by the forms, the faked text field, and the bounds validation the typed
-field dataclasses perform when they are built.
+by the forms and matrix forms, the faked text field, and the bounds
+validation the typed field dataclasses perform when they are built.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -17,7 +17,8 @@ import pytest
 
 from wizard_ui_bridge import AskField, AskFloatField, AskDateField, \
     AskTimeField, AskDateTimeField, AskDurationField, AnswerFloatField, \
-    AnswerDateField, AnswerDateTimeField
+    AnswerDateField, AnswerDateTimeField, AskCell, AskFloatCell, \
+    AskDateCell, AskTimeCell, AskDateTimeCell, AskDurationCell
 from wizard_ui_bridge._parse import parse_float, parse_date, \
     parse_time, parse_datetime, parse_duration, format_duration, \
     format_new_value, ordered_range_error, resolve_new, value_from_text, \
@@ -259,3 +260,26 @@ def _ordered_fields() -> list[AskField]:
 def test_field_hint_all() -> None:
     """Every typed field reports a non-empty format hint."""
     assert all(field_hint(field) for field in _ordered_fields())
+
+
+@pytest.mark.parametrize('cell, text, value', [
+    (AskFloatCell(None, max_value=2.0), '1.5', 1.5),
+    (AskDateCell(None), '2024-01-02', date(2024, 1, 2)),
+    (AskTimeCell(None), '10:30', time(10, 30)),
+    (AskDateTimeCell(None), '2024-01-02 10:30',
+     datetime(2024, 1, 2, 10, 30)),
+    (AskDurationCell(None), '90', timedelta(seconds=90))])
+def test_typed_cells(cell: AskCell, text: str, value: object) -> None:
+    """A matrix cell, not only a form field, is read from its text."""
+    assert value_from_text(cell, text) == value
+    assert error_from_text(cell, text) is None
+    assert error_from_text(cell, 'x') == f'Please enter {field_hint(cell)}.'
+
+
+def test_typed_cell_empty() -> None:
+    """An empty cell gives its default, or None and an error if required."""
+    assert value_from_text(AskFloatCell(None, default=2.5), '') == 2.5
+    assert value_from_text(AskFloatCell(None), '') is None
+    required = error_from_text(AskFloatCell(None), '')
+    assert required == f'Please enter {FLOAT_HINT}.'
+    assert error_from_text(AskFloatCell(None, nullable=True), '') is None

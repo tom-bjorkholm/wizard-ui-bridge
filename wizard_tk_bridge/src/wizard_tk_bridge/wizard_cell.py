@@ -9,11 +9,11 @@ builds the :class:`CellInput` for one Ask*Cell (every Ask*Field is one
 too), which reads the current answer value, reports the input's own
 validation error, writes a prefill into the input, and enables or
 disables it. The width hint of a cell sizes the text part of its input;
-without one a compact input, as in a matrix, gets a narrower default
-than a form row. :class:`HelpTooltip` shows a help text on hover,
-:func:`scrolled_editor` builds the scrolling area and status line shared
-by the form and matrix editors, and :func:`scroll_into_view` scrolls that
-area to show one of its widgets.
+without one a compact input, as in a matrix, gets the narrower default
+of wizard_ui_bridge.matrix_helpers.compact_width(). :class:`HelpTooltip`
+shows a help text on hover, :func:`scrolled_editor` builds the scrolling
+area and status line shared by the form and matrix editors, and
+:func:`scroll_into_view` scrolls that area to show one of its widgets.
 
 Turning the raw text of an integer input into its answer is the same job
 in a cell and in a standalone question, so :func:`int_answer` lives here
@@ -33,11 +33,11 @@ from tkinter import ttk
 from typing import Callable, Optional, Sequence
 from wizard_ui_bridge import AskCell, PrefillValueType, AskTextCell, \
     AskIntCell, AskPathCell, AskYesNoCell, AskChoiceCell, \
-    AskMultiChoiceCell, AskFloatCell, AskDateCell, AskTimeCell, \
-    AskDateTimeCell, AskDurationCell
+    AskMultiChoiceCell, AskFloatCell, AskTimeCell, AskDurationCell
 from wizard_ui_bridge.bridge_helpers import INT_ERROR as _INT_ERROR, \
     int_text, multi_count_message, out_of_range, path_answer, range_error, \
     text_answer
+from wizard_ui_bridge.matrix_helpers import compact_width
 from wizard_tk_bridge.auto_scroll import auto_hide, bind_wheel
 from wizard_tk_bridge.gui_style import choice_combo, style_input
 from wizard_tk_bridge.wizard_path import PathRow
@@ -50,10 +50,6 @@ MULTI_HEIGHT = 6
 ENTRY_WIDTH = 34
 INT_WIDTH = 14
 CHOICE_WIDTH = 30
-_COMPACT_WIDTHS: tuple[tuple[type[AskCell], int], ...] = (
-    (AskTextCell, 20), (AskIntCell, 8), (AskFloatCell, 10),
-    (AskPathCell, 24), (AskDateCell, 12), (AskTimeCell, 10),
-    (AskDateTimeCell, 20), (AskDurationCell, 16))
 _CHOICE_REQUIRED = 'Please choose a value.'
 TOOLTIP_BG = '#ffffe0'
 TOOLTIP_WRAP = 320
@@ -384,24 +380,10 @@ def build_input(parent: tk.Misc, cell: AskCell, change: Callable[[], None],
     else:
         built = _basic_input(parent, cell, change)
     width = cell.width if cell.width is not None or not compact \
-        else _compact_width(cell)
+        else compact_width(cell)
     if width is not None:
         built.set_width(width)
     return built
-
-
-def _compact_width(cell: AskCell) -> Optional[int]:
-    """Return the default width of a compact input, None for a check box.
-
-    A typed input fits a typical value rather than its format hint, which
-    the tooltip shows as well, and a choice input fits its longest choice.
-    """
-    if isinstance(cell, (AskChoiceCell, AskMultiChoiceCell)):
-        return max((len(choice) for choice in cell.choices), default=1) + 2
-    for kind, width in _COMPACT_WIDTHS:
-        if isinstance(cell, kind):
-            return width
-    return None
 
 
 def _entry_widget(cell_input: CellInput) -> tk.Entry:
