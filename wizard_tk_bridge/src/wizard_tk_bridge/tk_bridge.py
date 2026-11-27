@@ -91,23 +91,25 @@ class WizardUiBridgeTk(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
         """Ask for free text; see WizardUiBridge.ask_text."""
-        check_text_args(default, sensitive, nullable)
+        check_text_args(default, sensitive, nullable, start_value)
         return self._window_obj().ask_text(question, re_ask_reason, nullable,
-                                           default, sensitive)
+                                           default, sensitive, start_value)
 
     # pylint: disable-next=too-many-arguments
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
                 nullable: bool = False, min_value: Optional[int] = None,
                 max_value: Optional[int] = None, default: Optional[int] = None,
+                start_value: Optional[int] = None,
                 help_text: Optional[str] = None) -> Optional[int]:
         """Ask for an integer within optional bounds; see ask_int."""
         check_nullable(nullable, default is not None)
-        check_bounds(min_value, max_value, default)
+        check_bounds(min_value, max_value, default, start_value)
         return self._window_obj().ask_int(question, re_ask_reason, nullable,
-                                          min_value, max_value, default)
+                                          min_value, max_value, default,
+                                          start_value)
 
     def ask_path(self, question: str, re_ask_reason: Optional[str] = None, *,
                  options: Optional[PathAskOptions] = None,
@@ -119,9 +121,14 @@ class WizardUiBridgeTk(WizardUiBridge):
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None, *,
+                   start_value: Optional[bool] = None,
                    help_text: Optional[str] = None) -> bool:
-        """Ask a yes/no question with dedicated yes and no buttons."""
-        return self._window_obj().ask_yes_no(question, default, re_ask_reason)
+        """Ask a yes/no question with dedicated yes and no buttons.
+
+        The button of the start value, else the default, has the focus.
+        """
+        start = default if start_value is None else start_value
+        return self._window_obj().ask_yes_no(question, start, re_ask_reason)
 
     # pylint: disable=too-many-arguments
     @overload
@@ -129,12 +136,14 @@ class WizardUiBridgeTk(WizardUiBridge):
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
                    nullable: Literal[False] = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]: ...
     # pylint: enable=too-many-arguments
 
@@ -142,13 +151,16 @@ class WizardUiBridgeTk(WizardUiBridge):
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]:
         """Ask the user to pick one choice from a single-selection list.
 
-        A nullable choice is offered with a leading '(none)' entry.
+        A nullable choice is offered with a leading '(none)' entry. The
+        start value, else the default, is preselected.
         """
-        check_choice_args(choices, default, nullable)
-        return self._window_obj().ask_choice(question, choices, default,
+        check_choice_args(choices, default, nullable, start_value)
+        start = default if start_value is None else start_value
+        return self._window_obj().ask_choice(question, choices, start,
                                              re_ask_reason, nullable)
 
     # pylint: disable-next=too-many-arguments
@@ -156,10 +168,15 @@ class WizardUiBridgeTk(WizardUiBridge):
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None,
+                  start_value: Optional[Sequence[str]] = None,
                   help_text: Optional[str] = None) -> list[str]:
-        """Ask the user to pick several choices from a multi-selection list."""
-        check_multi_args(choices, default, min_select, max_select)
-        return self._window_obj().ask_multi(question, choices, default,
+        """Ask the user to pick several choices from a multi-selection list.
+
+        The start value, else the default, is preselected.
+        """
+        check_multi_args(choices, default, min_select, max_select, start_value)
+        start = default if start_value is None else start_value
+        return self._window_obj().ask_multi(question, choices, start,
                                             min_select, max_select,
                                             re_ask_reason)
 

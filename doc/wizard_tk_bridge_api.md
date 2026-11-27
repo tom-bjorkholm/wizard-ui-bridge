@@ -780,7 +780,7 @@ Return the accepted-format hint shown for a typed field or cell.
 def default_text(field: AskCell) -> str
 ```
 
-Return the starting entry text for a typed field's default.
+Return the starting entry text: the start value, else the default.
 
 <a id="wizard_tk_bridge.wizard_typed.typed_value"></a>
 
@@ -1408,6 +1408,7 @@ def ask_text(question: str,
              *,
              default: Optional[str] = None,
              sensitive: bool = False,
+             start_value: Optional[str] = None,
              help_text: Optional[str] = None) -> Optional[str]
 ```
 
@@ -1425,6 +1426,7 @@ def ask_int(question: str,
             min_value: Optional[int] = None,
             max_value: Optional[int] = None,
             default: Optional[int] = None,
+            start_value: Optional[int] = None,
             help_text: Optional[str] = None) -> Optional[int]
 ```
 
@@ -1453,10 +1455,13 @@ def ask_yes_no(question: str,
                default: bool,
                re_ask_reason: Optional[str] = None,
                *,
+               start_value: Optional[bool] = None,
                help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question with dedicated yes and no buttons.
+
+The button of the start value, else the default, has the focus.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_choice"></a>
 
@@ -1469,12 +1474,14 @@ def ask_choice(question: str,
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
                nullable: bool = False,
+               start_value: Optional[str] = None,
                help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask the user to pick one choice from a single-selection list.
 
-A nullable choice is offered with a leading '(none)' entry.
+A nullable choice is offered with a leading '(none)' entry. The
+start value, else the default, is preselected.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_multi"></a>
 
@@ -1488,10 +1495,13 @@ def ask_multi(question: str,
               min_select: int = 0,
               max_select: Optional[int] = None,
               re_ask_reason: Optional[str] = None,
+              start_value: Optional[Sequence[str]] = None,
               help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask the user to pick several choices from a multi-selection list.
+
+The start value, else the default, is preselected.
 
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.ask_table"></a>
 
@@ -1950,25 +1960,33 @@ def ask_text(question: str,
              re_ask: Optional[str],
              nullable: bool,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             start: Optional[str] = None) -> Optional[str]
 ```
 
 Ask one free-text question and return the entered text.
 
-A sensitive question masks the typed text; a default value is
-pre-filled and returned when the answer is left empty.
+A sensitive question masks the typed text. The entry is pre-filled
+with start, else default, and a default is returned when the
+answer is left empty.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_int"></a>
 
 #### ask\_int
 
 ```python
-def ask_int(question: str, re_ask: Optional[str], nullable: bool,
-            min_value: Optional[int], max_value: Optional[int],
-            default: Optional[int]) -> Optional[int]
+def ask_int(question: str,
+            re_ask: Optional[str],
+            nullable: bool,
+            min_value: Optional[int],
+            max_value: Optional[int],
+            default: Optional[int],
+            start: Optional[int] = None) -> Optional[int]
 ```
 
 Ask one integer question, re-asking until it is in range.
+
+The entry is pre-filled with start, else default.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_path"></a>
 
@@ -2011,10 +2029,12 @@ row or column added later, so the content is not bound here.
 #### ask\_yes\_no
 
 ```python
-def ask_yes_no(question: str, default: bool, re_ask: Optional[str]) -> bool
+def ask_yes_no(question: str, start: bool, re_ask: Optional[str]) -> bool
 ```
 
 Ask one yes/no question with dedicated buttons.
+
+The button of start has the focus when the question starts.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_choice"></a>
 
@@ -2023,15 +2043,16 @@ Ask one yes/no question with dedicated buttons.
 ```python
 def ask_choice(question: str,
                choices: Sequence[str],
-               default: Optional[str],
+               start: Optional[str],
                re_ask: Optional[str],
                nullable: bool = False) -> Optional[str]
 ```
 
 Ask the user to pick exactly one choice and return it.
 
-A nullable choice is offered with a leading, preselected '(none)'
-entry that selects no choice, reported as None.
+The choice start is preselected. A nullable choice is offered with
+a leading '(none)' entry that selects no choice, reported as None,
+and is preselected when start is None.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_multi"></a>
 
@@ -2039,11 +2060,13 @@ entry that selects no choice, reported as None.
 
 ```python
 def ask_multi(question: str, choices: Sequence[str],
-              default: Optional[Sequence[str]], min_select: int,
+              start: Optional[Sequence[str]], min_select: int,
               max_select: Optional[int], re_ask: Optional[str]) -> list[str]
 ```
 
 Ask the user to pick several choices within the count bounds.
+
+The choices in start are preselected.
 
 <a id="wizard_tk_bridge.wizard_window.WizardWindow.ask_table"></a>
 

@@ -40,7 +40,7 @@ class _FakeBridge(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted text answer."""
         self.defaults.append(default)
@@ -54,12 +54,14 @@ class _FakeBridge(WizardUiBridge):
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
                    nullable: Literal[False] = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]: ...
     # pylint: enable=too-many-arguments
 
@@ -67,6 +69,7 @@ class _FakeBridge(WizardUiBridge):
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted choice answer."""
         self.defaults.append(default)
@@ -76,6 +79,7 @@ class _FakeBridge(WizardUiBridge):
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None, *,
+                   start_value: Optional[bool] = None,
                    help_text: Optional[str] = None) -> bool:
         """Return the next scripted yes/no answer."""
         self.defaults.append(default)

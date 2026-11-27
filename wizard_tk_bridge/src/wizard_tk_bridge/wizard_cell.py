@@ -246,12 +246,16 @@ class CellInput:
 
 def _text_input(parent: tk.Misc, cell: AskTextCell,
                 change: Callable[[], None]) -> CellInput:
-    """Build a text entry, masked and without a default when sensitive."""
+    """Build a text entry, pre-filled unless sensitive.
+
+    It starts with the start value, else the default.
+    """
     entry = tk.Entry(parent, width=ENTRY_WIDTH)
+    start = cell.start_or_default
     if cell.sensitive:
         entry.configure(show='*')
-    elif cell.default is not None:
-        entry.insert(0, cell.default)
+    elif start is not None:
+        entry.insert(0, start)
     style_input(entry)
     entry.bind('<KeyRelease>', lambda _event: change())
     return CellInput(cell, entry)
@@ -259,10 +263,11 @@ def _text_input(parent: tk.Misc, cell: AskTextCell,
 
 def _int_input(parent: tk.Misc, cell: AskIntCell,
                change: Callable[[], None]) -> CellInput:
-    """Build a numeric text entry pre-filled with its default."""
+    """Build a numeric text entry pre-filled with its start or default."""
     entry = tk.Entry(parent, width=INT_WIDTH)
-    if cell.default is not None:
-        entry.insert(0, str(cell.default))
+    start = cell.start_or_default
+    if start is not None:
+        entry.insert(0, str(start))
     style_input(entry)
     entry.bind('<KeyRelease>', lambda _event: change())
     return CellInput(cell, entry)
@@ -270,53 +275,57 @@ def _int_input(parent: tk.Misc, cell: AskIntCell,
 
 def _path_input(parent: tk.Misc, cell: AskPathCell,
                 change: Callable[[], None]) -> CellInput:
-    """Build a path entry with a Browse button from the path options."""
-    default = cell.path_options.default
-    initial = '' if default is None else str(default)
+    """Build a path entry with a Browse button from the path options.
+
+    It starts with the start value, else the default.
+    """
+    start = cell.path_options.start_or_default
+    initial = '' if start is None else str(start)
     row = PathRow(parent, cell.path_options, initial, change)
     return CellInput(cell, row.frame, path=row)
 
 
 def _yes_no_input(parent: tk.Misc, cell: AskYesNoCell,
                   change: Callable[[], None]) -> CellInput:
-    """Build a check box holding the yes/no default."""
-    var = tk.BooleanVar(parent, cell.default)
+    """Build a check box holding the yes/no start value, else default."""
+    var = tk.BooleanVar(parent, cell.start_or_default)
     check = tk.Checkbutton(parent, variable=var, command=change)
     return CellInput(cell, check, var=var)
 
 
 def _choice_input(parent: tk.Misc, cell: AskChoiceCell,
                   change: Callable[[], None]) -> CellInput:
-    """Build a read-only drop-down, preselecting any default choice.
+    """Build a read-only drop-down, preselecting any start or default.
 
     A nullable choice gets a blank entry, see choice_combo().
     """
     box = choice_combo(parent, cell.choices, cell.nullable, CHOICE_WIDTH)
-    if cell.default is not None:
-        box.set(cell.default)
+    start = cell.start_or_default
+    if start is not None:
+        box.set(start)
     box.bind('<<ComboboxSelected>>', lambda _event: change())
     return CellInput(cell, box)
 
 
 def _multi_input(parent: tk.Misc, cell: AskMultiChoiceCell,
                  change: Callable[[], None]) -> CellInput:
-    """Build a multi-selection list, preselecting the default values."""
+    """Build a multi-selection list, preselecting the start or default."""
     box = tk.Listbox(parent, selectmode='multiple', exportselection=False,
                      height=min(len(cell.choices), MULTI_HEIGHT))
     for choice in cell.choices:
         box.insert('end', choice)
-    _preselect(box, cell.choices, cell.default)
+    _preselect(box, cell.choices, cell.start_or_default)
     style_input(box)
     box.bind('<<ListboxSelect>>', lambda _event: change())
     return CellInput(cell, box)
 
 
 def _preselect(box: tk.Listbox, choices: Sequence[str],
-               default: Optional[Sequence[str]]) -> None:
-    """Select the default values in a multi-selection list."""
-    if default is None:
+               start: Optional[Sequence[str]]) -> None:
+    """Select the start values in a multi-selection list."""
+    if start is None:
         return
-    wanted = set(default)
+    wanted = set(start)
     for index, choice in enumerate(choices):
         if choice in wanted:
             box.selection_set(index)

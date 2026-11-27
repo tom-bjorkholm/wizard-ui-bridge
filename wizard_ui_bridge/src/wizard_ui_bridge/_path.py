@@ -141,7 +141,7 @@ class _PickerScreen(_PathPick, ModalScreen[Optional[str]]):
         """Store the path kind and the tree root and initial input."""
         super().__init__()
         self._kind = options.kind
-        self._start = _start_dir(_seed_path(value, options.default))
+        self._start = _start_dir(_seed_path(value, options.start_or_default))
         self._value = value
 
     def compose(self) -> ComposeResult:

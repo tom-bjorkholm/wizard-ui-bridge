@@ -56,6 +56,21 @@ example proves it by importing the export-settings wizard from
 ``e02_question_kinds`` and running that unchanged code through the new
 bridge. A bridge works with *any* wizard; a wizard runs on *any* bridge.
 
+Start values
+------------
+Every typed ask method also takes a keyword-only ``start_value``: the value
+the question starts with, such as the current content of a table cell. It is
+separate from the ``default``, which is what an *empty* answer gives, so a
+nullable question can start with a value the user may still clear to None. A
+GUI pre-fills its input with the start value. A text bridge cannot pre-fill,
+so it shows the start value, keeps it when the user just presses Enter, and
+offers the erase token ``:e`` to empty the answer instead. The
+``bridge_helpers`` functions do exactly that when they are given the start
+value, so each method below only shows it and passes it on. A bridge written
+before ``start_value`` existed still works, but the base class then passes
+the start value as the default and issues a DeprecationWarning, and the user
+cannot empty such an answer.
+
 A table question with both min_rows and max_rows asks for a *variable*
 number of rows, which the user can only supply if the bridge lets them add
 and remove rows. That is correctness, not polish -- a wizard that expects
@@ -146,6 +161,16 @@ _NAV_TOKENS = {':b': WizardBack, ':c': WizardCancelLevel, ':q': WizardAbort}
 # never sees it.
 _HELP_TOKEN = ':?'
 _NO_HELP = 'No help is available for this question.'
+
+
+def _start_prompt(question: str, start: Optional[str]) -> str:
+    """Return the question showing a start value the user may keep or erase.
+
+    A question with no start value is returned unchanged. With one, Enter
+    keeps the value in brackets and the erase token ':e' empties it; the
+    bridge_helpers functions given the start value interpret both answers.
+    """
+    return question if start is None else f'{question} [{start}] (:e erases)'
 
 
 def _fold(text: str) -> str:
@@ -261,7 +286,7 @@ class TeleprinterBridge(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
         """Ask for free text; see WizardUiBridge.ask_text.
 
@@ -270,22 +295,33 @@ class TeleprinterBridge(WizardUiBridge):
         that is one more rung on the UX ladder.
         """
         # check_text_args() raises ValueError for a default combined with
-        # sensitive or with nullable, the same programming errors every
-        # bundled bridge rejects.
-        check_text_args(default, sensitive, nullable)
-        answer = self._ask(question_with_default(question, default),
-                           re_ask_reason, help_text=help_text)
+        # sensitive or with nullable, or a start value combined with
+        # sensitive, the same programming errors every bundled bridge
+        # rejects.
+        check_text_args(default, sensitive, nullable, start_value)
+        # The question shows the start value when there is one, else the
+        # default, which is then what Enter gives.
+        prompt = question_with_default(question, default) \
+            if start_value is None else _start_prompt(question, start_value)
+        answer = self._ask(prompt, re_ask_reason, help_text=help_text)
         assert isinstance(answer, str)  # no choices, so the answer is text
-        return text_answer(answer, nullable, default)
+        # text_answer() keeps the start value for an empty answer and reads
+        # ':e' as an empty answer, which gives the default, None or ''.
+        return text_answer(answer, nullable, default, start_value)
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None, *,
+                   start_value: Optional[bool] = None,
                    help_text: Optional[str] = None) -> bool:
         """Ask a yes/no question; see WizardUiBridge.ask_yes_no."""
+        start = None if start_value is None else 'yes' if start_value \
+            else 'no'
+        prompt = _start_prompt(question, start)
+
         def reader(reason: Optional[str]) -> str | int:
-            return self._ask(question, reason, ('yes', 'no'),
+            return self._ask(prompt, reason, ('yes', 'no'),
                              help_text=help_text)
-        return ask_yes_no(reader, default, re_ask_reason)
+        return ask_yes_no(reader, default, re_ask_reason, start_value)
 
     # The base class declares ask_choice() with two overloads, so a caller
     # that leaves nullable out gets a plain str back while a caller passing
@@ -297,12 +333,14 @@ class TeleprinterBridge(WizardUiBridge):
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
                    nullable: Literal[False] = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]: ...
     # pylint: enable=too-many-arguments
 
@@ -310,42 +348,54 @@ class TeleprinterBridge(WizardUiBridge):
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]:
         """Ask for one choice; see WizardUiBridge.ask_choice.
 
         A nullable choice may be left empty, which reports no choice (None).
         The teleprinter says so in the question. A richer bridge would show
         an explicit '(none)' entry instead; that is one more rung on the UX
-        ladder (see bridge_helpers.offered_choices).
+        ladder (see bridge_helpers.offered_choices). With a start value an
+        empty answer keeps it, so ':e' is the way to choose none.
         """
-        prompt = f'{question} (empty answer for none)' if nullable \
-            else question
+        prompt = f'{question} (empty answer for none)' \
+            if nullable and start_value is None else question
+        prompt = _start_prompt(prompt, start_value)
 
         def reader(reason: Optional[str]) -> str | int:
             return self._ask(prompt, reason, choices, help_text=help_text)
         # ask_one() re-asks until the answer is valid. With nullable=True it
         # returns None for an empty answer, and it raises ValueError when
-        # nullable is combined with a default.
+        # nullable is combined with a default. Given the start value, it
+        # keeps that for an empty answer and reads ':e' as an empty answer.
         return ask_one(reader, choices, default, re_ask_reason,
-                       nullable=nullable)
+                       nullable=nullable, start_value=start_value)
 
     # pylint: disable-next=too-many-arguments
     def ask_multi(self, question: str, *, choices: Sequence[str],
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None,
+                  start_value: Optional[Sequence[str]] = None,
                   help_text: Optional[str] = None) -> list[str]:
         """Ask for several choices; see WizardUiBridge.ask_multi."""
+        start = None if start_value is None else ', '.join(start_value)
+        prompt = _start_prompt(f'{question} (numbers separated by commas)',
+                               start)
+
         def reader(reason: Optional[str]) -> str | int:
-            return self._ask(f'{question} (numbers separated by commas)',
-                             reason, choices, help_text=help_text)
+            return self._ask(prompt, reason, choices, help_text=help_text)
+        # Given the start value, ask_many() keeps it for an empty answer and
+        # reads ':e' as selecting nothing.
         return ask_many(reader, choices, default, min_select, max_select,
-                        re_ask_reason, one_based=False)
+                        re_ask_reason, one_based=False,
+                        start_value=start_value)
 
     # pylint: disable-next=too-many-arguments
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
                 nullable: bool = False, min_value: Optional[int] = None,
                 max_value: Optional[int] = None, default: Optional[int] = None,
+                start_value: Optional[int] = None,
                 help_text: Optional[str] = None) -> Optional[int]:
         """Ask for an integer, naming the accepted range up front.
 
@@ -358,7 +408,8 @@ class TeleprinterBridge(WizardUiBridge):
         return super().ask_int(_int_prompt(question, min_value, max_value),
                                re_ask_reason, nullable=nullable,
                                min_value=min_value, max_value=max_value,
-                               default=default, help_text=help_text)
+                               default=default, start_value=start_value,
+                               help_text=help_text)
 
 
 def _present(bridge: WizardUiBridge, summary: str) -> None:

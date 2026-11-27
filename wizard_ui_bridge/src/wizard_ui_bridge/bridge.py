@@ -29,7 +29,7 @@ text and validates the path.
 
 import sys
 from pathlib import Path
-from typing import Literal, Optional, Sequence, TextIO, overload
+from typing import Literal, Optional, Sequence, TextIO, Union, overload
 from wizard_ui_bridge.arg_types import PartialCheck, \
     PathAskOptions, TableColumn, TableCell, WizardBack, check_nullable
 from wizard_ui_bridge.bridge_helpers import int_text, \
@@ -38,6 +38,7 @@ from wizard_ui_bridge.form_helpers import answer_of, initial_answer, \
     valid_prefills, prefilled_field, nullable_choice
 from wizard_ui_bridge._ask_cell import ask_cell_value
 from wizard_ui_bridge._help import help_kwargs
+from wizard_ui_bridge._start import start_args
 from wizard_ui_bridge._fake import ask_form_faking
 from wizard_ui_bridge._matrix_console import ConsoleMatrix
 from wizard_ui_bridge._table_matrix import TableMatrix
@@ -78,12 +79,20 @@ class WizardUiBridge:
     The base class calls an ask method of a derived bridge that lacks the
     help_text parameter without it, and issues a DeprecationWarning, so
     an older bridge keeps working until it is updated.
+
+    The typed ask methods also take a keyword-only start_value, the value
+    the question starts with, separate from the default that an empty
+    answer gives (see Start value in wizard_ui_bridge.matrix_cell_defs).
+    A path question takes it in its PathAskOptions. The base class calls
+    a typed ask method of a derived bridge that lacks start_value with
+    the start value as the default instead, not nullable, and issues a
+    DeprecationWarning; the user then cannot empty the answer.
     """
 
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
         """Ask a free-text question and return the entered text.
 
@@ -100,19 +109,27 @@ class WizardUiBridge:
             default: The value returned by an empty answer, or None for
                      no default. Not allowed together with nullable.
             sensitive: True when the bridge must avoid echoing the
-                       entered text, such as for passwords. A default is
-                       not allowed for a sensitive question.
+                       entered text, such as for passwords. Neither a
+                       default nor a start_value is allowed for a
+                       sensitive question.
+            start_value: The text the question starts with, or None to
+                         start with the default. The user may keep it,
+                         change it or empty it, and an emptied answer
+                         gives what an empty answer gives, so it may be
+                         combined with nullable. A console bridge shows
+                         it as the answer Enter keeps and offers ':e' to
+                         empty it.
             help_text: A help text for the question, or None for no help.
                        A console bridge shows it when the user asks for
                        help. A GUI bridge that overrides ask_form() and
                        ask_matrix_form() may ignore it.
 
         Returns:
-            The entered text, default for an empty answer with a default,
-            or None for an empty answer when nullable.
+            The entered or kept text, default for an empty answer with a
+            default, or None for an empty answer when nullable.
         Raises:
             ValueError: default is given together with sensitive or
-                        nullable.
+                        nullable, or start_value together with sensitive.
             NotImplementedError: The bridge does not implement ask_text().
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
@@ -124,6 +141,7 @@ class WizardUiBridge:
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
                 nullable: bool = False, min_value: Optional[int] = None,
                 max_value: Optional[int] = None, default: Optional[int] = None,
+                start_value: Optional[int] = None,
                 help_text: Optional[str] = None) -> Optional[int]:
         """Ask for an integer, optionally within inclusive bounds.
 
@@ -144,30 +162,34 @@ class WizardUiBridge:
                        The max value is inclusive.
             default: The value returned by an empty answer, or None for
                      no default. Not allowed together with nullable.
+            start_value: The value the question starts with, or None to
+                         start with the default, as for ask_text(). It
+                         must lie within the bounds.
             help_text: A help text for the question, or None for no help.
                        A console bridge shows it when the user asks for
                        help. A GUI bridge that overrides ask_form() and
                        ask_matrix_form() may ignore it.
 
         Returns:
-            The entered integer, default for an empty answer with a
-            default, or None for an empty answer when nullable.
+            The entered or kept integer, default for an empty answer with
+            a default, or None for an empty answer when nullable.
         Raises:
-            ValueError: min_value exceeds max_value, default is outside
-                        the bounds, or default is given together with
-                        nullable.
+            ValueError: min_value exceeds max_value, default or
+                        start_value is outside the bounds, or default is
+                        given together with nullable.
             WizardBack: The user asked to return to the previous question.
             WizardCancelLevel: The user cancelled the current level.
             WizardAbort: The user abandoned the whole wizard.
         """
-        check_bounds(min_value, max_value, default)
+        check_bounds(min_value, max_value, default, start_value)
         check_nullable(nullable, default is not None)
         reason = re_ask_reason
-        default_text = None if default is None else str(default)
+        args = start_args(self.ask_text, _text_of(start_value),
+                          _text_of(default), nullable)
         extra = help_kwargs(self.ask_text, help_text)
         while True:
-            text = self.ask_text(question, reason, nullable,
-                                 default=default_text, **extra)
+            text = self.ask_text(question, reason, args.nullable,
+                                 default=args.default, **args.kwargs, **extra)
             if text is None:
                 return None
             value = int_text(text)
@@ -190,7 +212,8 @@ class WizardUiBridge:
         Args:
             question: The question to ask the user.
             re_ask_reason: The reason for re-asking the question.
-            options: Path options. None only rejects existing directories.
+            options: Path options, including the default and start_value.
+                     None only rejects existing directories.
             help_text: A help text for the question, or None for no help.
                        A console bridge shows it when the user asks for
                        help. A GUI bridge that overrides ask_form() and
@@ -206,18 +229,20 @@ class WizardUiBridge:
         """
         path_options = PathAskOptions() if options is None else options
         reason = re_ask_reason
-        default = path_options.default
-        default_text = None if default is None else str(default)
+        args = start_args(self.ask_text, _text_of(path_options.start_value),
+                          _text_of(path_options.default),
+                          path_options.nullable)
         extra = help_kwargs(self.ask_text, help_text)
         while True:
-            text = self.ask_text(question, reason, path_options.nullable,
-                                 default=default_text, **extra)
+            text = self.ask_text(question, reason, args.nullable,
+                                 default=args.default, **args.kwargs, **extra)
             done, path, reason = path_answer(text, path_options)
             if done:
                 return path
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None, *,
+                   start_value: Optional[bool] = None,
                    help_text: Optional[str] = None) -> bool:
         """Ask a yes/no question and return the chosen boolean.
 
@@ -233,6 +258,10 @@ class WizardUiBridge:
                      choice.
             re_ask_reason: The reason for re-asking the question, for
                            instance that the user's answer was invalid.
+            start_value: The value the question starts with, or None to
+                         start with the default. A console bridge shows
+                         it as the answer Enter keeps and offers ':e' for
+                         the default.
             help_text: A help text for the question, or None for no help.
                        A console bridge shows it when the user asks for
                        help. A GUI bridge that overrides ask_form() and
@@ -254,12 +283,14 @@ class WizardUiBridge:
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
                    nullable: Literal[False] = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]: ...
     # pylint: enable=too-many-arguments
 
@@ -267,6 +298,7 @@ class WizardUiBridge:
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]:
         """Ask the user to pick exactly one of choices and return it.
 
@@ -293,6 +325,12 @@ class WizardUiBridge:
                            first question when not None.
             nullable: When True the user may select no choice, which is
                       reported as None.
+            start_value: The choice the question starts with, or None to
+                         start with the default. It must be one of
+                         choices. An emptied answer gives what an empty
+                         answer gives, so it may be combined with
+                         nullable. A console bridge shows it as the
+                         answer Enter keeps and offers ':e' to empty it.
             help_text: A help text for the question, or None for no help.
                        A console bridge shows it when the user asks for
                        help. A GUI bridge that overrides ask_form() and
@@ -302,8 +340,9 @@ class WizardUiBridge:
             The chosen value, one of choices, or None for no choice when
             nullable.
         Raises:
-            ValueError: default is not one of choices, or is given
-                        together with nullable. A bridge checks this with
+            ValueError: default or start_value is not one of choices,
+                        or default is given together with nullable. A
+                        bridge checks this with
                         arg_types.check_choice_args().
             NotImplementedError: The bridge does not implement ask_choice().
             WizardBack: The user asked to return to the previous question.
@@ -317,6 +356,7 @@ class WizardUiBridge:
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None,
+                  start_value: Optional[Sequence[str]] = None,
                   help_text: Optional[str] = None) -> list[str]:
         """Ask the user to pick several of choices and return them.
 
@@ -342,6 +382,12 @@ class WizardUiBridge:
                         for no upper bound.
             re_ask_reason: The reason for re-asking, shown before the
                            first question when not None.
+            start_value: The values selected when the question starts,
+                         or None to start with the default. It follows
+                         the rules of a default. Emptying the selection
+                         selects nothing, not the default. A console
+                         bridge shows it as the answer Enter keeps and
+                         offers ':e' to select nothing.
             help_text: A help text for the question, or None for no help.
                        A console bridge shows it when the user asks for
                        help. A GUI bridge that overrides ask_form() and
@@ -350,9 +396,10 @@ class WizardUiBridge:
         Returns:
             The chosen values, each one of choices, in choices order.
         Raises:
-            ValueError: The bounds cannot be satisfied, or default names
-                        a value that is not a choice, names a choice
-                        twice or names more than max_select choices. A
+            ValueError: The bounds cannot be satisfied, or default or
+                        start_value names a value that is not a choice,
+                        names a choice twice or names more than
+                        max_select choices. A
                         bridge checks this with
                         arg_types.check_multi_args().
             NotImplementedError: The bridge does not implement ask_multi().
@@ -385,10 +432,11 @@ class WizardUiBridge:
         header row of bold labels with the column headers, and each table
         row is the matrix row below it. A read-only cell is a label, and
         an editable cell is a text cell, or a choice cell when it has
-        choices, with help_text as its help text and its value as its
-        default. Each row the user adds is built from the cells shared by
-        every starting row, as bridge_helpers.new_row_template() does,
-        with every column editable. A console names each cell by the
+        choices, with help_text as its help text, its value as its
+        start_value and the nullable of its TableCell. Each row the user
+        adds is built from the cells shared by every starting row, as
+        bridge_helpers.new_row_template() does, with every column
+        editable. A console names each cell by the
         read-only texts of its row and its column header. A bridge may
         override this method to show its own table widget, and the
         helpers in wizard_ui_bridge.bridge_helpers fill a table one cell
@@ -397,10 +445,8 @@ class WizardUiBridge:
         How an empty editable cell is reported follows its TableCell: a
         nullable cell reports None, a free-text cell reports an empty
         string, and a cell with choices treats empty as not yet a valid
-        value. In the base implementation a pre-filled value is the
-        default of a matrix cell, which an empty answer returns, so a
-        pre-filled cell cannot be emptied there, and is never None even
-        when nullable.
+        value. A pre-filled cell starts with its value, and the user may
+        keep it, change it or empty it.
 
         When partial_check is given, the bridge calls it after the user
         changes a cell, passing the whole table as it currently stands
@@ -484,9 +530,12 @@ class WizardUiBridge:
         after each field is answered, passing the current answers and the
         index of the field just answered. It shows the returned message and
         skips asking the fields listed in disable_row_idxs, filling them
-        with their default or not-yet-answered value instead. WizardBack
-        steps to the previous asked field; from the first field it
-        propagates so the wizard steps to the previous question.
+        with their start value, default or not-yet-answered value
+        instead. Each prefill is offered as the start value of its field
+        when that field is asked. WizardBack steps to the previous asked
+        field, which starts with the answer the user gave it; from the
+        first field it propagates so the wizard steps to the previous
+        question.
 
         Args:
             long_question: The main question or instruction to the user,
@@ -608,9 +657,11 @@ class WizardUiBridge:
         for the whole matrix, then after each cell is answered and after
         each change of shape. Its message is shown when the matrix is not
         valid, its disabled cells are skipped and keep their answers, and
-        each prefill is offered as the default of its cell when that cell
-        is asked. The message is advisory only: the matrix is returned
-        even when it is not valid, so the wizard must check the answers.
+        each prefill is offered as the start value of its cell when that
+        cell is asked. A cell asked again after WizardBack starts with the
+        answer the user gave it. The message is advisory only: the matrix
+        is returned even when it is not valid, so the wizard must check
+        the answers.
 
         Any serious application or library using GUI, textual, curses or
         web interfaces should override this method to show the whole matrix
@@ -659,24 +710,25 @@ class WizardUiBridge:
                    validator: Optional[PartialFormValidator]) -> None:
         """Ask each enabled field in turn, stepping back on WizardBack.
 
-        A prefill returned by the validator for a not-yet-asked row is kept
-        in pending and offered as that row's default when it is asked.
+        starts holds the latest answer or prefill of each field, which
+        the field starts with when it is asked (again).
         """
         disabled: set[int] = set()
-        pending: dict[int, PrefillValueType] = {}
+        starts: dict[int, Optional[PrefillValueType]] = {}
         position = 0
         while position < len(ask_fields):
             if position in disabled:
                 position += 1
                 continue
             try:
-                answers[position] = self._ask_field(
-                    ask_fields[position], pending.pop(position, None))
+                answers[position] = self._ask_field(ask_fields[position],
+                                                    position, starts)
             except WizardBack:
                 position = self._prev_field(position, disabled)
                 continue
+            starts[position] = answers[position].value
             disabled = self._form_feedback(ask_fields, answers, position,
-                                           validator, pending)
+                                           validator, starts)
             position += 1
 
     @staticmethod
@@ -693,11 +745,12 @@ class WizardUiBridge:
     def _form_feedback(self, ask_fields: AskFields, answers: list[AnswerField],
                        position: int,
                        validator: Optional[PartialFormValidator],
-                       pending: dict[int, PrefillValueType]) -> set[int]:
+                       starts: dict[int, Optional[PrefillValueType]]
+                       ) -> set[int]:
         """Run the validator, show its message, store prefills, return rows.
 
-        Prefills for other rows are validated and kept in pending, so a
-        later row is offered the value as its default when it is asked.
+        Prefills for other rows are validated and kept in starts, so a
+        row is offered the value as its start value when it is asked.
         """
         if validator is None:
             return set()
@@ -706,22 +759,23 @@ class WizardUiBridge:
             self.show(result.message)
         for index, value in valid_prefills(ask_fields, position,
                                            result.prefill_values):
-            pending[index] = value
+            starts[index] = value
         return set(result.disable_row_idxs)
 
-    def _ask_field(self, field: AskField,
-                   prefill: Optional[PrefillValueType] = None) -> AnswerField:
+    def _ask_field(self, field: AskField, position: int,
+                   starts: dict[int, Optional[PrefillValueType]]
+                   ) -> AnswerField:
         """Ask one form field with the matching typed ask method.
 
-        When prefill is given it replaces the field's default, so the value
-        is offered as the starting answer the user can accept or edit.
+        A field with an entry in starts starts with that value, so the
+        user can keep, edit or empty it. The answer refers to field.
         """
-        if prefill is not None:
-            field = prefilled_field(field, prefill)
+        asked = prefilled_field(field, starts[position]) \
+            if position in starts else field
         if field.help_text is not None:
             self.show(field.help_text)
         return answer_of(field, ask_cell_value(self, field.short_question,
-                                               field))
+                                               asked))
 
     def error_file(self) -> TextIO:
         """Return the stream used for validation diagnostics."""
@@ -739,3 +793,8 @@ class WizardUiBridge:
             message: The message to show the user.
         """
         raise NotImplementedError('show() not implemented')
+
+
+def _text_of(value: Optional[Union[int, Path]]) -> Optional[str]:
+    """Return value as the text a user types for it, or None for None."""
+    return None if value is None else str(value)

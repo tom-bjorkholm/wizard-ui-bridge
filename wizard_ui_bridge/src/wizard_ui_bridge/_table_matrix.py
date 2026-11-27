@@ -11,9 +11,10 @@ of the cell specification is bridge_helpers.new_row_template() with every
 column editable, and the matrix repeats it for each row the user appends.
 
 A TableCell separates the value an input starts with from what an empty
-cell means, while an Ask*Cell uses its default for both. So a pre-filled
-value is the default of its cell, and a nullable TableCell with a value
-is asked as a cell that is not nullable.
+cell means, and so does an Ask*Cell: the value of an editable TableCell
+is the start_value of its matrix cell, and its nullable is kept. The
+matrix cell has no default, so an emptied cell means what an empty
+TableCell means.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -149,13 +150,9 @@ def _starting_row(columns: Sequence[TableColumn], row: Sequence[TableCell],
 
 
 def _input_cell(cell: TableCell, help_text: Optional[str]) -> AskCell:
-    """Return the matrix input cell of one editable table cell.
-
-    A pre-filled value becomes the default, which an Ask*Cell does not
-    allow together with nullable, so the value wins over nullable.
-    """
-    nullable = cell.nullable and cell.value is None
+    """Return the matrix input cell of one editable table cell."""
     if cell.choices is None:
-        return AskTextCell(help_text, nullable=nullable, default=cell.value)
-    return AskChoiceCell(help_text, cell.choices, default=cell.value,
-                         nullable=nullable)
+        return AskTextCell(help_text, nullable=cell.nullable,
+                           start_value=cell.value)
+    return AskChoiceCell(help_text, cell.choices, nullable=cell.nullable,
+                         start_value=cell.value)

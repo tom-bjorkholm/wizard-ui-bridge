@@ -5,6 +5,14 @@ The names without a leading underscore are the public helpers a bridge
 implementation can use to interpret raw user answers the same way the
 bundled bridges do, and the messages those bridges show when an answer
 is not accepted.
+
+The helpers that read a raw answer take an optional start_value for a
+question that starts with a value. An empty answer then keeps the start
+value, and the erase token ':e' (ERASE_TOKEN) becomes the empty answer
+without a start value: the default, None when nullable, an empty string
+for text, and nothing selected for a multi-choice. That is what a GUI
+gives when the user empties a pre-filled input. A GUI bridge reading an
+input widget passes no start_value, since an empty widget is empty.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -13,7 +21,7 @@ is not accepted.
 from io import StringIO
 from pathlib import Path
 from typing import Callable, Literal, Optional, Sequence, TypeVar, \
-    overload
+    Union, overload
 from config_as_json import InvalidConfiguration, string_best_match
 from wizard_ui_bridge.arg_types import PartialCheck, \
     AskReader, WizardBack, WizardPathKind, PathAskOptions, TableColumn, \
@@ -21,7 +29,7 @@ from wizard_ui_bridge.arg_types import PartialCheck, \
 from wizard_ui_bridge._help import help_kwargs
 
 
-_ERASE_TOKEN = ':e'  # empties an editable cell in a one-cell-at-a-time table
+ERASE_TOKEN = ':e'  # empties a cell, or a console answer with a start value
 CHOICE_ERROR = 'Please enter one of the listed choices.'
 INT_ERROR = 'Please enter an integer.'
 _PATH_REQUIRED = 'Please enter a path.'
@@ -29,17 +37,22 @@ _VALUE_REQUIRED = 'Please enter a value.'
 NO_CHOICE = '(none)'  # the entry that selects no choice when nullable
 
 _V = TypeVar('_V')
+_A = TypeVar('_A')
 
 
 def check_text_args(default: Optional[str], sensitive: bool,
-                    nullable: bool = False) -> None:
+                    nullable: bool = False,
+                    start_value: Optional[str] = None) -> None:
     """Raise ValueError when text-question arguments are inconsistent.
 
     A default is allowed neither for sensitive input nor together with
-    nullable, see arg_types.check_nullable.
+    nullable, see arg_types.check_nullable. A start_value is not allowed
+    for sensitive input.
     """
     if sensitive and default is not None:
         raise ValueError('default is not allowed for sensitive input')
+    if sensitive and start_value is not None:
+        raise ValueError('start_value is not allowed for sensitive input')
     check_nullable(nullable, default is not None)
 
 
@@ -50,9 +63,14 @@ def question_with_default(question: str, default: Optional[str]) -> str:
     return f'{question} [{default}]'
 
 
-def text_answer(text: str, nullable: bool,
-                default: Optional[str]) -> Optional[str]:
-    """Return the public text answer for raw text from a bridge."""
+def text_answer(text: str, nullable: bool, default: Optional[str],
+                start_value: Optional[str] = None) -> Optional[str]:
+    """Return the public text answer for raw text from a bridge.
+
+    With a start value an empty text keeps it, and the erase token is an
+    empty text, see the module docstring.
+    """
+    text = _with_start(text, start_value)
     if text == '' and default is not None:
         return default
     if text == '' and nullable:
@@ -152,11 +170,17 @@ def _yes_no_from_text(text: str) -> Optional[bool]:
 
 
 def ask_yes_no(reader: Callable[[Optional[str]], str | int], default: bool,
-               re_ask_reason: Optional[str]) -> bool:
-    """Re-ask through reader until a yes/no answer is understood."""
+               re_ask_reason: Optional[str],
+               start_value: Optional[bool] = None) -> bool:
+    """Re-ask through reader until a yes/no answer is understood.
+
+    With a start value an empty answer keeps it, and the erase token
+    gives the default.
+    """
     reason = re_ask_reason
     while True:
-        choice = _interpret_yes_no(reader(reason), default)
+        answer = _with_start(reader(reason), start_value)
+        choice = _interpret_yes_no(answer, default)
         if choice is not None:
             return choice
         reason = 'Please answer yes or no.'
@@ -292,7 +316,7 @@ def _cell_value(answer: str | int, cell: TableCell, current: Optional[str]
     """
     if answer == '':
         return _kept_value(cell, current)
-    if isinstance(answer, str) and answer.strip().lower() == _ERASE_TOKEN:
+    if _is_erase(answer):
         return _erased_value(cell)
     if isinstance(answer, bool):
         return (_VALUE_REQUIRED, None)
@@ -373,38 +397,43 @@ def range_error(min_value: Optional[int], max_value: Optional[int]) -> str:
     return f'Please enter an integer between {min_value} and {max_value}.'
 
 
+# pylint: disable=too-many-arguments
 @overload
 def ask_one(reader: Callable[[Optional[str]], str | int],
             choices: Sequence[str], default: Optional[str],
-            re_ask_reason: Optional[str], *,
-            nullable: Literal[False] = False) -> str: ...
+            re_ask_reason: Optional[str], *, nullable: Literal[False] = False,
+            start_value: Optional[str] = None) -> str: ...
 
 
 @overload
 def ask_one(reader: Callable[[Optional[str]], str | int],
             choices: Sequence[str], default: Optional[str],
-            re_ask_reason: Optional[str], *,
-            nullable: bool) -> Optional[str]: ...
+            re_ask_reason: Optional[str], *, nullable: bool,
+            start_value: Optional[str] = None) -> Optional[str]: ...
+# pylint: enable=too-many-arguments
 
 
+# pylint: disable-next=too-many-arguments
 def ask_one(reader: Callable[[Optional[str]], str | int],
             choices: Sequence[str], default: Optional[str],
-            re_ask_reason: Optional[str], *,
-            nullable: bool = False) -> Optional[str]:
+            re_ask_reason: Optional[str], *, nullable: bool = False,
+            start_value: Optional[str] = None) -> Optional[str]:
     """Re-ask through reader until one valid choice is selected.
 
     When nullable an empty answer selects no choice, which is reported
     as None. Otherwise an empty answer selects default, or is re-asked
-    when default is None.
+    when default is None. With a start value an empty answer keeps it,
+    and the erase token is an empty answer.
 
     Raises:
-        ValueError: default is not one of choices, or is combined with
-                    nullable.
+        ValueError: default or start_value is not one of choices, or
+                    default is combined with nullable.
     """
-    check_choice_args(choices, default, nullable)
+    check_choice_args(choices, default, nullable, start_value)
+    start = None if start_value is None else list(choices).index(start_value)
     reason = re_ask_reason
     while True:
-        answer = reader(reason)
+        answer = _with_start(reader(reason), start)
         if nullable and answer == '':
             return None
         chosen = _resolve_choice(answer, choices, default)
@@ -430,17 +459,26 @@ def offered_choices(choices: Sequence[str], nullable: bool
 def ask_many(reader: Callable[[Optional[str]], str | int],
              choices: Sequence[str], default: Optional[Sequence[str]],
              min_select: int, max_select: Optional[int],
-             re_ask_reason: Optional[str], one_based: bool) -> list[str]:
+             re_ask_reason: Optional[str], one_based: bool,
+             start_value: Optional[Sequence[str]] = None) -> list[str]:
     """Re-ask through reader until a valid set of choices is selected.
+
+    An empty answer selects default, or nothing when default is None.
+    With a start value an empty answer keeps it instead, and the erase
+    token selects nothing.
 
     Raises:
         ValueError: The arguments break a rule of check_multi_args().
     """
-    check_multi_args(choices, default, min_select, max_select)
+    check_multi_args(choices, default, min_select, max_select, start_value)
+    empty = default if start_value is None else start_value
     reason = re_ask_reason
     while True:
-        chosen, error = _resolve_multi(reader(reason), choices, default,
-                                       min_select, max_select, one_based)
+        answer = reader(reason)
+        erased = start_value is not None and _is_erase(answer)
+        chosen, error = _resolve_multi('' if erased else answer, choices,
+                                       [] if erased else empty, min_select,
+                                       max_select, one_based)
         if chosen is not None:
             return chosen
         reason = error
@@ -578,3 +616,21 @@ def new_row_template(columns: Sequence[TableColumn],
             choices=choices,
             nullable=_uniform([cell.nullable for cell in column], False)))
     return new_row
+
+
+def _with_start(answer: _V, start: Optional[_A]) -> Union[_V, _A, str]:
+    """Return what a raw answer means for a question with a start value.
+
+    With a start value an empty answer keeps the start, and the erase
+    token becomes an empty answer. Otherwise answer is returned as it is.
+    """
+    if start is None:
+        return answer
+    if answer == '':
+        return start
+    return '' if _is_erase(answer) else answer
+
+
+def _is_erase(answer: object) -> bool:
+    """Return whether a raw answer is the erase token."""
+    return isinstance(answer, str) and answer.strip().lower() == ERASE_TOKEN

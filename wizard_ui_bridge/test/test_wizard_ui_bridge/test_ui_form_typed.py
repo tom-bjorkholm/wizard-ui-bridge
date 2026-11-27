@@ -91,11 +91,12 @@ def test_prefilled_all(field: AskField, value: PrefillValueType) -> None:
 
 
 def test_prefilled_float_ok() -> None:
-    """An in-range float prefill becomes the field's offered default."""
+    """An in-range float prefill becomes the field's start value."""
     field = AskFloatField('R', None, min_value=0.0, max_value=5.0)
     result = prefilled_field(field, 4.0)
     assert isinstance(result, AskFloatField)
-    assert result.default == 4.0
+    assert result.start_value == 4.0
+    assert result.default is None
 
 
 def test_prefill_float_oob() -> None:
@@ -104,6 +105,7 @@ def test_prefill_float_oob() -> None:
     result = prefilled_field(field, 9.0)
     assert isinstance(result, AskFloatField)
     assert result.default == 3.0
+    assert result.start_value is None
 
 
 def test_prefilled_date_range() -> None:
@@ -114,6 +116,7 @@ def test_prefilled_date_range() -> None:
     result = prefilled_field(field, date(2025, 1, 1))
     assert isinstance(result, AskDateField)
     assert result.default == date(2024, 6, 1)
+    assert result.start_value is None
 
 
 def test_console_prefill_date() -> None:

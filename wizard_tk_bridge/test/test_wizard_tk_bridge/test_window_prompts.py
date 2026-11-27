@@ -66,6 +66,29 @@ def test_text_rules(typed: str, nullable: bool, default: Optional[str],
         assert answer == expected
 
 
+@pytest.mark.parametrize('typed, expected', [('Ada', 'Ada'), ('', None)])
+def test_text_start(typed: str, expected: Optional[str]) -> None:
+    """Test a text question pre-fills its start value, which may be cleared.
+
+    The question is nullable, so an emptied entry gives None.
+    """
+    with prompt_window() as (root, window):
+        seen: list[str] = []
+        PromptDriver(root, window, [lambda: _seen_answer(window, seen, typed)])
+        answer = window.ask_text('Name?', None, True, start='Ada')
+        assert (answer, seen) == (expected, ['Ada'])
+
+
+@pytest.mark.parametrize('typed, expected', [('', 3), ('5', 5)])
+def test_int_start(typed: str, expected: int) -> None:
+    """Test an integer question pre-fills its start value, not the default."""
+    with prompt_window() as (root, window):
+        seen: list[str] = []
+        PromptDriver(root, window, [lambda: _seen_answer(window, seen, typed)])
+        answer = window.ask_int('Age?', None, False, None, None, 3, start=9)
+        assert (answer, seen) == (expected, ['9'])
+
+
 def test_re_ask_shows_reason() -> None:
     """Test a re-asked question shows its reason in red above itself."""
     with prompt_window() as (root, window):
@@ -179,6 +202,14 @@ def test_choice_keeps_default() -> None:
         PromptDriver(root, window,
                      [lambda: click_button(content_of(window), 'OK')])
         assert window.ask_choice('Pick?', ['a', 'b', 'c'], 'c', None) == 'c'
+
+
+def test_null_choice_start() -> None:
+    """Test a nullable choice preselects its start instead of '(none)'."""
+    with prompt_window() as (root, window):
+        PromptDriver(root, window,
+                     [lambda: click_button(content_of(window), 'OK')])
+        assert window.ask_choice('Pick?', ['a', 'b'], 'b', None, True) == 'b'
 
 
 @pytest.mark.parametrize('row, expected', [(0, None), (2, 'b')])

@@ -4,7 +4,7 @@
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 from typing import Callable, Optional, Protocol, Sequence
@@ -131,54 +131,70 @@ def check_nullable(nullable: bool, has_default: bool) -> None:
 
 
 def check_choice_args(choices: Sequence[str], default: Optional[str],
-                      nullable: bool) -> None:
+                      nullable: bool,
+                      start_value: Optional[str] = None) -> None:
     """Raise ValueError when single-choice arguments contradict each other.
 
     Args:
         choices: The choices offered.
         default: The choice selected by an empty answer, or None.
         nullable: Whether no choice is allowed, reported as None.
+        start_value: The choice the question starts with, or None.
     Raises:
-        ValueError: default is not one of choices, or default is given
-                    together with nullable.
+        ValueError: default or start_value is not one of choices, or
+                    default is given together with nullable.
     """
     check_nullable(nullable, default is not None)
-    if default is not None and default not in choices:
-        raise ValueError('default must be one of choices')
+    for name, value in (('default', default), ('start_value', start_value)):
+        if value is not None and value not in choices:
+            raise ValueError(f'{name} must be one of choices')
 
 
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def check_multi_args(choices: Sequence[str], default: Optional[Sequence[str]],
-                     min_select: int, max_select: Optional[int]) -> None:
+                     min_select: int, max_select: Optional[int],
+                     start_value: Optional[Sequence[str]] = None) -> None:
     """Raise ValueError when multi-choice arguments contradict each other.
 
     The selection bounds must be satisfiable, so 0 <= min_select <=
     max_select <= len(choices), where a max_select of None stands for
     len(choices). A default must name distinct choices, at most
     max_select of them. It may name fewer than min_select, leaving the
-    rest of the selection for the user to make deliberately.
+    rest of the selection for the user to make deliberately. A
+    start_value follows the same rules as a default.
 
     Args:
         choices: The choices offered.
         default: The choices pre-selected by an empty answer, or None.
         min_select: The smallest acceptable number of choices.
         max_select: The largest acceptable number of choices, or None.
+        start_value: The choices the question starts with, or None.
     Raises:
-        ValueError: The bounds cannot be satisfied, or default names a
-                    value that is not a choice, names a choice twice or
-                    names more than max_select choices.
+        ValueError: The bounds cannot be satisfied, or default or
+                    start_value names a value that is not a choice, names
+                    a choice twice or names more than max_select choices.
     """
     upper = len(choices) if max_select is None else max_select
     if not 0 <= min_select <= upper <= len(choices):
         raise ValueError('need 0 <= min_select <= max_select <= '
                          'number of choices')
-    if default is None:
-        return
-    if not set(default) <= set(choices):
-        raise ValueError('every default value must be one of choices')
-    if len(set(default)) != len(default):
-        raise ValueError('default must not name a choice twice')
-    if len(default) > upper:
-        raise ValueError('default must not name more than max_select')
+    for name, value in (('default', default), ('start_value', start_value)):
+        if value is not None:
+            _check_selection(name, value, choices, upper)
+
+
+def _check_selection(name: str, selection: Sequence[str],
+                     choices: Sequence[str], upper: int) -> None:
+    """Raise ValueError unless selection is at most upper distinct choices.
+
+    The message names the argument, such as default or start_value.
+    """
+    if not set(selection) <= set(choices):
+        raise ValueError(f'every {name} value must be one of choices')
+    if len(set(selection)) != len(selection):
+        raise ValueError(f'{name} must not name a choice twice')
+    if len(selection) > upper:
+        raise ValueError(f'{name} must not name more than max_select')
 
 
 @dataclass(frozen=True)
@@ -191,15 +207,26 @@ class PathAskOptions:
                   allowed together with a default.
         default: The path returned by an empty answer, or None for no
                  default.
+        start_value: The path the question starts with, or None to start
+                     with the default. It only sets where the input
+                     starts: an answer the user empties still means what
+                     an empty answer means, so nullable may be combined
+                     with a start_value. Keyword-only.
     """
 
     kind: WizardPathKind = WizardPathKind.FILE
     nullable: bool = False
     default: Optional[Path] = None
+    start_value: Optional[Path] = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         """Check that nullable is not combined with a default."""
         check_nullable(self.nullable, self.default is not None)
+
+    @property
+    def start_or_default(self) -> Optional[Path]:
+        """Return the path the input starts with: start_value or default."""
+        return self.default if self.start_value is None else self.start_value
 
 
 @dataclass(frozen=True)

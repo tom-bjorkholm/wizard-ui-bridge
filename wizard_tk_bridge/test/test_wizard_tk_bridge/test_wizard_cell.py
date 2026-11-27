@@ -225,6 +225,43 @@ def test_cell_default_value(cell: AskCell,
 
 
 @pytest.mark.parametrize('cell, value', [
+    (AskTextCell(None, nullable=True, start_value='Ann'), 'Ann'),
+    (AskIntCell(None, default=8, start_value=5), 5),
+    (AskPathCell(None, PathAskOptions(start_value=Path('/x'))), Path('/x')),
+    (AskYesNoCell(None, default=False, start_value=True), True),
+    (AskChoiceCell(None, choices=('a', 'b'), nullable=True, start_value='b'),
+     'b'),
+    (AskMultiChoiceCell(None, choices=('a', 'b'), default=('a',),
+                        start_value=('b',)), ['b']),
+    (AskFloatCell(None, nullable=True, start_value=1.5), 1.5),
+    (AskDateCell(None, default=date(2027, 1, 1),
+                 start_value=date(2027, 2, 2)), date(2027, 2, 2))])
+def test_cell_start_value(cell: AskCell,
+                          value: Optional[PrefillValueType]) -> None:
+    """Test a cell input starts from the cell's start value, not default."""
+    with gui_root() as root:
+        built, _ = _input(root, cell)
+        assert built.value() == value
+        assert built.error() is None
+
+
+@pytest.mark.parametrize('cell, value', [
+    (AskTextCell(None, nullable=True, start_value='Ann'), None),
+    (AskTextCell(None, start_value='Ann'), ''),
+    (AskIntCell(None, default=8, start_value=5), 8),
+    (AskFloatCell(None, nullable=True, start_value=1.5), None)])
+def test_cell_start_emptied(cell: AskCell,
+                            value: Optional[PrefillValueType]) -> None:
+    """Test an emptied start value gives what an empty input gives."""
+    with gui_root() as root:
+        built, _ = _input(root, cell)
+        assert isinstance(built.widget, tk.Entry)
+        set_entry(built.widget, '')
+        assert built.value() == value
+        assert built.error() is None
+
+
+@pytest.mark.parametrize('cell, value', [
     (AskTextCell(None), 'Ann'), (AskIntCell(None), 7),
     (AskPathCell(None, PathAskOptions()), Path('/x/y')),
     (AskYesNoCell(None, default=False), True),

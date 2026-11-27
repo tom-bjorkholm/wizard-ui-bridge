@@ -41,23 +41,28 @@ class _TextBridge(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted answer using ask_text semantics."""
         if sensitive and default is not None:
             raise ValueError('default is not allowed for sensitive input')
         self.calls.append((question, re_ask_reason))
-        return _scripted_text(self._next(), nullable, default)
+        return _scripted_text(self._next(), nullable, default, start_value)
 
     def show(self, message: str) -> None:
         """Ignore shown messages."""
         _ = message
 
 
-def _scripted_text(answer: str | int, nullable: bool,
-                   default: Optional[str]) -> Optional[str]:
-    """Return ask_text semantics for one scripted raw answer."""
+def _scripted_text(answer: str | int, nullable: bool, default: Optional[str],
+                   start_value: Optional[str]) -> Optional[str]:
+    """Return ask_text semantics for one scripted raw answer.
+
+    An empty answer keeps a start value, as Enter does on the console.
+    """
     text = answer if isinstance(answer, str) else str(answer)
+    if text == '' and start_value is not None:
+        return start_value
     if text == '' and default is not None:
         return default
     return None if (nullable and text == '') else text

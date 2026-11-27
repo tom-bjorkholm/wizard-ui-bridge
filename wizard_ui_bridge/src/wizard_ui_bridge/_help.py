@@ -30,7 +30,7 @@ def help_kwargs(method: Callable[..., object],
     A method that takes neither a help_text parameter nor **kwargs gets
     no keyword arguments, and a DeprecationWarning names the method.
     """
-    if _accepts_help(method):
+    if accepts_keyword(method, 'help_text'):
         return {'help_text': help_text}
     name = getattr(method, '__qualname__', repr(method))
     warnings.warn(f'{name}() does not accept the keyword-only parameter '
@@ -39,9 +39,9 @@ def help_kwargs(method: Callable[..., object],
     return {}
 
 
-def _accepts_help(method: Callable[..., object]) -> bool:
-    """Return whether method takes help_text, by name or as **kwargs."""
+def accepts_keyword(method: Callable[..., object], name: str) -> bool:
+    """Return whether method takes the keyword name, or any **kwargs."""
     parameters = inspect.signature(method).parameters
-    return 'help_text' in parameters or any(
+    return name in parameters or any(
         parameter.kind is inspect.Parameter.VAR_KEYWORD
         for parameter in parameters.values())

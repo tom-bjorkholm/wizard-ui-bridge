@@ -25,8 +25,9 @@ class _FormBridge(WizardUiBridge):
     """Bridge that feeds scripted answers to the typed ask methods.
 
     A scripted answer that is an exception is raised, so a test can make
-    a particular field request navigation. Shown messages and the order
-    of asked fields are recorded for inspection.
+    a particular field request navigation. Shown messages, the order of
+    asked fields and the default and start value of each are recorded
+    for inspection.
     """
 
     def __init__(self, answers: Sequence[object]) -> None:
@@ -35,6 +36,7 @@ class _FormBridge(WizardUiBridge):
         self.shown: list[str] = []
         self.asked: list[str] = []
         self.defaults: list[object] = []
+        self.starts: list[object] = []
         self.nullables: list[bool] = []
         self.helps: list[Optional[str]] = []
 
@@ -52,12 +54,13 @@ class _FormBridge(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted text answer."""
         self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
+        self.starts.append(start_value)
         answer = self._next()
         assert answer is None or isinstance(answer, str)
         return answer
@@ -66,11 +69,14 @@ class _FormBridge(WizardUiBridge):
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
                 nullable: bool = False, min_value: Optional[int] = None,
                 max_value: Optional[int] = None, default: Optional[int] = None,
+                start_value: Optional[int] = None,
                 help_text: Optional[str] = None) -> Optional[int]:
-        """Return the next scripted integer answer."""
+        """Return the next scripted integer answer, recording nullable."""
         self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
+        self.starts.append(start_value)
+        self.nullables.append(nullable)
         answer = self._next()
         assert answer is None or isinstance(answer, int)
         return answer
@@ -82,17 +88,20 @@ class _FormBridge(WizardUiBridge):
         self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(None if options is None else options.default)
+        self.starts.append(None if options is None else options.start_value)
         answer = self._next()
         assert answer is None or isinstance(answer, Path)
         return answer
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None, *,
+                   start_value: Optional[bool] = None,
                    help_text: Optional[str] = None) -> bool:
         """Return the next scripted yes/no answer."""
         self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
+        self.starts.append(start_value)
         answer = self._next()
         assert isinstance(answer, bool)
         return answer
@@ -103,12 +112,14 @@ class _FormBridge(WizardUiBridge):
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
                    nullable: Literal[False] = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]: ...
     # pylint: enable=too-many-arguments
 
@@ -116,11 +127,13 @@ class _FormBridge(WizardUiBridge):
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted choice answer, recording nullable."""
         self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
+        self.starts.append(start_value)
         self.nullables.append(nullable)
         answer = self._next()
         assert answer is None or isinstance(answer, str)
@@ -131,11 +144,13 @@ class _FormBridge(WizardUiBridge):
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None,
+                  start_value: Optional[Sequence[str]] = None,
                   help_text: Optional[str] = None) -> list[str]:
         """Return the next scripted multi-choice answer."""
         self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
+        self.starts.append(start_value)
         answer = self._next()
         assert isinstance(answer, list)
         return answer
@@ -212,7 +227,7 @@ def test_form_in_order() -> None:
     assert [answer.value for answer in answers] == \
         ['Tom', 42, False, 'green', ['a', 'c']]
     assert [answer.asking for answer in answers] == list(fields)
-    assert bridge.nullables == [False]
+    assert bridge.nullables == [False, False]
 
 
 def test_form_null_choice() -> None:
@@ -358,7 +373,7 @@ def test_prefill_sensitive() -> None:
 
 
 def test_prefill_text() -> None:
-    """A validator prefill seeds a later text row's offered default."""
+    """A validator prefill seeds a later text row's start value."""
     fields: list[AskField] = [AskTextField('A', None),
                               AskTextField('B', None)]
 
@@ -372,11 +387,12 @@ def test_prefill_text() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'ignored'])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, 'derived KEY']
+    assert bridge.starts == [None, 'derived KEY']
+    assert bridge.defaults == [None, None]
 
 
 def test_prefill_bool() -> None:
-    """A bool prefill seeds a yes/no field's default (checkbox case)."""
+    """A bool prefill seeds a yes/no field's start (checkbox case)."""
     fields: list[AskField] = [AskYesNoField('A', None, False),
                               AskYesNoField('B', None, False)]
 
@@ -386,7 +402,8 @@ def test_prefill_bool() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge([False, False])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [False, True]
+    assert bridge.starts == [None, True]
+    assert bridge.defaults == [False, False]
 
 
 def test_prefill_persists() -> None:
@@ -405,7 +422,7 @@ def test_prefill_persists() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'mid', 'x'])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, None, 'from A']
+    assert bridge.starts == [None, None, 'from A']
 
 
 def test_prefill_own_row() -> None:
@@ -418,7 +435,7 @@ def test_prefill_own_row() -> None:
         return PartFormValidationResult(True, '', (), ((changed, 'self'),))
     bridge = _FormBridge(['a', 'b'])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, None]
+    assert bridge.starts == [None, None]
 
 
 def test_prefill_bad_type() -> None:
@@ -436,7 +453,7 @@ def test_prefill_bad_type() -> None:
 
 
 def test_prefill_int_range() -> None:
-    """An out-of-range int prefill is ignored; the field keeps default."""
+    """An out-of-range int prefill is ignored; the field keeps its start."""
     fields: list[AskField] = [
         AskTextField('A', None),
         AskIntField('B', None, min_value=1, max_value=5, default=3)]
@@ -447,11 +464,12 @@ def test_prefill_int_range() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 4])
     bridge.ask_form('Q', fields, partial_validator=rule)
+    assert bridge.starts == [None, None]
     assert bridge.defaults == [None, 3]
 
 
 def test_prefill_choice_ok() -> None:
-    """A valid choice prefill seeds the choice field's default."""
+    """A valid choice prefill seeds the choice field's start value."""
     fields: list[AskField] = [
         AskTextField('A', None),
         AskChoiceField('B', None, choices=('r', 'g', 'b'), default='r')]
@@ -462,11 +480,12 @@ def test_prefill_choice_ok() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'g'])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, 'g']
+    assert bridge.starts == [None, 'g']
+    assert bridge.defaults == [None, 'r']
 
 
 def test_prefill_choice_bad() -> None:
-    """A choice prefill not among the choices keeps the own default."""
+    """A choice prefill not among the choices keeps the own start."""
     fields: list[AskField] = [
         AskTextField('A', None),
         AskChoiceField('B', None, choices=('r', 'g', 'b'), default='r')]
@@ -477,14 +496,15 @@ def test_prefill_choice_bad() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'r'])
     bridge.ask_form('Q', fields, partial_validator=rule)
+    assert bridge.starts == [None, None]
     assert bridge.defaults == [None, 'r']
 
 
 def test_prefill_nullable() -> None:
-    """A prefill seeds a nullable field's default, dropping nullable.
+    """A prefill seeds a nullable field's start value, keeping nullable.
 
-    A field cannot be both nullable and have a default, so the console
-    asks the prefilled row as a non-nullable field with that default.
+    A start value, unlike a default, may be combined with nullable, so
+    the user can still empty the prefilled field to None.
     """
     fields: list[AskField] = [AskTextField('A', None),
                               AskIntField('B', None, nullable=True)]
@@ -493,13 +513,16 @@ def test_prefill_nullable() -> None:
              changed: int) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, 5),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
-    bridge = _FormBridge(['KEY', 5])
-    bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, 5]
+    bridge = _FormBridge(['KEY', None])
+    answers = bridge.ask_form('Q', fields, partial_validator=rule)
+    assert bridge.starts == [None, 5]
+    assert bridge.defaults == [None, None]
+    assert bridge.nullables == [True]
+    assert answers[1].value is None
 
 
 def test_prefill_path(tmp_path: Path) -> None:
-    """A Path prefill seeds the path field's default."""
+    """A Path prefill seeds the path field's start value."""
     target = tmp_path / 'out.csv'
     fields: list[AskField] = [AskTextField('A', None),
                               AskPathField('B', None, PathAskOptions())]
@@ -510,11 +533,11 @@ def test_prefill_path(tmp_path: Path) -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', target])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, target]
+    assert bridge.starts == [None, target]
 
 
 def test_prefill_int_ok() -> None:
-    """An in-range int prefill seeds the integer field's default."""
+    """An in-range int prefill seeds the integer field's start value."""
     fields: list[AskField] = [
         AskTextField('A', None),
         AskIntField('B', None, min_value=1, max_value=5, default=3)]
@@ -525,11 +548,12 @@ def test_prefill_int_ok() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 4])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, 4]
+    assert bridge.starts == [None, 4]
+    assert bridge.defaults == [None, 3]
 
 
 def test_prefill_multi() -> None:
-    """A sequence prefill seeds the multi-choice field's default."""
+    """A sequence prefill seeds the multi-choice field's start value."""
     fields: list[AskField] = [
         AskTextField('A', None),
         AskMultiChoiceField('B', None, choices=('a', 'b', 'c'))]
@@ -540,4 +564,4 @@ def test_prefill_multi() -> None:
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', ['a']])
     bridge.ask_form('Q', fields, partial_validator=rule)
-    assert bridge.defaults == [None, ['a', 'c']]
+    assert bridge.starts == [None, ['a', 'c']]

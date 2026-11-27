@@ -45,7 +45,7 @@ class _Recorder(WizardUiBridgeConsole):
         self.menus: list[list[str]] = []
 
     def _emit_question(self, question: str, re_ask_reason: Optional[str],
-                       lines: Sequence[str]) -> None:
+                       lines: Sequence[str], hint: str) -> None:
         """Record the question, and the lines of a menu, then emit them.
 
         The ' [default]' the console adds to a question is not recorded.
@@ -53,7 +53,7 @@ class _Recorder(WizardUiBridgeConsole):
         self.questions.append(question.split(' [')[0])
         if question.startswith('Rows: '):
             self.menus.append(list(lines))
-        super()._emit_question(question, re_ask_reason, lines)
+        super()._emit_question(question, re_ask_reason, lines, hint)
 
 
 def _grid(names: Sequence[str], days: int = 2) -> list[list[AskCell]]:

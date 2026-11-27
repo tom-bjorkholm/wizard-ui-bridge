@@ -18,7 +18,8 @@ from textual.pilot import Pilot
 from textual.widgets import Button, Input
 
 from wizard_ui_bridge import WizardNavigation, WizardUiBridgeTextual
-from wizard_ui_bridge.form_defs import AnswerField, AskField
+from wizard_ui_bridge.form_defs import AnswerField, AskField, \
+    PartialFormValidator
 from wizard_ui_bridge.textual_bridge import _FormApp
 from wizard_ui_bridge._textual_nav import _NavApp
 from wizard_ui_bridge._path import _PickerScreen
@@ -70,6 +71,24 @@ class _CannedBridge(WizardUiBridgeTextual):
             app.nav = outcome
             return None
         return outcome
+
+
+def submit_typed(fields: Sequence[AskField], text: str,
+                 validator: Optional[PartialFormValidator] = None) -> _FormApp:
+    """Set the input of the first field of a form to text, then submit.
+
+    The form app is returned, with the answers as its return value when
+    the form was accepted, else None.
+    """
+    app = _FormApp('H', list(fields), [], validator)
+
+    async def scenario() -> None:
+        async with app.run_test() as pilot:
+            app.query_one('#field_0', Input).value = text
+            await pilot.pause()
+            await pilot.click('#submit')
+    asyncio.run(scenario())
+    return app
 
 
 def _submitted(app: _NavApp[Any]) -> list[AnswerField]:

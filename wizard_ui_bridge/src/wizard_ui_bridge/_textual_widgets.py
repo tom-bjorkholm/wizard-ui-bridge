@@ -20,7 +20,8 @@ input is mounted.
 # MIT License
 
 from datetime import date, datetime, time
-from typing import Iterator, Optional, Sequence
+from pathlib import Path
+from typing import Iterator, Optional, Sequence, Union
 from textual.containers import Horizontal
 from textual.widget import Widget
 from textual.widgets import Button, Checkbox, Input, Select, SelectionList, \
@@ -28,7 +29,7 @@ from textual.widgets import Button, Checkbox, Input, Select, SelectionList, \
 from textual.widgets.selection_list import Selection
 from wizard_ui_bridge.bridge_helpers import multi_count_message
 from wizard_ui_bridge._parse import format_new_value, \
-    parse_date, parse_datetime
+    parse_date, parse_datetime, NEW_FIELD_TYPES
 from wizard_ui_bridge.arg_types import TableCell
 from wizard_ui_bridge.form_defs import AskField, \
     AskTextField, AskIntField, AskPathField, AskYesNoField, AskChoiceField, \
@@ -87,10 +88,14 @@ def _make_select(cell: TableCell, widget_id: str) -> Select[str]:
 
 
 def _choice_select(field: AskChoiceField, widget_id: str) -> Select[str]:
-    """Return a drop-down for a choice field, blank when no default."""
+    """Return a drop-down for a choice field, blank when no default.
+
+    It starts with the start value, else the default, else blank.
+    """
     options = [(choice, choice) for choice in field.choices]
-    if field.default is not None:
-        return Select(options, value=field.default, allow_blank=False,
+    start = field.start_or_default
+    if start is not None:
+        return Select(options, value=start, allow_blank=field.default is None,
                       id=widget_id)
     return Select(options, allow_blank=True, id=widget_id)
 
@@ -98,7 +103,7 @@ def _choice_select(field: AskChoiceField, widget_id: str) -> Select[str]:
 def _multi_selection(field: AskMultiChoiceField,
                      widget_id: str) -> SelectionList[int]:
     """Return a check-box list for a multi-choice field."""
-    chosen = set(_preselected(field.choices, field.default))
+    chosen = set(_preselected(field.choices, field.start_or_default))
     selections = [Selection(choice, index, index in chosen)
                   for index, choice in enumerate(field.choices)]
     return SelectionList[int](*selections, id=widget_id)
@@ -139,32 +144,42 @@ def _new_field_widget(field: AskField, index: int) -> Optional[Widget]:
 
     A date or date-time field shows a text input with a Pick button that
     opens the calendar; a float, time or duration field shows a plain
-    text input parsed on change. Each starts from its formatted default.
+    text input parsed on change. Each starts from its formatted start
+    value, else its default.
     """
     if isinstance(field, (AskDateField, AskDateTimeField)):
-        text = '' if field.default is None else format_new_value(field.default)
-        return _pick_field_row(text, index)
+        return _pick_field_row(_start_text(field), index)
     if isinstance(field, (AskFloatField, AskTimeField, AskDurationField)):
-        text = '' if field.default is None else format_new_value(field.default)
-        return Input(value=text, id=f'field_{index}')
+        return Input(value=_start_text(field), id=f'field_{index}')
     return None
+
+
+def _optional_text(value: Optional[Union[int, Path]]) -> str:
+    """Return the input text of an integer or path, or '' for None."""
+    return '' if value is None else str(value)
+
+
+def _start_text(field: AskField) -> str:
+    """Return the formatted start value, else default, of a typed field."""
+    assert isinstance(field, NEW_FIELD_TYPES)
+    start = field.start_or_default
+    return '' if start is None else format_new_value(start)
 
 
 def _basic_field_widget(field: AskField, index: int) -> Widget:
     """Return the input widget for one of the original field kinds."""
     widget_id = f'field_{index}'
     if isinstance(field, AskTextField):
-        value = '' if field.default is None else field.default
-        return Input(value=value, password=field.sensitive, id=widget_id)
+        text = field.start_or_default
+        return Input(value=text or '', password=field.sensitive, id=widget_id)
     if isinstance(field, AskIntField):
-        value = '' if field.default is None else str(field.default)
-        return Input(value=value, id=widget_id)
+        return Input(value=_optional_text(field.start_or_default),
+                     id=widget_id)
     if isinstance(field, AskPathField):
-        default = field.path_options.default
-        text = '' if default is None else str(default)
-        return _path_field_row(text, index)
+        start = field.path_options.start_or_default
+        return _path_field_row(_optional_text(start), index)
     if isinstance(field, AskYesNoField):
-        return Checkbox(value=field.default, id=widget_id)
+        return Checkbox(value=field.start_or_default, id=widget_id)
     if isinstance(field, AskChoiceField):
         return _choice_select(field, widget_id)
     assert isinstance(field, AskMultiChoiceField)

@@ -103,8 +103,8 @@ class _PathApp(_PathPick, _NavApp[str]):
         self._question = question
         self._messages = messages
         self._kind = options.kind
-        self._start = _start_dir(options.default)
-        self._value = _start_value(value, options.default)
+        self._start = _start_dir(options.start_or_default)
+        self._value = _start_value(value, options.start_or_default)
 
     def compose(self) -> ComposeResult:
         """Lay out the header, directory tree, path input and footer."""
@@ -589,12 +589,16 @@ class WizardUiBridgeTextual(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
-        """Ask for free text; see WizardUiBridge.ask_text."""
-        check_text_args(default, sensitive, nullable)
+        """Ask for free text; see WizardUiBridge.ask_text.
+
+        The input starts with the start value, else the default.
+        """
+        check_text_args(default, sensitive, nullable, start_value)
         messages = self._collect(re_ask_reason)
-        value = '' if default is None else default
+        start = default if start_value is None else start_value
+        value = '' if start is None else start
         text = self._run(_TextApp(question, messages, value, sensitive))
         return text_answer(text, nullable, default)
 
@@ -615,12 +619,16 @@ class WizardUiBridgeTextual(WizardUiBridge):
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None, *,
+                   start_value: Optional[bool] = None,
                    help_text: Optional[str] = None) -> bool:
-        """Ask a yes/no question; see WizardUiBridge.ask_yes_no."""
+        """Ask a yes/no question; see WizardUiBridge.ask_yes_no.
+
+        The start value, else the default, is highlighted.
+        """
         messages = self._collect(re_ask_reason)
-        default_index = 0 if default else 1
-        chosen = self._run(_ChoiceApp(question, ['yes', 'no'], default_index,
-                                      messages))
+        start = default if start_value is None else start_value
+        chosen = self._run(_ChoiceApp(question, ['yes', 'no'],
+                                      0 if start else 1, messages))
         return chosen == 0
 
     # pylint: disable=too-many-arguments
@@ -629,12 +637,14 @@ class WizardUiBridgeTextual(WizardUiBridge):
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
                    nullable: Literal[False] = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]: ...
     # pylint: enable=too-many-arguments
 
@@ -642,16 +652,18 @@ class WizardUiBridgeTextual(WizardUiBridge):
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]:
         """Ask the user to pick one choice; see ask_choice.
 
-        A nullable choice is offered with a leading, highlighted
-        '(none)' option that selects no choice.
+        A nullable choice is offered with a leading '(none)' option that
+        selects no choice. The start value is highlighted, else '(none)'
+        when nullable, else the default.
         """
-        check_choice_args(choices, default, nullable)
+        check_choice_args(choices, default, nullable, start_value)
         messages = self._collect(re_ask_reason)
         offered = offered_choices(choices, nullable)
-        start = 0 if nullable else _default_index(choices, default)
+        start = _choice_start(choices, default, nullable, start_value)
         index = self._run(_ChoiceApp(question, [lbl for lbl, _ in offered],
                                      start, messages))
         return offered[index][1]
@@ -661,13 +673,18 @@ class WizardUiBridgeTextual(WizardUiBridge):
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None,
+                  start_value: Optional[Sequence[str]] = None,
                   help_text: Optional[str] = None) -> list[str]:
-        """Ask the user to pick several choices; see ask_multi."""
-        check_multi_args(choices, default, min_select, max_select)
+        """Ask the user to pick several choices; see ask_multi.
+
+        The start value, else the default, is preselected.
+        """
+        check_multi_args(choices, default, min_select, max_select, start_value)
         messages = self._collect(re_ask_reason)
+        start = default if start_value is None else start_value
         chosen = self._run(_MultiApp(question, list(choices),
-                                     _preselected(choices, default),
-                                     min_select, max_select, messages))
+                                     _preselected(choices, start), min_select,
+                                     max_select, messages))
         return [choices[index] for index in sorted(chosen)]
 
     # pylint: disable-next=too-many-arguments
@@ -753,3 +770,16 @@ class WizardUiBridgeTextual(WizardUiBridge):
         displayed, because only a Textual screen renders it.
         """
         self._pending.append(message)
+
+
+def _choice_start(choices: Sequence[str], default: Optional[str],
+                  nullable: bool, start_value: Optional[str]) -> Optional[int]:
+    """Return the index of the offered choice to highlight, or None.
+
+    That is the start value, else '(none)' when nullable, else the
+    default. A nullable choice offers '(none)' first, so the start value
+    is one further down.
+    """
+    if start_value is not None:
+        return list(choices).index(start_value) + (1 if nullable else 0)
+    return 0 if nullable else _default_index(choices, default)

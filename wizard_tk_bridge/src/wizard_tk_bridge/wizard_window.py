@@ -54,8 +54,9 @@ CHOICE_HEIGHT = 10
 
 
 def _default_path_text(options: PathAskOptions) -> str:
-    """Return the initial path text from the option's default."""
-    return '' if options.default is None else str(options.default)
+    """Return the initial path text: the start value, else the default."""
+    start = options.start_or_default
+    return '' if start is None else str(start)
 
 
 # pylint: disable-next=too-many-instance-attributes
@@ -139,20 +140,23 @@ class WizardWindow:
             self._messages.destroy()
             self._content.destroy()
 
+    # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def ask_text(self, question: str, re_ask: Optional[str], nullable: bool,
-                 default: Optional[str] = None,
-                 sensitive: bool = False) -> Optional[str]:
+                 default: Optional[str] = None, sensitive: bool = False,
+                 start: Optional[str] = None) -> Optional[str]:
         """Ask one free-text question and return the entered text.
 
-        A sensitive question masks the typed text; a default value is
-        pre-filled and returned when the answer is left empty.
+        A sensitive question masks the typed text. The entry is pre-filled
+        with start, else default, and a default is returned when the
+        answer is left empty.
         """
         self._begin(question, re_ask)
         entry = tk.Entry(self._content, width=44)
+        seed = default if start is None else start
         if sensitive:
             entry.configure(show='*')
-        elif default is not None:
-            entry.insert(0, default)
+        elif seed is not None:
+            entry.insert(0, seed)
         style_input(entry)
         entry.pack(anchor='w', pady=6)
         self._add_buttons(lambda: self._finish(entry.get()))
@@ -163,23 +167,28 @@ class WizardWindow:
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def ask_int(self, question: str, re_ask: Optional[str], nullable: bool,
                 min_value: Optional[int], max_value: Optional[int],
-                default: Optional[int]) -> Optional[int]:
-        """Ask one integer question, re-asking until it is in range."""
+                default: Optional[int],
+                start: Optional[int] = None) -> Optional[int]:
+        """Ask one integer question, re-asking until it is in range.
+
+        The entry is pre-filled with start, else default.
+        """
         reason = re_ask
+        seed = default if start is None else start
         while True:
-            text = self._run_int(question, reason, default)
+            text = self._run_int(question, reason, seed)
             done, value, reason = int_answer(text, nullable, min_value,
                                              max_value, default)
             if done:
                 return value
 
     def _run_int(self, question: str, re_ask: Optional[str],
-                 default: Optional[int]) -> str:
-        """Show one integer entry and return the entered text."""
+                 seed: Optional[int]) -> str:
+        """Show one integer entry pre-filled with seed; return its text."""
         self._begin(question, re_ask)
         entry = tk.Entry(self._content, width=14)
-        if default is not None:
-            entry.insert(0, str(default))
+        if seed is not None:
+            entry.insert(0, str(seed))
         style_input(entry)
         entry.pack(anchor='w', pady=6)
         self._add_buttons(lambda: self._finish(entry.get()))
@@ -238,9 +247,12 @@ class WizardWindow:
         assert isinstance(result, list)
         return result
 
-    def ask_yes_no(self, question: str, default: bool,
+    def ask_yes_no(self, question: str, start: bool,
                    re_ask: Optional[str]) -> bool:
-        """Ask one yes/no question with dedicated buttons."""
+        """Ask one yes/no question with dedicated buttons.
+
+        The button of start has the focus when the question starts.
+        """
         self._begin(question, re_ask)
         box = tk.Frame(self._content)
         box.pack(pady=10)
@@ -251,7 +263,7 @@ class WizardWindow:
         yes.pack(side='left', padx=6)
         no.pack(side='left', padx=6)
         self._add_nav_buttons(box)
-        chosen = yes if default else no
+        chosen = yes if start else no
         chosen.configure(default='active')
         chosen.focus_set()
         result = self._wait()
@@ -260,18 +272,19 @@ class WizardWindow:
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def ask_choice(self, question: str, choices: Sequence[str],
-                   default: Optional[str], re_ask: Optional[str],
+                   start: Optional[str], re_ask: Optional[str],
                    nullable: bool = False) -> Optional[str]:
         """Ask the user to pick exactly one choice and return it.
 
-        A nullable choice is offered with a leading, preselected '(none)'
-        entry that selects no choice, reported as None.
+        The choice start is preselected. A nullable choice is offered with
+        a leading '(none)' entry that selects no choice, reported as None,
+        and is preselected when start is None.
         """
         self._begin(question, re_ask)
         offered = offered_choices(choices, nullable)
-        listbox = self._choice_list([label for label, _ in offered], default,
+        listbox = self._choice_list([label for label, _ in offered], start,
                                     'browse')
-        if nullable:
+        if nullable and start is None:
             listbox.selection_set(0)
         answers = [answer for _, answer in offered]
         self._add_buttons(lambda: self._pick_one(listbox, answers))
@@ -281,13 +294,16 @@ class WizardWindow:
 
     # pylint: disable-next=too-many-arguments,too-many-positional-arguments
     def ask_multi(self, question: str, choices: Sequence[str],
-                  default: Optional[Sequence[str]], min_select: int,
+                  start: Optional[Sequence[str]], min_select: int,
                   max_select: Optional[int], re_ask: Optional[str]
                   ) -> list[str]:
-        """Ask the user to pick several choices within the count bounds."""
+        """Ask the user to pick several choices within the count bounds.
+
+        The choices in start are preselected.
+        """
         reason = re_ask
         while True:
-            chosen = self._run_multi(question, reason, choices, default)
+            chosen = self._run_multi(question, reason, choices, start)
             reason = multi_count_message(len(chosen), min_select, max_select)
             if reason is None:
                 return chosen
@@ -309,10 +325,10 @@ class WizardWindow:
 
     def _run_multi(self, question: str, re_ask: Optional[str],
                    choices: Sequence[str],
-                   default: Optional[Sequence[str]]) -> list[str]:
+                   start: Optional[Sequence[str]]) -> list[str]:
         """Show a multi-selection list once and return the picked values."""
         self._begin(question, re_ask)
-        listbox = self._choice_list(choices, default, 'multiple')
+        listbox = self._choice_list(choices, start, 'multiple')
         self._add_buttons(lambda: self._pick_many(listbox, choices))
         result = self._wait()
         assert isinstance(result, list)

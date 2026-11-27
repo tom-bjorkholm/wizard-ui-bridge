@@ -24,13 +24,14 @@ WizardBack steps back to the previously asked
 cell that can still be asked, also from a menu, and propagates from the
 first cell. The cells passed on the way back are walked again, so a cell
 skipped as disabled is asked if it is enabled by then, as in the base
-WizardUiBridge.ask_form().
+WizardUiBridge.ask_form(). A cell asked again starts with the answer the
+user gave it.
 
 A partial validator gets each answered cell, and the whole matrix after
 a shape change; its message is shown when the matrix is not valid, its
-disabled cells are skipped, and each prefill becomes the default of its
-cell when that cell is asked. The message is advisory only: the wizard
-checks the returned answers.
+disabled cells are skipped, and each prefill becomes the start value of
+its cell when that cell is asked, so a nullable cell stays nullable. The
+message is advisory only: the wizard checks the returned answers.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -84,7 +85,7 @@ class ConsoleMatrix:
         self._cells: list[list[AskCell]] = []
         self._answers: list[list[Optional[AnswerCell]]] = []
         self._disabled: set[CellPosition] = set()
-        self._pending: dict[CellPosition, PrefillValueType] = {}
+        self._starts: dict[CellPosition, Optional[PrefillValueType]] = {}
         self._reshape(request.dimensions.default)
 
     def run(self) -> list[list[Optional[AnswerCell]]]:
@@ -155,14 +156,17 @@ class ConsoleMatrix:
         raise WizardBack()
 
     def _ask(self, position: CellPosition) -> None:
-        """Ask one input cell, store its answer and run the validator."""
+        """Ask one input cell, store its answer and run the validator.
+
+        The cell starts with its latest answer or prefill, if it has one.
+        """
         cell = self._cells[position.row][position.column]
         if self._request.console_question.use_help_text and cell.help_text:
             self._bridge.show(cell.help_text)
-        prefill = self._pending.get(position)
-        asked = cell if prefill is None else prefilled_field(cell, prefill)
+        asked = prefilled_field(cell, self._starts[position]) \
+            if position in self._starts else cell
         value = ask_cell_value(self._bridge, self._question(position), asked)
-        self._pending.pop(position, None)
+        self._starts[position] = value
         self._answers[position.row][position.column] = answer_of(cell, value)
         self._validate(position)
 
@@ -277,14 +281,14 @@ class ConsoleMatrix:
         self._disabled = set(result.disable_cells)
         for position, value in valid_cell_prefills(self._cells, changed,
                                                    result.prefill_values):
-            self._pending[position] = value
+            self._starts[position] = value
 
     def _reshape(self, shape: MatrixDimension) -> None:
         """Change the matrix to shape, deleting or appending at the end.
 
         A remaining cell keeps its answer. A new cell comes fresh from the
-        specification with its start answer, and a prefill waiting for a
-        deleted cell is dropped.
+        specification with its start answer, and the latest answer or
+        prefill of a deleted cell is dropped.
         """
         old = self._shape
         self._shape = shape
@@ -294,8 +298,8 @@ class ConsoleMatrix:
                        for line in grid]
         self._answers = [[self._kept_answer(position, old)
                           for position in line] for line in grid]
-        self._pending = {position: value for position, value
-                         in self._pending.items() if _inside(position, shape)}
+        self._starts = {position: value for position, value
+                        in self._starts.items() if _inside(position, shape)}
 
     def _kept_cell(self, position: CellPosition,
                    old: MatrixDimension) -> AskCell:

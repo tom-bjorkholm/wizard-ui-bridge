@@ -422,6 +422,21 @@ Try it on the output-file question, which carries a help text in `e02`. A
 bridge written before `help_text` existed still works, but the base class then
 leaves the help text out and issues a `DeprecationWarning`.
 
+### Start values
+
+Every typed ask method also takes a keyword-only `start_value`: the value the
+question starts with, such as the current content of a table cell. It is
+separate from the `default`, which is what an *empty* answer gives, so a
+nullable question can start with a value the user may still clear to `None`.
+A GUI pre-fills its input with the start value. A text bridge cannot, so the
+teleprinter shows it in brackets, keeps it when the user just presses Enter,
+and reads the erase token `:e` as an empty answer. The `bridge_helpers`
+functions `text_answer`, `ask_yes_no`, `ask_one` and `ask_many` do that when
+they are given the start value, so each method only shows it and passes it
+on. A bridge written before `start_value` existed still works, but the base
+class then passes the start value as the default and issues a
+`DeprecationWarning`, and the user cannot empty such an answer.
+
 ### User experience second: the "override to improve" move
 
 Those mandatory methods are the **floor for correctness, not the target**. A

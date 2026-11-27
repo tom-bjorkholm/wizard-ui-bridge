@@ -4,6 +4,7 @@
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
+import warnings
 from io import StringIO
 from pathlib import Path
 from typing import Optional
@@ -517,6 +518,23 @@ def test_e07_table_choice() -> None:
              [TableCell('y'), TableCell(None, choices=kinds)]]
     result = bridge.ask_table(columns, cells, 'edit')
     assert result == [['Anna', 'number'], ['Bo', 'text']]
+
+
+@pytest.mark.parametrize('answer, expected', [
+    ('', ['Ann', 'text']), (':e', [None, None])])
+def test_e07_table_start(answer: str, expected: list[Optional[str]]) -> None:
+    """Enter keeps a pre-filled nullable cell and ':e' empties it to None."""
+    out_file = StringIO()
+    answers = StringIO(f'{answer}\n{answer}\n')
+    bridge = e07_custom_bridge.TeleprinterBridge(out_file, answers, StringIO())
+    columns = [TableColumn('guest'), TableColumn('kind')]
+    cells = [[TableCell('Ann', nullable=True),
+              TableCell('text', choices=('text', 'number'), nullable=True)]]
+    with warnings.catch_warnings():
+        warnings.simplefilter('error', DeprecationWarning)
+        result = bridge.ask_table(columns, cells, 'guests')
+    assert result == [expected]
+    assert '[ANN] (:E ERASES)' in out_file.getvalue()
 
 
 def test_e07_table_var() -> None:

@@ -55,27 +55,30 @@ def initial_answer(field: AskCell) -> AnswerCell: ...
 def initial_answer(field: AskCell) -> AnswerCell:
     """Return the starting answer for a field or input cell.
 
-    The value is the field's default, or the empty or not-yet-answered
-    state when the field has no default. A choice field with no default
-    starts as None, which tells a partial validator the choice is not
-    answered yet; a bridge must not leave that None in a submitted form.
+    The value is the field's start value, else its default, or the empty
+    or not-yet-answered state when the field has neither. A choice field
+    with neither starts as None, which tells a partial validator the
+    choice is not answered yet; a bridge must not leave that None in a
+    submitted form.
     A form field gets its Answer*Field and a matrix cell its Answer*Cell.
     A label cell has no answer and must not be passed.
     """
-    return answer_of(field, _default_value(field))
+    return answer_of(field, _starting_value(field))
 
 
-def _default_value(cell: AskCell) -> Optional[PrefillValueType]:
-    """Return the default answer value of an input cell or field.
+def _starting_value(cell: AskCell) -> Optional[PrefillValueType]:
+    """Return the value an input cell or field starts with.
 
-    A multi-choice with no default starts with nothing selected.
+    A multi-choice with neither a start value nor a default starts with
+    nothing selected.
     """
     if isinstance(cell, AskPathCell):
-        return cell.path_options.default
+        return cell.path_options.start_or_default
     if isinstance(cell, AskMultiChoiceCell):
-        return [] if cell.default is None else list(cell.default)
+        start = cell.start_or_default
+        return [] if start is None else list(start)
     assert not isinstance(cell, AskLabelCell)
-    return cell.default
+    return cell.start_or_default
 
 
 @overload
@@ -302,73 +305,65 @@ def _bad_type(where: str) -> NoReturn:
 
 
 @overload
-def prefilled_field(field: AskField, prefill: PrefillValueType) -> AskField:
-    ...
+def prefilled_field(field: AskField,
+                    prefill: Optional[PrefillValueType]) -> AskField: ...
 
 
 @overload
-def prefilled_field(field: AskCell, prefill: PrefillValueType) -> AskCell:
-    ...
+def prefilled_field(field: AskCell,
+                    prefill: Optional[PrefillValueType]) -> AskCell: ...
 
 
-def prefilled_field(field: AskCell, prefill: PrefillValueType) -> AskCell:
-    """Return a form field or input cell with prefill as its default.
+def prefilled_field(field: AskCell,
+                    prefill: Optional[PrefillValueType]) -> AskCell:
+    """Return a form field or input cell that starts with prefill.
 
-    The console bridge offers a prefill as the default of the field or
-    cell when it is asked. A field may not be both nullable and have a
-    default, so the returned field is not nullable: as for any default,
-    an empty answer takes the prefill. A prefill that cannot serve as a
-    valid default, such as an integer or date outside the field's bounds
-    or a multi-choice selection of more than max_select choices, is
-    ignored so the field keeps its own default. The prefill has already
-    been checked against the field type by valid_prefills() or
-    matrix_helpers.valid_cell_prefills(). A label cell must not be passed.
+    The console bridge asks a field or cell with a prefill, or with the
+    answer the user gave before stepping back to it, as its start_value.
+    Unlike a default, a start value keeps nullable, so the user can still
+    empty the answer. A prefill of None starts the field with its
+    default, which is empty for a nullable field. A prefill that cannot
+    serve as a valid start value, such as an integer or date outside the
+    field's bounds or a multi-choice selection of more than max_select
+    choices, is ignored so the field keeps its own start. The prefill
+    has already been checked against the field type by valid_prefills()
+    or matrix_helpers.valid_cell_prefills(), or is an earlier answer. A
+    label cell must not be passed.
     """
     try:
-        result = _default_a(field, prefill)
-        return result if result is not None else _default_b(field, prefill)
+        result = _start_a(field, prefill)
+        return result if result is not None else _start_b(field, prefill)
     except ValueError:
         return field
 
 
-def _default_a(field: AskCell, prefill: PrefillValueType) -> Optional[AskCell]:
-    """Return field with prefill as default for the first field group."""
+def _start_a(field: AskCell,
+             value: Optional[PrefillValueType]) -> Optional[AskCell]:
+    """Return field starting with value, for the first field group."""
     if isinstance(field, AskPathCell):
-        assert isinstance(prefill, Path)
-        options = replace(field.path_options, nullable=False, default=prefill)
+        options = replace(field.path_options,
+                          start_value=_optional(value, Path))
         return replace(field, path_options=options)
     if isinstance(field, AskIntCell):
-        assert isinstance(prefill, int)
-        return replace(field, nullable=False, default=prefill)
+        return replace(field, start_value=_optional(value, int))
     if isinstance(field, AskFloatCell):
-        assert isinstance(prefill, (int, float))
-        return replace(field, nullable=False, default=prefill)
+        return replace(field, start_value=_float_value(value))
     if isinstance(field, AskDateCell):
-        assert isinstance(prefill, date)
-        return replace(field, nullable=False, default=prefill)
+        return replace(field, start_value=_optional(value, date))
     if isinstance(field, AskTimeCell):
-        assert isinstance(prefill, time)
-        return replace(field, nullable=False, default=prefill)
+        return replace(field, start_value=_optional(value, time))
     return None
 
 
-def _default_b(field: AskCell, prefill: PrefillValueType) -> AskCell:
-    """Return field with prefill as default for the second field group."""
+def _start_b(field: AskCell, value: Optional[PrefillValueType]) -> AskCell:
+    """Return field starting with value, for the second field group."""
     if isinstance(field, AskDateTimeCell):
-        assert isinstance(prefill, datetime)
-        return replace(field, nullable=False, default=prefill)
+        return replace(field, start_value=_optional(value, datetime))
     if isinstance(field, AskDurationCell):
-        assert isinstance(prefill, timedelta)
-        return replace(field, nullable=False, default=prefill)
+        return replace(field, start_value=_optional(value, timedelta))
     if isinstance(field, AskYesNoCell):
-        assert isinstance(prefill, bool)
-        return replace(field, default=prefill)
-    if isinstance(field, AskChoiceCell):
-        assert isinstance(prefill, str)
-        return replace(field, nullable=False, default=prefill)
-    if isinstance(field, AskTextCell):
-        assert isinstance(prefill, str)
-        return replace(field, nullable=False, default=prefill)
+        return replace(field, start_value=_optional(value, bool))
+    if isinstance(field, (AskChoiceCell, AskTextCell)):
+        return replace(field, start_value=_optional(value, str))
     assert isinstance(field, AskMultiChoiceCell)
-    assert isinstance(prefill, list)
-    return replace(field, default=prefill)
+    return replace(field, start_value=_optional(value, list))

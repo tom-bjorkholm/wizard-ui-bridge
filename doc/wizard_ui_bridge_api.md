@@ -40,6 +40,10 @@
     * [ask\_multi](#wizard_ui_bridge.console.WizardUiBridgeConsole.ask_multi)
     * [error\_file](#wizard_ui_bridge.console.WizardUiBridgeConsole.error_file)
     * [show](#wizard_ui_bridge.console.WizardUiBridgeConsole.show)
+* [wizard\_ui\_bridge.\_start](#wizard_ui_bridge._start)
+  * [StartKwargs](#wizard_ui_bridge._start.StartKwargs)
+  * [StartArgs](#wizard_ui_bridge._start.StartArgs)
+  * [start\_args](#wizard_ui_bridge._start.start_args)
 * [wizard\_ui\_bridge.matrix\_helpers](#wizard_ui_bridge.matrix_helpers)
   * [cell\_at](#wizard_ui_bridge.matrix_helpers.cell_at)
   * [valid\_cell\_prefills](#wizard_ui_bridge.matrix_helpers.valid_cell_prefills)
@@ -52,18 +56,24 @@
 * [wizard\_ui\_bridge.\_help](#wizard_ui_bridge._help)
   * [HelpKwargs](#wizard_ui_bridge._help.HelpKwargs)
   * [help\_kwargs](#wizard_ui_bridge._help.help_kwargs)
+  * [accepts\_keyword](#wizard_ui_bridge._help.accepts_keyword)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [value\_out\_of\_range](#wizard_ui_bridge.matrix_cell_defs.value_out_of_range)
   * [check\_bounds](#wizard_ui_bridge.matrix_cell_defs.check_bounds)
   * [AskCellCommon](#wizard_ui_bridge.matrix_cell_defs.AskCellCommon)
   * [AskLabelCell](#wizard_ui_bridge.matrix_cell_defs.AskLabelCell)
   * [AskTextCell](#wizard_ui_bridge.matrix_cell_defs.AskTextCell)
+    * [start\_or\_default](#wizard_ui_bridge.matrix_cell_defs.AskTextCell.start_or_default)
   * [AskRangeCell](#wizard_ui_bridge.matrix_cell_defs.AskRangeCell)
+    * [start\_or\_default](#wizard_ui_bridge.matrix_cell_defs.AskRangeCell.start_or_default)
   * [AskIntCell](#wizard_ui_bridge.matrix_cell_defs.AskIntCell)
   * [AskPathCell](#wizard_ui_bridge.matrix_cell_defs.AskPathCell)
   * [AskYesNoCell](#wizard_ui_bridge.matrix_cell_defs.AskYesNoCell)
+    * [start\_or\_default](#wizard_ui_bridge.matrix_cell_defs.AskYesNoCell.start_or_default)
   * [AskChoiceCell](#wizard_ui_bridge.matrix_cell_defs.AskChoiceCell)
+    * [start\_or\_default](#wizard_ui_bridge.matrix_cell_defs.AskChoiceCell.start_or_default)
   * [AskMultiChoiceCell](#wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell)
+    * [start\_or\_default](#wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell.start_or_default)
   * [AskFloatCell](#wizard_ui_bridge.matrix_cell_defs.AskFloatCell)
   * [AskDateCell](#wizard_ui_bridge.matrix_cell_defs.AskDateCell)
   * [AskTimeCell](#wizard_ui_bridge.matrix_cell_defs.AskTimeCell)
@@ -93,6 +103,7 @@
   * [check\_choice\_args](#wizard_ui_bridge.arg_types.check_choice_args)
   * [check\_multi\_args](#wizard_ui_bridge.arg_types.check_multi_args)
   * [PathAskOptions](#wizard_ui_bridge.arg_types.PathAskOptions)
+    * [start\_or\_default](#wizard_ui_bridge.arg_types.PathAskOptions.start_or_default)
   * [TableColumn](#wizard_ui_bridge.arg_types.TableColumn)
   * [TableCell](#wizard_ui_bridge.arg_types.TableCell)
 * [wizard\_ui\_bridge.matrix\_defs](#wizard_ui_bridge.matrix_defs)
@@ -162,6 +173,7 @@
     * [values](#wizard_ui_bridge._table_matrix.TableMatrix.values)
     * [cell\_name](#wizard_ui_bridge._table_matrix.TableMatrix.cell_name)
 * [wizard\_ui\_bridge.bridge\_helpers](#wizard_ui_bridge.bridge_helpers)
+  * [ERASE\_TOKEN](#wizard_ui_bridge.bridge_helpers.ERASE_TOKEN)
   * [NO\_CHOICE](#wizard_ui_bridge.bridge_helpers.NO_CHOICE)
   * [check\_text\_args](#wizard_ui_bridge.bridge_helpers.check_text_args)
   * [question\_with\_default](#wizard_ui_bridge.bridge_helpers.question_with_default)
@@ -206,7 +218,7 @@ question at a time. Every Ask*Field derives from its Ask*Cell, so a
 single function asks either, given the question to show, through the
 public typed ask methods of the bridge, which a derived bridge may
 override. The help text of the cell is passed as help_text, so a console
-user can ask to see it.
+user can ask to see it, and its start value as start_value.
 
 <a id="wizard_ui_bridge._ask_cell.ask_cell_value"></a>
 
@@ -660,6 +672,12 @@ navigation tokens so a console user can step back, cancel the current
 level or abandon the whole wizard, and the help token ':?', which shows
 the help text of the question and then asks the same question again.
 
+A question with a start value shows it as the answer an empty line
+keeps, and also recognises the erase token ':e', which gives what an
+empty answer gives without the start value: the default, None when
+nullable, an empty string for text, and nothing selected for a
+multi-choice. This is what a GUI gives when the user empties the input.
+
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole"></a>
 
 ## WizardUiBridgeConsole Objects
@@ -698,10 +716,13 @@ def ask_text(question: str,
              *,
              default: Optional[str] = None,
              sensitive: bool = False,
+             start_value: Optional[str] = None,
              help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask for free text on the console; see WizardUiBridge.ask_text.
+
+The question shows the start value, else the default, in brackets.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole.supports_form_field"></a>
 
@@ -727,10 +748,13 @@ def ask_yes_no(question: str,
                default: bool,
                re_ask_reason: Optional[str] = None,
                *,
+               start_value: Optional[bool] = None,
                help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question on the console; see ask_yes_no.
+
+The start value, else the default, is marked in the menu.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole.ask_table"></a>
 
@@ -765,13 +789,15 @@ def ask_choice(question: str,
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
                nullable: bool = False,
+               start_value: Optional[str] = None,
                help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask one choice on the console; see WizardUiBridge.ask_choice.
 
 A nullable choice adds the menu line '0: (none)'. Answering 0, or
-giving an empty answer, then selects no choice.
+giving an empty answer with no start value, then selects no
+choice. The start value, else the default, is marked in the menu.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole.ask_multi"></a>
 
@@ -785,10 +811,13 @@ def ask_multi(question: str,
               min_select: int = 0,
               max_select: Optional[int] = None,
               re_ask_reason: Optional[str] = None,
+              start_value: Optional[Sequence[str]] = None,
               help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask several choices on the console; see WizardUiBridge.ask_multi.
+
+The start value, else the default, is marked in the menu.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole.error_file"></a>
 
@@ -815,6 +844,58 @@ This method prints the message to the console.
 **Arguments**:
 
 - `message` - The message to show the user.
+
+<a id="wizard_ui_bridge._start"></a>
+
+# wizard\_ui\_bridge.\_start
+
+Pass a start value only to the ask methods that accept it.
+
+The typed ask methods gained a keyword-only start_value parameter after
+bridges outside this package were written. The code of this package
+calls them through start_args(). For a method that does not accept
+start_value yet, the start value is passed as the default instead, and
+the question is not nullable. A DeprecationWarning names the method.
+The question then still starts with the value, but an emptied answer
+gives the start value and never None, as before start_value existed.
+
+<a id="wizard_ui_bridge._start.StartKwargs"></a>
+
+## StartKwargs Objects
+
+```python
+class StartKwargs(TypedDict, Generic[_V])
+```
+
+The keyword arguments that carry a start value to an ask method.
+
+<a id="wizard_ui_bridge._start.StartArgs"></a>
+
+## StartArgs Objects
+
+```python
+class StartArgs(NamedTuple, Generic[_V, _D])
+```
+
+The default, nullable and start keyword arguments for a method.
+
+<a id="wizard_ui_bridge._start.start_args"></a>
+
+#### start\_args
+
+```python
+def start_args(method: Callable[..., object],
+               start_value: Optional[_V],
+               default: _D,
+               nullable: bool = False) -> StartArgs[_V, _D]
+```
+
+Return how to pass default, nullable and start_value to method.
+
+With no start value, default and nullable are passed unchanged. A
+method that takes start_value, by name or as **kwargs, also gets
+the start value. Any other method gets the start value as its
+default and nullable False, and a DeprecationWarning names it.
 
 <a id="wizard_ui_bridge.matrix_helpers"></a>
 
@@ -987,6 +1068,16 @@ Return help_text as keyword arguments for method, if it takes them.
 A method that takes neither a help_text parameter nor **kwargs gets
 no keyword arguments, and a DeprecationWarning names the method.
 
+<a id="wizard_ui_bridge._help.accepts_keyword"></a>
+
+#### accepts\_keyword
+
+```python
+def accepts_keyword(method: Callable[..., object], name: str) -> bool
+```
+
+Return whether method takes the keyword name, or any **kwargs.
+
 <a id="wizard_ui_bridge.matrix_cell_defs"></a>
 
 # wizard\_ui\_bridge.matrix\_cell\_defs
@@ -1017,6 +1108,21 @@ Likewise each Answer*Field derives from its Answer*Cell.
 The request, dimensions and validator of a matrix form are defined in
 module matrix_defs.
 
+Start value: every input cell, and every form field, can start with a
+value of its own, separate from its default. The default is what an
+empty answer gives; the keyword-only start_value is only where the input
+starts, and the user may keep it, change it or empty it. An input starts
+with its start_value when that is not None, else with its default (see
+the start_or_default property of each cell). Emptying the input gives
+what an empty answer gives without a start value: the default, None
+when nullable, an empty string for text, nothing selected for a
+multi-choice, and otherwise an answer that is not yet valid. So unlike
+a default, a start_value may be combined with nullable. A start_value
+follows the same rules as a default: a choice, within the bounds, and
+not allowed on sensitive text. A path cell holds it in its
+PathAskOptions. A console bridge shows the start value as the answer
+Enter keeps and offers ':e' to empty the input.
+
 <a id="wizard_ui_bridge.matrix_cell_defs.value_out_of_range"></a>
 
 #### value\_out\_of\_range
@@ -1035,10 +1141,11 @@ Return whether value lies outside the inclusive bounds.
 ```python
 def check_bounds(minimum: Optional[_OrderedValue],
                  maximum: Optional[_OrderedValue],
-                 default: Optional[_OrderedValue]) -> None
+                 default: Optional[_OrderedValue],
+                 start_value: Optional[_OrderedValue] = None) -> None
 ```
 
-Raise ValueError when ordered bounds or the default disagree.
+Raise ValueError when ordered bounds, default or start disagree.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskCellCommon"></a>
 
@@ -1120,11 +1227,25 @@ A text cell in a matrix form.
   raises ValueError.
 - `default` - The value returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
+  as the starting value in the input field, unless a
+  start_value is given, and the user can change it.
 - `sensitive` - True when the bridge must avoid echoing the entered text,
-  such as for passwords. A default is not allowed for a
-  sensitive question.
+  such as for passwords. Neither a default nor a
+  start_value is allowed for a sensitive question.
+- `start_value` - The text the input starts with, or None to start
+  with the default. Keyword-only. See Start value in the
+  module docstring.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskTextCell.start_or_default"></a>
+
+#### start\_or\_default
+
+```python
+@property
+def start_or_default() -> Optional[str]
+```
+
+Return the text the input starts with: start_value or default.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskRangeCell"></a>
 
@@ -1149,12 +1270,27 @@ once.
   together with a default, which raises ValueError.
 - `default` - The value returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it.
+  as the starting value in the input field, unless a
+  start_value is given, and the user can change it.
 - `min_value` - The minimum allowed value, or None for no minimum.
   The min value is inclusive.
 - `max_value` - The maximum allowed value, or None for no maximum.
   The max value is inclusive.
+- `start_value` - The value the input starts with, or None to start
+  with the default. It must lie within the bounds.
+  Keyword-only. See Start value in the
+  module docstring.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskRangeCell.start_or_default"></a>
+
+#### start\_or\_default
+
+```python
+@property
+def start_or_default() -> Optional[_OrderedT]
+```
+
+Return the value the input starts with: start_value or default.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskIntCell"></a>
 
@@ -1185,7 +1321,7 @@ with a button next to it that opens a file/directory chooser dialog.
 
 - `path_options` - Options for how the path question is asked, including
   whether the path must exist, whether it must be a file
-  or a directory.
+  or a directory, and its default and start_value.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskYesNoCell"></a>
 
@@ -1205,8 +1341,22 @@ toggle button.
 
 - `default` - The boolean value used when the user makes no explicit
   choice. In a GUI implementation this is typically shown as
-  the starting value in the checkbox or toggle, and the user
-  can change it.
+  the starting value in the checkbox or toggle, unless a
+  start_value is given, and the user can change it.
+- `start_value` - The value the check box or toggle starts with, or
+  None to start with the default. Keyword-only. See
+  START_VALUE_DOC.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskYesNoCell.start_or_default"></a>
+
+#### start\_or\_default
+
+```python
+@property
+def start_or_default() -> bool
+```
+
+Return the value the input starts with: start_value or default.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskChoiceCell"></a>
 
@@ -1227,13 +1377,28 @@ or a set of radio buttons.
 - `choices` - The allowed choices for the answer.
 - `default` - The value returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it. It must be one of choices, or ValueError is
-  raised.
+  as the starting value in the input field, unless a
+  start_value is given, and the user can change it. It must
+  be one of choices, or ValueError is raised.
 - `nullable` - When True the user may leave the choice empty, which is
   reported as None. When False an empty choice with no
   default is not a valid final answer. Not allowed
   together with a default, which raises ValueError.
+- `start_value` - The choice the input starts with, or None to start
+  with the default. It must be one of choices.
+  Keyword-only. See Start value in the
+  module docstring.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskChoiceCell.start_or_default"></a>
+
+#### start\_or\_default
+
+```python
+@property
+def start_or_default() -> Optional[str]
+```
+
+Return the choice the input starts with: start_value or default.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell"></a>
 
@@ -1254,15 +1419,32 @@ or a list of items with multiple selection enabled.
 - `choices` - The allowed choices for the answer.
 - `default` - The values returned when user fills in nothing, or None for
   no default. In a GUI implementation this is typically shown
-  as the starting value in the input field, and the user can
-  change it. It must name distinct choices, at most
-  max_select of them, but may name fewer than min_select.
+  as the starting value in the input field, unless a
+  start_value is given, and the user can change it. It must
+  name distinct choices, at most max_select of them, but may
+  name fewer than min_select.
 - `min_select` - The minimum number of choices that must be selected.
 - `max_select` - The maximum number of choices that can be selected,
   or None for no maximum. The bounds must satisfy
   0 <= min_select <= max_select <= len(choices).
+- `start_value` - The choices the input starts with, or None to start
+  with the default. It follows the rules of a default.
+  Emptying the selection selects nothing, not the
+  default. Keyword-only. See Start value in the
+  module docstring.
   
-  A default or bounds breaking these rules raise ValueError.
+  A default, start_value or bounds breaking these rules raise ValueError.
+
+<a id="wizard_ui_bridge.matrix_cell_defs.AskMultiChoiceCell.start_or_default"></a>
+
+#### start\_or\_default
+
+```python
+@property
+def start_or_default() -> Optional[Sequence[str]]
+```
+
+Return the choices the input starts with: start_value or default.
 
 <a id="wizard_ui_bridge.matrix_cell_defs.AskFloatCell"></a>
 
@@ -1698,8 +1880,10 @@ a contradiction and a programming error in the calling code.
 #### check\_choice\_args
 
 ```python
-def check_choice_args(choices: Sequence[str], default: Optional[str],
-                      nullable: bool) -> None
+def check_choice_args(choices: Sequence[str],
+                      default: Optional[str],
+                      nullable: bool,
+                      start_value: Optional[str] = None) -> None
 ```
 
 Raise ValueError when single-choice arguments contradict each other.
@@ -1709,19 +1893,23 @@ Raise ValueError when single-choice arguments contradict each other.
 - `choices` - The choices offered.
 - `default` - The choice selected by an empty answer, or None.
 - `nullable` - Whether no choice is allowed, reported as None.
+- `start_value` - The choice the question starts with, or None.
 
 **Raises**:
 
-- `ValueError` - default is not one of choices, or default is given
-  together with nullable.
+- `ValueError` - default or start_value is not one of choices, or
+  default is given together with nullable.
 
 <a id="wizard_ui_bridge.arg_types.check_multi_args"></a>
 
 #### check\_multi\_args
 
 ```python
-def check_multi_args(choices: Sequence[str], default: Optional[Sequence[str]],
-                     min_select: int, max_select: Optional[int]) -> None
+def check_multi_args(choices: Sequence[str],
+                     default: Optional[Sequence[str]],
+                     min_select: int,
+                     max_select: Optional[int],
+                     start_value: Optional[Sequence[str]] = None) -> None
 ```
 
 Raise ValueError when multi-choice arguments contradict each other.
@@ -1730,7 +1918,8 @@ The selection bounds must be satisfiable, so 0 <= min_select <=
 max_select <= len(choices), where a max_select of None stands for
 len(choices). A default must name distinct choices, at most
 max_select of them. It may name fewer than min_select, leaving the
-rest of the selection for the user to make deliberately.
+rest of the selection for the user to make deliberately. A
+start_value follows the same rules as a default.
 
 **Arguments**:
 
@@ -1738,12 +1927,13 @@ rest of the selection for the user to make deliberately.
 - `default` - The choices pre-selected by an empty answer, or None.
 - `min_select` - The smallest acceptable number of choices.
 - `max_select` - The largest acceptable number of choices, or None.
+- `start_value` - The choices the question starts with, or None.
 
 **Raises**:
 
-- `ValueError` - The bounds cannot be satisfied, or default names a
-  value that is not a choice, names a choice twice or
-  names more than max_select choices.
+- `ValueError` - The bounds cannot be satisfied, or default or
+  start_value names a value that is not a choice, names
+  a choice twice or names more than max_select choices.
 
 <a id="wizard_ui_bridge.arg_types.PathAskOptions"></a>
 
@@ -1763,6 +1953,22 @@ Options for a path question.
   allowed together with a default.
 - `default` - The path returned by an empty answer, or None for no
   default.
+- `start_value` - The path the question starts with, or None to start
+  with the default. It only sets where the input
+- `starts` - an answer the user empties still means what
+  an empty answer means, so nullable may be combined
+  with a start_value. Keyword-only.
+
+<a id="wizard_ui_bridge.arg_types.PathAskOptions.start_or_default"></a>
+
+#### start\_or\_default
+
+```python
+@property
+def start_or_default() -> Optional[Path]
+```
+
+Return the path the input starts with: start_value or default.
 
 <a id="wizard_ui_bridge.arg_types.TableColumn"></a>
 
@@ -2071,10 +2277,11 @@ def initial_answer(field: AskCell) -> AnswerCell
 
 Return the starting answer for a field or input cell.
 
-The value is the field's default, or the empty or not-yet-answered
-state when the field has no default. A choice field with no default
-starts as None, which tells a partial validator the choice is not
-answered yet; a bridge must not leave that None in a submitted form.
+The value is the field's start value, else its default, or the empty
+or not-yet-answered state when the field has neither. A choice field
+with neither starts as None, which tells a partial validator the
+choice is not answered yet; a bridge must not leave that None in a
+submitted form.
 A form field gets its Answer*Field and a matrix cell its Answer*Cell.
 A label cell has no answer and must not be passed.
 
@@ -2138,20 +2345,23 @@ does not match cell.
 #### prefilled\_field
 
 ```python
-def prefilled_field(field: AskCell, prefill: PrefillValueType) -> AskCell
+def prefilled_field(field: AskCell,
+                    prefill: Optional[PrefillValueType]) -> AskCell
 ```
 
-Return a form field or input cell with prefill as its default.
+Return a form field or input cell that starts with prefill.
 
-The console bridge offers a prefill as the default of the field or
-cell when it is asked. A field may not be both nullable and have a
-default, so the returned field is not nullable: as for any default,
-an empty answer takes the prefill. A prefill that cannot serve as a
-valid default, such as an integer or date outside the field's bounds
-or a multi-choice selection of more than max_select choices, is
-ignored so the field keeps its own default. The prefill has already
-been checked against the field type by valid_prefills() or
-matrix_helpers.valid_cell_prefills(). A label cell must not be passed.
+The console bridge asks a field or cell with a prefill, or with the
+answer the user gave before stepping back to it, as its start_value.
+Unlike a default, a start value keeps nullable, so the user can still
+empty the answer. A prefill of None starts the field with its
+default, which is empty for a nullable field. A prefill that cannot
+serve as a valid start value, such as an integer or date outside the
+field's bounds or a multi-choice selection of more than max_select
+choices, is ignored so the field keeps its own start. The prefill
+has already been checked against the field type by valid_prefills()
+or matrix_helpers.valid_cell_prefills(), or is an earlier answer. A
+label cell must not be passed.
 
 <a id="wizard_ui_bridge.bridge"></a>
 
@@ -2217,6 +2427,14 @@ The base class calls an ask method of a derived bridge that lacks the
 help_text parameter without it, and issues a DeprecationWarning, so
 an older bridge keeps working until it is updated.
 
+The typed ask methods also take a keyword-only start_value, the value
+the question starts with, separate from the default that an empty
+answer gives (see Start value in wizard_ui_bridge.matrix_cell_defs).
+A path question takes it in its PathAskOptions. The base class calls
+a typed ask method of a derived bridge that lacks start_value with
+the start value as the default instead, not nullable, and issues a
+DeprecationWarning; the user then cannot empty the answer.
+
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.ask_text"></a>
 
 #### ask\_text
@@ -2228,6 +2446,7 @@ def ask_text(question: str,
              *,
              default: Optional[str] = None,
              sensitive: bool = False,
+             start_value: Optional[str] = None,
              help_text: Optional[str] = None) -> Optional[str]
 ```
 
@@ -2247,8 +2466,16 @@ a real text-entry control. The base class has no implementation.
 - `default` - The value returned by an empty answer, or None for
   no default. Not allowed together with nullable.
 - `sensitive` - True when the bridge must avoid echoing the
-  entered text, such as for passwords. A default is
-  not allowed for a sensitive question.
+  entered text, such as for passwords. Neither a
+  default nor a start_value is allowed for a
+  sensitive question.
+- `start_value` - The text the question starts with, or None to
+  start with the default. The user may keep it,
+  change it or empty it, and an emptied answer
+  gives what an empty answer gives, so it may be
+  combined with nullable. A console bridge shows
+  it as the answer Enter keeps and offers ':e' to
+  empty it.
 - `help_text` - A help text for the question, or None for no help.
   A console bridge shows it when the user asks for
   help. A GUI bridge that overrides ask_form() and
@@ -2257,13 +2484,13 @@ a real text-entry control. The base class has no implementation.
 
 **Returns**:
 
-  The entered text, default for an empty answer with a default,
-  or None for an empty answer when nullable.
+  The entered or kept text, default for an empty answer with a
+  default, or None for an empty answer when nullable.
 
 **Raises**:
 
 - `ValueError` - default is given together with sensitive or
-  nullable.
+  nullable, or start_value together with sensitive.
 - `NotImplementedError` - The bridge does not implement ask_text().
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
@@ -2281,6 +2508,7 @@ def ask_int(question: str,
             min_value: Optional[int] = None,
             max_value: Optional[int] = None,
             default: Optional[int] = None,
+            start_value: Optional[int] = None,
             help_text: Optional[str] = None) -> Optional[int]
 ```
 
@@ -2304,6 +2532,9 @@ derived bridge may override it with a direct numeric control.
   The max value is inclusive.
 - `default` - The value returned by an empty answer, or None for
   no default. Not allowed together with nullable.
+- `start_value` - The value the question starts with, or None to
+  start with the default, as for ask_text(). It
+  must lie within the bounds.
 - `help_text` - A help text for the question, or None for no help.
   A console bridge shows it when the user asks for
   help. A GUI bridge that overrides ask_form() and
@@ -2312,14 +2543,14 @@ derived bridge may override it with a direct numeric control.
 
 **Returns**:
 
-  The entered integer, default for an empty answer with a
-  default, or None for an empty answer when nullable.
+  The entered or kept integer, default for an empty answer with
+  a default, or None for an empty answer when nullable.
 
 **Raises**:
 
-- `ValueError` - min_value exceeds max_value, default is outside
-  the bounds, or default is given together with
-  nullable.
+- `ValueError` - min_value exceeds max_value, default or
+  start_value is outside the bounds, or default is
+  given together with nullable.
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -2346,7 +2577,8 @@ asks for text through ask_text(), then validates the answer.
 
 - `question` - The question to ask the user.
 - `re_ask_reason` - The reason for re-asking the question.
-- `options` - Path options. None only rejects existing directories.
+- `options` - Path options, including the default and start_value.
+  None only rejects existing directories.
 - `help_text` - A help text for the question, or None for no help.
   A console bridge shows it when the user asks for
   help. A GUI bridge that overrides ask_form() and
@@ -2373,6 +2605,7 @@ def ask_yes_no(question: str,
                default: bool,
                re_ask_reason: Optional[str] = None,
                *,
+               start_value: Optional[bool] = None,
                help_text: Optional[str] = None) -> bool
 ```
 
@@ -2391,6 +2624,10 @@ implementation.
   choice.
 - `re_ask_reason` - The reason for re-asking the question, for
   instance that the user's answer was invalid.
+- `start_value` - The value the question starts with, or None to
+  start with the default. A console bridge shows
+  it as the answer Enter keeps and offers ':e' for
+  the default.
 - `help_text` - A help text for the question, or None for no help.
   A console bridge shows it when the user asks for
   help. A GUI bridge that overrides ask_form() and
@@ -2419,6 +2656,7 @@ def ask_choice(question: str,
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
                nullable: bool = False,
+               start_value: Optional[str] = None,
                help_text: Optional[str] = None) -> Optional[str]
 ```
 
@@ -2448,6 +2686,12 @@ overloads on its override. The base class has no implementation.
   first question when not None.
 - `nullable` - When True the user may select no choice, which is
   reported as None.
+- `start_value` - The choice the question starts with, or None to
+  start with the default. It must be one of
+  choices. An emptied answer gives what an empty
+  answer gives, so it may be combined with
+  nullable. A console bridge shows it as the
+  answer Enter keeps and offers ':e' to empty it.
 - `help_text` - A help text for the question, or None for no help.
   A console bridge shows it when the user asks for
   help. A GUI bridge that overrides ask_form() and
@@ -2461,8 +2705,9 @@ overloads on its override. The base class has no implementation.
 
 **Raises**:
 
-- `ValueError` - default is not one of choices, or is given
-  together with nullable. A bridge checks this with
+- `ValueError` - default or start_value is not one of choices,
+  or default is given together with nullable. A
+  bridge checks this with
   arg_types.check_choice_args().
 - `NotImplementedError` - The bridge does not implement ask_choice().
 - `WizardBack` - The user asked to return to the previous question.
@@ -2481,6 +2726,7 @@ def ask_multi(question: str,
               min_select: int = 0,
               max_select: Optional[int] = None,
               re_ask_reason: Optional[str] = None,
+              start_value: Optional[Sequence[str]] = None,
               help_text: Optional[str] = None) -> list[str]
 ```
 
@@ -2509,6 +2755,12 @@ implementation.
   for no upper bound.
 - `re_ask_reason` - The reason for re-asking, shown before the
   first question when not None.
+- `start_value` - The values selected when the question starts,
+  or None to start with the default. It follows
+  the rules of a default. Emptying the selection
+  selects nothing, not the default. A console
+  bridge shows it as the answer Enter keeps and
+  offers ':e' to select nothing.
 - `help_text` - A help text for the question, or None for no help.
   A console bridge shows it when the user asks for
   help. A GUI bridge that overrides ask_form() and
@@ -2521,9 +2773,10 @@ implementation.
 
 **Raises**:
 
-- `ValueError` - The bounds cannot be satisfied, or default names
-  a value that is not a choice, names a choice
-  twice or names more than max_select choices. A
+- `ValueError` - The bounds cannot be satisfied, or default or
+  start_value names a value that is not a choice,
+  names a choice twice or names more than
+  max_select choices. A
   bridge checks this with
   arg_types.check_multi_args().
 - `NotImplementedError` - The bridge does not implement ask_multi().
@@ -2561,10 +2814,11 @@ matrix form shows a table the same way. Row 0 of the matrix is a
 header row of bold labels with the column headers, and each table
 row is the matrix row below it. A read-only cell is a label, and
 an editable cell is a text cell, or a choice cell when it has
-choices, with help_text as its help text and its value as its
-default. Each row the user adds is built from the cells shared by
-every starting row, as bridge_helpers.new_row_template() does,
-with every column editable. A console names each cell by the
+choices, with help_text as its help text, its value as its
+start_value and the nullable of its TableCell. Each row the user
+adds is built from the cells shared by every starting row, as
+bridge_helpers.new_row_template() does, with every column
+editable. A console names each cell by the
 read-only texts of its row and its column header. A bridge may
 override this method to show its own table widget, and the
 helpers in wizard_ui_bridge.bridge_helpers fill a table one cell
@@ -2573,10 +2827,8 @@ at a time for a bridge that asks one question at a time.
 How an empty editable cell is reported follows its TableCell: a
 nullable cell reports None, a free-text cell reports an empty
 string, and a cell with choices treats empty as not yet a valid
-value. In the base implementation a pre-filled value is the
-default of a matrix cell, which an empty answer returns, so a
-pre-filled cell cannot be emptied there, and is never None even
-when nullable.
+value. A pre-filled cell starts with its value, and the user may
+keep it, change it or empty it.
 
 When partial_check is given, the bridge calls it after the user
 changes a cell, passing the whole table as it currently stands
@@ -2670,9 +2922,12 @@ When partial_validator is given, the base implementation calls it
 after each field is answered, passing the current answers and the
 index of the field just answered. It shows the returned message and
 skips asking the fields listed in disable_row_idxs, filling them
-with their default or not-yet-answered value instead. WizardBack
-steps to the previous asked field; from the first field it
-propagates so the wizard steps to the previous question.
+with their start value, default or not-yet-answered value
+instead. Each prefill is offered as the start value of its field
+when that field is asked. WizardBack steps to the previous asked
+field, which starts with the answer the user gave it; from the
+first field it propagates so the wizard steps to the previous
+question.
 
 **Arguments**:
 
@@ -2818,9 +3073,11 @@ In the base implementation the partial validator is called first
 for the whole matrix, then after each cell is answered and after
 each change of shape. Its message is shown when the matrix is not
 valid, its disabled cells are skipped and keep their answers, and
-each prefill is offered as the default of its cell when that cell
-is asked. The message is advisory only: the matrix is returned
-even when it is not valid, so the wizard must check the answers.
+each prefill is offered as the start value of its cell when that
+cell is asked. A cell asked again after WizardBack starts with the
+answer the user gave it. The message is advisory only: the matrix
+is returned even when it is not valid, so the wizard must check
+the answers.
 
 Any serious application or library using GUI, textual, curses or
 web interfaces should override this method to show the whole matrix
@@ -3119,7 +3376,8 @@ Re-ask a typed field or cell through ask_text until it is usable.
 The hint is shown after the question and repeated in the parse-error
 message, so a console user learns the accepted text format. An empty
 answer yields the field default, or None when the field is nullable.
-The help text of the field is passed to ask_text as help_text.
+The help text of the field is passed to ask_text as help_text, and
+its start value, formatted as text, as start_value.
 
 <a id="wizard_ui_bridge._parse.resolve_new"></a>
 
@@ -3248,13 +3506,14 @@ WizardBack steps back to the previously asked
 cell that can still be asked, also from a menu, and propagates from the
 first cell. The cells passed on the way back are walked again, so a cell
 skipped as disabled is asked if it is enabled by then, as in the base
-WizardUiBridge.ask_form().
+WizardUiBridge.ask_form(). A cell asked again starts with the answer the
+user gave it.
 
 A partial validator gets each answered cell, and the whole matrix after
 a shape change; its message is shown when the matrix is not valid, its
-disabled cells are skipped, and each prefill becomes the default of its
-cell when that cell is asked. The message is advisory only: the wizard
-checks the returned answers.
+disabled cells are skipped, and each prefill becomes the start value of
+its cell when that cell is asked, so a nullable cell stays nullable. The
+message is advisory only: the wizard checks the returned answers.
 
 <a id="wizard_ui_bridge._matrix_console.ConsoleMatrix"></a>
 
@@ -3344,9 +3603,10 @@ of the cell specification is bridge_helpers.new_row_template() with every
 column editable, and the matrix repeats it for each row the user appends.
 
 A TableCell separates the value an input starts with from what an empty
-cell means, while an Ask*Cell uses its default for both. So a pre-filled
-value is the default of its cell, and a nullable TableCell with a value
-is asked as a cell that is not nullable.
+cell means, and so does an Ask*Cell: the value of an editable TableCell
+is the start_value of its matrix cell, and its nullable is kept. The
+matrix cell has no default, so an emptied cell means what an empty
+TableCell means.
 
 <a id="wizard_ui_bridge._table_matrix.TableMatrix"></a>
 
@@ -3428,6 +3688,20 @@ implementation can use to interpret raw user answers the same way the
 bundled bridges do, and the messages those bridges show when an answer
 is not accepted.
 
+The helpers that read a raw answer take an optional start_value for a
+question that starts with a value. An empty answer then keeps the start
+value, and the erase token ':e' (ERASE_TOKEN) becomes the empty answer
+without a start value: the default, None when nullable, an empty string
+for text, and nothing selected for a multi-choice. That is what a GUI
+gives when the user empties a pre-filled input. A GUI bridge reading an
+input widget passes no start_value, since an empty widget is empty.
+
+<a id="wizard_ui_bridge.bridge_helpers.ERASE_TOKEN"></a>
+
+#### ERASE\_TOKEN
+
+empties a cell, or a console answer with a start value
+
 <a id="wizard_ui_bridge.bridge_helpers.NO_CHOICE"></a>
 
 #### NO\_CHOICE
@@ -3441,13 +3715,15 @@ the entry that selects no choice when nullable
 ```python
 def check_text_args(default: Optional[str],
                     sensitive: bool,
-                    nullable: bool = False) -> None
+                    nullable: bool = False,
+                    start_value: Optional[str] = None) -> None
 ```
 
 Raise ValueError when text-question arguments are inconsistent.
 
 A default is allowed neither for sensitive input nor together with
-nullable, see arg_types.check_nullable.
+nullable, see arg_types.check_nullable. A start_value is not allowed
+for sensitive input.
 
 <a id="wizard_ui_bridge.bridge_helpers.question_with_default"></a>
 
@@ -3464,11 +3740,16 @@ Return question with a bracketed default when one is given.
 #### text\_answer
 
 ```python
-def text_answer(text: str, nullable: bool,
-                default: Optional[str]) -> Optional[str]
+def text_answer(text: str,
+                nullable: bool,
+                default: Optional[str],
+                start_value: Optional[str] = None) -> Optional[str]
 ```
 
 Return the public text answer for raw text from a bridge.
+
+With a start value an empty text keeps it, and the erase token is an
+empty text, see the module docstring.
 
 <a id="wizard_ui_bridge.bridge_helpers.path_answer"></a>
 
@@ -3487,11 +3768,16 @@ Return whether a path answer is final, its value, and retry reason.
 #### ask\_yes\_no
 
 ```python
-def ask_yes_no(reader: Callable[[Optional[str]], str | int], default: bool,
-               re_ask_reason: Optional[str]) -> bool
+def ask_yes_no(reader: Callable[[Optional[str]], str | int],
+               default: bool,
+               re_ask_reason: Optional[str],
+               start_value: Optional[bool] = None) -> bool
 ```
 
 Re-ask through reader until a yes/no answer is understood.
+
+With a start value an empty answer keeps it, and the erase token
+gives the default.
 
 <a id="wizard_ui_bridge.bridge_helpers.run_table"></a>
 
@@ -3609,19 +3895,21 @@ def ask_one(reader: Callable[[Optional[str]], str | int],
             default: Optional[str],
             re_ask_reason: Optional[str],
             *,
-            nullable: bool = False) -> Optional[str]
+            nullable: bool = False,
+            start_value: Optional[str] = None) -> Optional[str]
 ```
 
 Re-ask through reader until one valid choice is selected.
 
 When nullable an empty answer selects no choice, which is reported
 as None. Otherwise an empty answer selects default, or is re-asked
-when default is None.
+when default is None. With a start value an empty answer keeps it,
+and the erase token is an empty answer.
 
 **Raises**:
 
-- `ValueError` - default is not one of choices, or is combined with
-  nullable.
+- `ValueError` - default or start_value is not one of choices, or
+  default is combined with nullable.
 
 <a id="wizard_ui_bridge.bridge_helpers.offered_choices"></a>
 
@@ -3645,12 +3933,20 @@ by position, even if one of choices is itself named NO_CHOICE.
 
 ```python
 def ask_many(reader: Callable[[Optional[str]], str | int],
-             choices: Sequence[str], default: Optional[Sequence[str]],
-             min_select: int, max_select: Optional[int],
-             re_ask_reason: Optional[str], one_based: bool) -> list[str]
+             choices: Sequence[str],
+             default: Optional[Sequence[str]],
+             min_select: int,
+             max_select: Optional[int],
+             re_ask_reason: Optional[str],
+             one_based: bool,
+             start_value: Optional[Sequence[str]] = None) -> list[str]
 ```
 
 Re-ask through reader until a valid set of choices is selected.
+
+An empty answer selects default, or nothing when default is None.
+With a start value an empty answer keeps it instead, and the erase
+token selects nothing.
 
 **Raises**:
 
@@ -3775,10 +4071,13 @@ def ask_text(question: str,
              *,
              default: Optional[str] = None,
              sensitive: bool = False,
+             start_value: Optional[str] = None,
              help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask for free text; see WizardUiBridge.ask_text.
+
+The input starts with the start value, else the default.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_path"></a>
 
@@ -3803,10 +4102,13 @@ def ask_yes_no(question: str,
                default: bool,
                re_ask_reason: Optional[str] = None,
                *,
+               start_value: Optional[bool] = None,
                help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question; see WizardUiBridge.ask_yes_no.
+
+The start value, else the default, is highlighted.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_choice"></a>
 
@@ -3819,13 +4121,15 @@ def ask_choice(question: str,
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
                nullable: bool = False,
+               start_value: Optional[str] = None,
                help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask the user to pick one choice; see ask_choice.
 
-A nullable choice is offered with a leading, highlighted
-'(none)' option that selects no choice.
+A nullable choice is offered with a leading '(none)' option that
+selects no choice. The start value is highlighted, else '(none)'
+when nullable, else the default.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_multi"></a>
 
@@ -3839,10 +4143,13 @@ def ask_multi(question: str,
               min_select: int = 0,
               max_select: Optional[int] = None,
               re_ask_reason: Optional[str] = None,
+              start_value: Optional[Sequence[str]] = None,
               help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask the user to pick several choices; see ask_multi.
+
+The start value, else the default, is preselected.
 
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.ask_table"></a>
 

@@ -24,6 +24,21 @@ Likewise each Answer*Field derives from its Answer*Cell.
 
 The request, dimensions and validator of a matrix form are defined in
 module matrix_defs.
+
+Start value: every input cell, and every form field, can start with a
+value of its own, separate from its default. The default is what an
+empty answer gives; the keyword-only start_value is only where the input
+starts, and the user may keep it, change it or empty it. An input starts
+with its start_value when that is not None, else with its default (see
+the start_or_default property of each cell). Emptying the input gives
+what an empty answer gives without a start value: the default, None
+when nullable, an empty string for text, nothing selected for a
+multi-choice, and otherwise an answer that is not yet valid. So unlike
+a default, a start_value may be combined with nullable. A start_value
+follows the same rules as a default: a choice, within the bounds, and
+not allowed on sensitive text. A path cell holds it in its
+PathAskOptions. A console bridge shows the start value as the answer
+Enter keeps and offers ':e' to empty the input.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -66,12 +81,14 @@ def value_out_of_range(value: _OrderedT, minimum: Optional[_OrderedT],
 
 def check_bounds(minimum: Optional[_OrderedValue],
                  maximum: Optional[_OrderedValue],
-                 default: Optional[_OrderedValue]) -> None:
-    """Raise ValueError when ordered bounds or the default disagree."""
+                 default: Optional[_OrderedValue],
+                 start_value: Optional[_OrderedValue] = None) -> None:
+    """Raise ValueError when ordered bounds, default or start disagree."""
     if minimum is not None and maximum is not None and minimum > maximum:
         raise ValueError('min_value must not exceed max_value')
-    if default is not None and value_out_of_range(default, minimum, maximum):
-        raise ValueError('default is out of the allowed range')
+    for name, value in (('default', default), ('start_value', start_value)):
+        if value is not None and value_out_of_range(value, minimum, maximum):
+            raise ValueError(f'{name} is out of the allowed range')
 
 
 @dataclass
@@ -147,23 +164,34 @@ class AskTextCell(AskCellCommon):
                   raises ValueError.
         default: The value returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
-                 as the starting value in the input field, and the user can
-                 change it.
+                 as the starting value in the input field, unless a
+                 start_value is given, and the user can change it.
         sensitive: True when the bridge must avoid echoing the entered text,
-                   such as for passwords. A default is not allowed for a
-                   sensitive question.
+                   such as for passwords. Neither a default nor a
+                   start_value is allowed for a sensitive question.
+        start_value: The text the input starts with, or None to start
+                     with the default. Keyword-only. See Start value in the
+                     module docstring.
     """
 
     nullable: bool = False
     default: Optional[str] = None
     sensitive: bool = False
+    start_value: Optional[str] = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
         """Check that the text cell arguments are valid."""
         super().__post_init__()
         if self.sensitive and self.default is not None:
             raise ValueError('Sensitive text field cannot have a default')
+        if self.sensitive and self.start_value is not None:
+            raise ValueError('Sensitive text field cannot have a start_value')
         check_nullable(self.nullable, self.default is not None)
+
+    @property
+    def start_or_default(self) -> Optional[str]:
+        """Return the text the input starts with: start_value or default."""
+        return self.default if self.start_value is None else self.start_value
 
 
 @dataclass
@@ -181,24 +209,35 @@ class AskRangeCell(AskCellCommon, Generic[_OrderedT]):
                   together with a default, which raises ValueError.
         default: The value returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
-                 as the starting value in the input field, and the user can
-                 change it.
+                 as the starting value in the input field, unless a
+                 start_value is given, and the user can change it.
         min_value: The minimum allowed value, or None for no minimum.
                    The min value is inclusive.
         max_value: The maximum allowed value, or None for no maximum.
                    The max value is inclusive.
+        start_value: The value the input starts with, or None to start
+                     with the default. It must lie within the bounds.
+                     Keyword-only. See Start value in the
+                     module docstring.
     """
 
     nullable: bool = False
     default: Optional[_OrderedT] = None
     min_value: Optional[_OrderedT] = None
     max_value: Optional[_OrderedT] = None
+    start_value: Optional[_OrderedT] = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
-        """Check that the bounds, the default and nullable agree."""
+        """Check that the bounds, the default, the start and nullable agree."""
         super().__post_init__()
-        check_bounds(self.min_value, self.max_value, self.default)
+        check_bounds(self.min_value, self.max_value, self.default,
+                     self.start_value)
         check_nullable(self.nullable, self.default is not None)
+
+    @property
+    def start_or_default(self) -> Optional[_OrderedT]:
+        """Return the value the input starts with: start_value or default."""
+        return self.default if self.start_value is None else self.start_value
 
 
 @dataclass
@@ -216,7 +255,7 @@ class AskPathCell(AskCellCommon):
     Attributes:
         path_options: Options for how the path question is asked, including
                       whether the path must exist, whether it must be a file
-                      or a directory.
+                      or a directory, and its default and start_value.
     """
 
     path_options: PathAskOptions
@@ -232,11 +271,20 @@ class AskYesNoCell(AskCellCommon):
     Attributes:
         default: The boolean value used when the user makes no explicit
                  choice. In a GUI implementation this is typically shown as
-                 the starting value in the checkbox or toggle, and the user
-                 can change it.
+                 the starting value in the checkbox or toggle, unless a
+                 start_value is given, and the user can change it.
+        start_value: The value the check box or toggle starts with, or
+                     None to start with the default. Keyword-only. See
+                     START_VALUE_DOC.
     """
 
     default: bool
+    start_value: Optional[bool] = field(default=None, kw_only=True)
+
+    @property
+    def start_or_default(self) -> bool:
+        """Return the value the input starts with: start_value or default."""
+        return self.default if self.start_value is None else self.start_value
 
 
 @dataclass
@@ -250,23 +298,34 @@ class AskChoiceCell(AskCellCommon):
         choices: The allowed choices for the answer.
         default: The value returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
-                 as the starting value in the input field, and the user can
-                 change it. It must be one of choices, or ValueError is
-                 raised.
+                 as the starting value in the input field, unless a
+                 start_value is given, and the user can change it. It must
+                 be one of choices, or ValueError is raised.
         nullable: When True the user may leave the choice empty, which is
                   reported as None. When False an empty choice with no
                   default is not a valid final answer. Not allowed
                   together with a default, which raises ValueError.
+        start_value: The choice the input starts with, or None to start
+                     with the default. It must be one of choices.
+                     Keyword-only. See Start value in the
+                     module docstring.
     """
 
     choices: Sequence[str]
     default: Optional[str] = None
     nullable: bool = False
+    start_value: Optional[str] = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
-        """Check that a default is a choice and not combined with nullable."""
+        """Check that default and start are choices, default not nullable."""
         super().__post_init__()
-        check_choice_args(self.choices, self.default, self.nullable)
+        check_choice_args(self.choices, self.default, self.nullable,
+                          self.start_value)
+
+    @property
+    def start_or_default(self) -> Optional[str]:
+        """Return the choice the input starts with: start_value or default."""
+        return self.default if self.start_value is None else self.start_value
 
 
 @dataclass
@@ -280,27 +339,39 @@ class AskMultiChoiceCell(AskCellCommon):
         choices: The allowed choices for the answer.
         default: The values returned when user fills in nothing, or None for
                  no default. In a GUI implementation this is typically shown
-                 as the starting value in the input field, and the user can
-                 change it. It must name distinct choices, at most
-                 max_select of them, but may name fewer than min_select.
+                 as the starting value in the input field, unless a
+                 start_value is given, and the user can change it. It must
+                 name distinct choices, at most max_select of them, but may
+                 name fewer than min_select.
         min_select: The minimum number of choices that must be selected.
         max_select: The maximum number of choices that can be selected,
                     or None for no maximum. The bounds must satisfy
                     0 <= min_select <= max_select <= len(choices).
+        start_value: The choices the input starts with, or None to start
+                     with the default. It follows the rules of a default.
+                     Emptying the selection selects nothing, not the
+                     default. Keyword-only. See Start value in the
+                     module docstring.
 
-    A default or bounds breaking these rules raise ValueError.
+    A default, start_value or bounds breaking these rules raise ValueError.
     """
 
     choices: Sequence[str]
     default: Optional[Sequence[str]] = None
     min_select: int = 0
     max_select: Optional[int] = None
+    start_value: Optional[Sequence[str]] = field(default=None, kw_only=True)
 
     def __post_init__(self) -> None:
-        """Check that the bounds and the default fit the choices."""
+        """Check that the bounds, the default and the start fit the choices."""
         super().__post_init__()
         check_multi_args(self.choices, self.default, self.min_select,
-                         self.max_select)
+                         self.max_select, self.start_value)
+
+    @property
+    def start_or_default(self) -> Optional[Sequence[str]]:
+        """Return the choices the input starts with: start_value or default."""
+        return self.default if self.start_value is None else self.start_value
 
 
 @dataclass

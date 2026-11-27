@@ -29,8 +29,8 @@ from wizard_ui_bridge import AskField, AskChoiceField, AskIntField, \
 from wizard_ui_bridge.textual_bridge import _FormApp
 from wizard_ui_bridge._textual_widgets import \
     _browse_index, _field_index
-from .ui_textual_support import drive, open_picker, _CannedBridge, \
-    _submitted, disabled_after
+from .ui_textual_support import drive, open_picker, submit_typed, \
+    _CannedBridge, _submitted, disabled_after
 
 
 def _sample_form() -> list[AskField]:
@@ -459,15 +459,7 @@ def test_form_browse_bad_id() -> None:
 def test_int_empty_default() -> None:
     """An integer field cleared to blank falls back to its default."""
     fields: list[AskField] = [AskIntField('N', None, default=5)]
-    app = _FormApp('H', fields, [], None)
-
-    async def scenario() -> None:
-        async with app.run_test() as pilot:
-            app.query_one('#field_0', Input).value = ''
-            await pilot.pause()
-            await pilot.click('#submit')
-    asyncio.run(scenario())
-    assert _submitted(app)[0].value == 5
+    assert _submitted(submit_typed(fields, ''))[0].value == 5
 
 
 def test_int_required_empty() -> None:
@@ -480,15 +472,7 @@ def test_int_required_empty() -> None:
 def test_form_int_not_number() -> None:
     """A non-numeric integer field refuses to submit."""
     fields: list[AskField] = [AskIntField('N', None)]
-    app = _FormApp('H', fields, [], None)
-
-    async def scenario() -> None:
-        async with app.run_test() as pilot:
-            app.query_one('#field_0', Input).value = 'abc'
-            await pilot.pause()
-            await pilot.click('#submit')
-    asyncio.run(scenario())
-    assert app.return_value is None
+    assert submit_typed(fields, 'abc').return_value is None
 
 
 def test_prefill_text() -> None:
@@ -587,15 +571,7 @@ def test_prefill_multi() -> None:
         if changed == 0 and first.value:
             prefill = ((1, ['a', 'c']),)
         return PartFormValidationResult(True, '', (), prefill)
-    app = _FormApp('H', fields, [], rule)
-
-    async def scenario() -> None:
-        async with app.run_test() as pilot:
-            app.query_one('#field_0', Input).value = 'x'
-            await pilot.pause()
-            await pilot.click('#submit')
-    asyncio.run(scenario())
-    assert _submitted(app)[1].value == ['a', 'c']
+    assert _submitted(submit_typed(fields, 'x', rule))[1].value == ['a', 'c']
 
 
 def test_prefill_disabled() -> None:

@@ -6,6 +6,12 @@ talks to a user through plain text streams. It recognises reserved
 navigation tokens so a console user can step back, cancel the current
 level or abandon the whole wizard, and the help token ':?', which shows
 the help text of the question and then asks the same question again.
+
+A question with a start value shows it as the answer an empty line
+keeps, and also recognises the erase token ':e', which gives what an
+empty answer gives without the start value: the default, None when
+nullable, an empty string for text, and nothing selected for a
+multi-choice. This is what a GUI gives when the user empties the input.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -20,7 +26,7 @@ from wizard_ui_bridge.form_defs import AskField, \
     ALL_ASK_FIELD_TYPES
 from wizard_ui_bridge.bridge_helpers import check_text_args, \
     text_answer, ask_yes_no, ask_one, ask_many, run_table, int_text, \
-    question_with_default, NO_CHOICE
+    question_with_default, NO_CHOICE, ERASE_TOKEN
 from wizard_ui_bridge._table import _run_variable_table
 
 _BACK = ':b'
@@ -28,8 +34,12 @@ _CANCEL = ':c'
 _ABORT = ':q'
 _HELP = ':?'
 _NAV_HINT = '(:b=back  :c=cancel level  :q=abort  :?=help)'
+_ERASE_HINT = ('(:e=erase  :b=back  :c=cancel level  :q=abort  '
+               ':?=help)')
 _NO_HELP = 'No help is available for this question.'
 _NONE_LINE = f'0: {NO_CHOICE}'
+_DEFAULT_MARK = ' (default)'
+_START_MARK = ' (current)'
 
 
 class WizardUiBridgeConsole(WizardUiBridge):
@@ -51,14 +61,18 @@ class WizardUiBridgeConsole(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False,
+                 sensitive: bool = False, start_value: Optional[str] = None,
                  help_text: Optional[str] = None) -> Optional[str]:
-        """Ask for free text on the console; see WizardUiBridge.ask_text."""
-        check_text_args(default, sensitive, nullable)
-        prompt = question_with_default(question, default)
-        text = self._prompt(prompt, re_ask_reason, [], help_text,
-                            sensitive=sensitive)
-        return text_answer(text, nullable, default)
+        """Ask for free text on the console; see WizardUiBridge.ask_text.
+
+        The question shows the start value, else the default, in brackets.
+        """
+        check_text_args(default, sensitive, nullable, start_value)
+        shown = default if start_value is None else start_value
+        text = self._prompt(question_with_default(question, shown),
+                            re_ask_reason, [], help_text, sensitive=sensitive,
+                            erasable=start_value is not None)
+        return text_answer(text, nullable, default, start_value)
 
     def supports_form_field(self, field: AskField) -> bool:
         """Show every form field type; see WizardUiBridge.
@@ -72,14 +86,21 @@ class WizardUiBridgeConsole(WizardUiBridge):
 
     def ask_yes_no(self, question: str, default: bool,
                    re_ask_reason: Optional[str] = None, *,
+                   start_value: Optional[bool] = None,
                    help_text: Optional[str] = None) -> bool:
-        """Ask a yes/no question on the console; see ask_yes_no."""
+        """Ask a yes/no question on the console; see ask_yes_no.
+
+        The start value, else the default, is marked in the menu.
+        """
+        start = default if start_value is None else start_value
+        menu_lines = _menu_lines(('yes', 'no'), ('yes',) if start else ('no',),
+                                 _mark(start_value))
+
         def reader(reason: Optional[str]) -> str | int:
-            marked = ('yes',) if default else ('no',)
-            menu_lines = _menu_lines(('yes', 'no'), marked=marked)
             return _to_index(self._prompt(question, reason, menu_lines,
-                                          help_text))
-        return ask_yes_no(reader, default, re_ask_reason)
+                                          help_text,
+                                          erasable=start_value is not None))
+        return ask_yes_no(reader, default, re_ask_reason, start_value)
 
     # pylint: disable-next=too-many-arguments
     def ask_table(self, columns: Sequence[TableColumn],
@@ -123,12 +144,14 @@ class WizardUiBridgeConsole(WizardUiBridge):
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
                    nullable: Literal[False] = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]: ...
     # pylint: enable=too-many-arguments
 
@@ -136,48 +159,63 @@ class WizardUiBridgeConsole(WizardUiBridge):
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   start_value: Optional[str] = None,
                    help_text: Optional[str] = None) -> Optional[str]:
         """Ask one choice on the console; see WizardUiBridge.ask_choice.
 
         A nullable choice adds the menu line '0: (none)'. Answering 0, or
-        giving an empty answer, then selects no choice.
+        giving an empty answer with no start value, then selects no
+        choice. The start value, else the default, is marked in the menu.
         """
-        marked = None if default is None else (default,)
-        lines = _menu_lines(choices, marked)
+        start = default if start_value is None else start_value
+        lines = _menu_lines(choices, None if start is None else (start,),
+                            _mark(start_value))
         if nullable:
             lines.insert(0, _NONE_LINE)
 
+        erasable = start_value is not None
+
         def reader(reason: Optional[str]) -> str | int:
             return _single_index(self._prompt(question, reason, lines,
-                                              help_text), nullable)
+                                              help_text, erasable=erasable),
+                                 nullable, erasable)
         return ask_one(reader, choices, default, re_ask_reason,
-                       nullable=nullable)
+                       nullable=nullable, start_value=start_value)
 
     # pylint: disable-next=too-many-arguments
     def ask_multi(self, question: str, *, choices: Sequence[str],
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
                   re_ask_reason: Optional[str] = None,
+                  start_value: Optional[Sequence[str]] = None,
                   help_text: Optional[str] = None) -> list[str]:
-        """Ask several choices on the console; see WizardUiBridge.ask_multi."""
+        """Ask several choices on the console; see WizardUiBridge.ask_multi.
+
+        The start value, else the default, is marked in the menu.
+        """
+        start = default if start_value is None else start_value
+        lines = _menu_lines(choices, start, _mark(start_value))
+
         def reader(reason: Optional[str]) -> str | int:
-            return self._prompt(_multi_question(question), reason,
-                                _menu_lines(choices, default), help_text)
+            return self._prompt(_multi_question(question), reason, lines,
+                                help_text, erasable=start_value is not None)
         return ask_many(reader, choices, default, min_select, max_select,
-                        re_ask_reason, one_based=True)
+                        re_ask_reason, one_based=True, start_value=start_value)
 
     # pylint: disable-next=too-many-arguments
     def _prompt(self, question: str, re_ask_reason: Optional[str],
                 lines: Sequence[str], help_text: Optional[str], *,
-                sensitive: bool = False) -> str:
+                sensitive: bool = False, erasable: bool = False) -> str:
         """Ask one question until the answer is not a request for help.
 
         The help token shows the help text, or a note that there is none,
         and asks the same question again, with the same re-ask reason. A
-        navigation token raises its navigation request.
+        navigation token raises its navigation request. An erasable
+        question, one with a start value, lists the erase token too.
         """
+        hint = _ERASE_HINT if erasable else _NAV_HINT
         while True:
-            self._emit_question(question, re_ask_reason, lines)
+            self._emit_question(question, re_ask_reason, lines, hint)
             text = self._read_sensitive(question) if sensitive \
                 else self._read_answer(question)
             if text.strip() != _HELP:
@@ -185,7 +223,7 @@ class WizardUiBridgeConsole(WizardUiBridge):
             self.show(help_text or _NO_HELP)
 
     def _emit_question(self, question: str, re_ask_reason: Optional[str],
-                       lines: Sequence[str]) -> None:
+                       lines: Sequence[str], hint: str) -> None:
         """Print one question, any re-ask reason, choices and the prompt."""
         if re_ask_reason is not None:
             print(re_ask_reason, file=self.stderr_file)
@@ -193,7 +231,7 @@ class WizardUiBridgeConsole(WizardUiBridge):
         print(question, file=self.stdout_file)
         for line in lines:
             print(line, file=self.stdout_file)
-        print(_NAV_HINT, file=self.stdout_file)
+        print(hint, file=self.stdout_file)
         print('> ', end='', file=self.stdout_file)
 
     def _read_answer(self, question: str) -> str:
@@ -244,23 +282,35 @@ def _to_index(text: str) -> str | int:
     return text if index is None else index - 1
 
 
-def _single_index(text: str, nullable: bool) -> str | int:
-    """Map a single-choice answer, reading 0 as no choice when nullable."""
+def _single_index(text: str, nullable: bool, erasable: bool) -> str | int:
+    """Map a single-choice answer, reading 0 as no choice when nullable.
+
+    No choice is the empty answer, or the erase token when the question
+    has a start value, since an empty answer then keeps the start value.
+    """
     answer = _to_index(text)
-    return '' if nullable and answer == -1 else answer
+    if nullable and answer == -1:
+        return ERASE_TOKEN if erasable else ''
+    return answer
 
 
 def _menu_lines(choices: Optional[Sequence[str]],
-                marked: Optional[Sequence[str]] = None) -> list[str]:
-    """Return the numbered menu lines, marking any choice in marked."""
+                marked: Optional[Sequence[str]] = None,
+                mark: str = _DEFAULT_MARK) -> list[str]:
+    """Return the numbered menu lines, adding mark to any choice in marked."""
     if choices is None:
         return []
     flagged = set() if marked is None else set(marked)
     lines: list[str] = []
     for index, choice in enumerate(choices, start=1):
-        suffix = ' (default)' if choice in flagged else ''
+        suffix = mark if choice in flagged else ''
         lines.append(f'{index}: {choice}{suffix}')
     return lines
+
+
+def _mark(start_value: object) -> str:
+    """Return the menu mark of the start value, else of the default."""
+    return _DEFAULT_MARK if start_value is None else _START_MARK
 
 
 def _multi_question(question: str) -> str:

@@ -74,25 +74,28 @@ def test_header_and_rows() -> None:
         [AskLabelCell('Source', bold=True),
          AskLabelCell('Rename to', bold=True),
          AskLabelCell('Type', bold=True)],
-        [AskLabelCell('city'), AskTextCell('H', default='city'),
-         AskChoiceCell('H', _KINDS, default='text')],
+        [AskLabelCell('city'), AskTextCell('H', start_value='city'),
+         AskChoiceCell('H', _KINDS, start_value='text')],
         [AskLabelCell('size'), AskTextCell('H'), AskChoiceCell('H', _KINDS)],
-        [AskTextCell('H', default=''), AskTextCell('H', default=''),
+        [AskTextCell('H', start_value=''), AskTextCell('H', start_value=''),
          AskChoiceCell('H', _KINDS)]]
 
 
 @pytest.mark.parametrize('cell, expected', [
     (TableCell(None), AskTextCell('H')),
     (TableCell(None, nullable=True), AskTextCell('H', nullable=True)),
-    (TableCell('x'), AskTextCell('H', default='x')),
-    (TableCell('x', nullable=True), AskTextCell('H', default='x')),
+    (TableCell('x'), AskTextCell('H', start_value='x')),
+    (TableCell('x', nullable=True),
+     AskTextCell('H', nullable=True, start_value='x')),
     (TableCell(None, choices=_KINDS), AskChoiceCell('H', _KINDS)),
     (TableCell(None, choices=_KINDS, nullable=True),
      AskChoiceCell('H', _KINDS, nullable=True)),
+    (TableCell('text', choices=_KINDS),
+     AskChoiceCell('H', _KINDS, start_value='text')),
     (TableCell('text', choices=_KINDS, nullable=True),
-     AskChoiceCell('H', _KINDS, default='text'))])
+     AskChoiceCell('H', _KINDS, nullable=True, start_value='text'))])
 def test_input_cell(cell: TableCell, expected: AskCell) -> None:
-    """An editable cell is asked with its value as default."""
+    """An editable cell starts with its value and keeps its nullable."""
     request = _request(_GUEST, [[cell]])
     assert isinstance(request.ask_cells, list)
     assert request.ask_cells[1] == [expected]
@@ -103,7 +106,7 @@ def test_new_row_read_only() -> None:
     columns = (TableColumn('Kind', read_only=True),)
     request = _request(columns, [[TableCell('a')], [TableCell('a')]])
     assert isinstance(request.ask_cells, list)
-    assert request.ask_cells[-1] == [AskTextCell('H', default='a')]
+    assert request.ask_cells[-1] == [AskTextCell('H', start_value='a')]
 
 
 @pytest.mark.parametrize('rows, expected', [
@@ -245,6 +248,27 @@ def test_console_fixed() -> None:
     table = WizardUiBridge.ask_table(bridge, _RENAME, _rename_cells(), 'Q')
     assert table == [['city', 'town', 'number'], ['size', '', 'text']]
     assert 'city / Rename to [city]' in out.getvalue()
+
+
+@pytest.mark.parametrize('cell, lines, expected', [
+    (TableCell('Ann', nullable=True), [':e'], None),
+    (TableCell('Ann', nullable=True), [''], 'Ann'),
+    (TableCell('Ann'), [':e'], ''),
+    (TableCell('text', choices=_KINDS, nullable=True), ['0'], None),
+    (TableCell('text', choices=_KINDS), [':e', '2'], 'number')])
+def test_console_erase(cell: TableCell, lines: list[str],
+                       expected: Optional[str]) -> None:
+    """A pre-filled cell can be kept or emptied as its TableCell says.
+
+    An emptied nullable cell is None, an emptied free-text cell is an
+    empty string, and an emptied choice that is not nullable is asked
+    again.
+    """
+    bridge, out = _console(lines)
+    table = WizardUiBridge.ask_table(bridge, _GUEST, [[cell]], 'Q')
+    assert table == [[expected]]
+    assert f'[{cell.value}]' in out.getvalue() \
+        or f'{cell.value} (current)' in out.getvalue()
 
 
 def test_console_choice_req() -> None:

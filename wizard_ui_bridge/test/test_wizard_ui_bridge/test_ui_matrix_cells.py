@@ -139,9 +139,14 @@ def test_null_default(make: Callable[[], AskCellCommon | PathAskOptions]
 
 
 def test_choice_nullable() -> None:
-    """A choice cell is not nullable by default; nullable is its last arg."""
+    """A choice cell is not nullable by default; nullable is its last arg.
+
+    The keyword-only fields, such as width and start_value, follow it.
+    """
     assert AskChoiceCell(None, ('a', 'b')).nullable is False
-    assert _names(AskChoiceCell)[-1] == 'nullable'
+    positional = [field.name for field in fields(AskChoiceCell)
+                  if not field.kw_only]
+    assert positional[-1] == 'nullable'
 
 
 @pytest.mark.parametrize('make', [AskChoiceCell, partial(AskChoiceField, 'Q')])

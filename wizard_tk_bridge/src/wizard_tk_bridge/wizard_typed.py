@@ -202,9 +202,10 @@ def _checked(value: Optional[_Ordered], field: AskCell,
 
 
 def default_text(field: AskCell) -> str:
-    """Return the starting entry text for a typed field's default."""
-    default = _default_of(field)
-    return '' if default is None else format_value(default)
+    """Return the starting entry text: the start value, else the default."""
+    assert isinstance(field, _TYPED_CELLS)
+    start = field.start_or_default
+    return '' if start is None else format_value(start)
 
 
 def typed_value(field: AskCell, text: str) -> Optional[PrefillValueType]:
