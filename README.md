@@ -39,8 +39,10 @@ application using `wizard-ui-bridge`, and was moved here as
 The low-level `WizardUiBridge.ask()` method was removed in version 1.2,
 together with the fallbacks that let a bridge which only overrode
 `ask()` keep working. A bridge implements the typed `ask_text()`,
-`ask_choice()`, `ask_multi()`, `ask_yes_no()` and `ask_table()` methods
-directly, together with `show()`.
+`ask_choice()`, `ask_multi()` and `ask_yes_no()` methods directly,
+together with `show()`. Since `ask_table()` has a base implementation
+built on `ask_matrix_form()`, a bridge only overrides it for a table
+widget of its own.
 
 ## Related documentation
 
@@ -125,7 +127,7 @@ run.
 
 ## Test summary
 
-- Test result: 1578 passed, 9 deselected in 48s
+- Test result: 1615 passed, 9 deselected in 51s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.

@@ -389,33 +389,33 @@ written; the rest are inherited and already work:
 
 | Must implement (no default) | Inherited (permanent base fallback) |
 | --------------------------- | ----------------------------------- |
-| `ask_text`, `ask_yes_no`, `ask_choice`, `ask_multi`, `ask_table`, `show` | `ask_path` (asks text, validates), `ask_int` (asks text, re-asks in range), `ask_form` (asks each field one at a time), `error_file` |
+| `ask_text`, `ask_yes_no`, `ask_choice`, `ask_multi`, `show` | `ask_path` (asks text, validates), `ask_int` (asks text, re-asks in range), `ask_form` (asks each field one at a time), `ask_matrix_form` (asks each cell one at a time, with a resize menu), `ask_table` (asks the table as a matrix form), `error_file` |
 
 So the moment the mandatory methods work, the bridge can already run any of
-the earlier wizards — path questions and whole forms included — because the
-base class fills the gaps. This example proves it: the export wizard's path
-question rides the inherited `ask_path`, and the mandatory methods stay a few
-lines each by delegating to the public helpers in
-`wizard_ui_bridge.bridge_helpers` (`ask_one`, `ask_many`, `ask_yes_no`,
-`run_table`), exactly as the built-in console bridge does.
+the earlier wizards — path questions, whole forms and tables included —
+because the base class fills the gaps. This example proves it: the export
+wizard's path question rides the inherited `ask_path`, and the mandatory
+methods stay a few lines each by delegating to the public helpers in
+`wizard_ui_bridge.bridge_helpers` (`ask_one`, `ask_many`, `ask_yes_no`),
+exactly as the built-in console bridge does.
 
-There is one correctness gap this bridge does **not** fill, and it is honest
-about it. When a table question gives both `min_rows` and `max_rows`, the
-wizard is asking for a *variable* number of rows, which the user can only
-supply if the bridge lets them add and remove rows — a matter of correctness,
-not polish, since a wizard that expects the user to extend a table (a
-translation table, say) has no way to receive those rows otherwise.
-Implementing the add/remove interface is left out here only for brevity, so
-`ask_table()` raises `NotImplementedError` for a variable-row request rather
-than silently returning just the starting rows. See the variable-row table in
-`WizardUiBridgeConsole`, `WizardUiBridgeTextual` and the `WizardUiBridgeTk` of
-the companion package `wizard-tk-bridge` for three implementations.
+Tables are covered too. When a table question gives both `min_rows` and
+`max_rows`, the wizard is asking for a *variable* number of rows, which the
+user can only supply if the bridge lets them add and remove rows — a matter of
+correctness, not polish, since a wizard that expects the user to extend a
+table (a translation table, say) has no way to receive those rows otherwise.
+The inherited `ask_table()` describes the table as a matrix form, which may
+grow and shrink by whole rows, and asks it with `ask_matrix_form()`, so this
+bridge needs no table code of its own. `WizardUiBridgeConsole`,
+`WizardUiBridgeTextual` and the `WizardUiBridgeTk` of the companion package
+`wizard-tk-bridge` override `ask_table()` with table editors of their own — a
+user experience rung, not a correctness requirement.
 
 ### Help on request
 
-Every ask method takes a keyword-only `help_text`, and so does the reader that
-`run_table` calls. The wizard passes the help text of a question there, and
-the base `ask_form` passes the help text of each field. The teleprinter bridge
+Every ask method takes a keyword-only `help_text`. The wizard passes the help
+text of a question there, and the base `ask_form` and `ask_matrix_form` pass
+the help text of each field or cell. The teleprinter bridge
 offers it on request, like the console bridge: the answer `:?` prints the help
 text and asks the same question again, so the wizard never sees the request.
 Try it on the output-file question, which carries a help text in `e02`. A
@@ -442,8 +442,9 @@ and `WizardUiBridgeTextual` are two reference rungs, and the
 `WizardUiBridgeTk` of the companion package `wizard-tk-bridge` is a graphical
 bridge that has climbed all six:
 
-1. Whole-screen `ask_form()` — show every field at once instead of one at a
-   time (Textual and Tk bridges).
+1. Whole-screen `ask_form()` and `ask_matrix_form()` — show every field or
+   cell at once instead of one at a time, and with the inherited
+   `ask_table()` a whole table too (Textual and Tk bridges).
 2. A native `ask_path()` picker — a file/directory dialog instead of typed
    text (Tk bridge).
 3. A calendar for date fields (Textual and Tk bridges).
@@ -455,8 +456,8 @@ bridge that has climbed all six:
 
 The helper modules `wizard_ui_bridge.bridge_helpers` and
 `wizard_ui_bridge.form_helpers` exist to make climbing this ladder cheaper:
-they interpret raw answers, run the table loop, and validate form prefills
-exactly as the built-in bridges do.
+they interpret raw answers, fill a table one cell at a time, and validate form
+prefills exactly as the built-in bridges do.
 
 `--ui` selects the bridge, and the very same wizard runs on all three, so you
 can watch the folding appear only on the custom bridge:

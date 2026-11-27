@@ -12,8 +12,7 @@ from typing import Callable, Optional, Sequence
 import pytest
 
 from wizard_ui_bridge import PathAskOptions as PublicPathAskOptions, \
-    WizardPathKind as PublicPathKind, WizardUiBridge, TableColumn, \
-    TableCell, AskChoiceField
+    WizardPathKind as PublicPathKind, WizardUiBridge, AskChoiceField
 from wizard_ui_bridge.arg_types import PathAskOptions, \
     WizardPathKind
 from wizard_ui_bridge.bridge_helpers import path_answer, INT_ERROR
@@ -75,8 +74,6 @@ _MANDATORY: list[tuple[str, Callable[[WizardUiBridge], object]]] = [
     ('ask_yes_no', lambda bridge: bridge.ask_yes_no('q', True)),
     ('ask_choice', lambda bridge: bridge.ask_choice('q', choices=('a', 'b'))),
     ('ask_multi', lambda bridge: bridge.ask_multi('q', choices=('a', 'b'))),
-    ('ask_table', lambda bridge: bridge.ask_table([TableColumn('c')],
-                                                  [[TableCell('v')]], 'q')),
     ('show', lambda bridge: bridge.show('m'))]
 
 

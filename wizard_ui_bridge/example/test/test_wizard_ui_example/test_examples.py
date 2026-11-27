@@ -507,7 +507,7 @@ def test_e07_null_choice(answer: str, expected: Optional[str]) -> None:
 
 
 def test_e07_table_choice() -> None:
-    """The mandatory ask_table fills fixed rows, choice cells by number."""
+    """The inherited ask_table fills fixed rows, choice cells by number."""
     answers = StringIO('Anna\n1\nBo\n0\n')
     bridge = e07_custom_bridge.TeleprinterBridge(StringIO(), answers,
                                                  StringIO())
@@ -520,13 +520,15 @@ def test_e07_table_choice() -> None:
 
 
 def test_e07_table_var() -> None:
-    """A variable-row table is refused: adding rows needs bridge support."""
-    bridge = e07_custom_bridge.TeleprinterBridge(StringIO(), StringIO(),
-                                                 StringIO())
+    """The inherited ask_table lets the user append a row to a table."""
+    out_file = StringIO()
+    answers = StringIO('\n1\nBo\n\n')
+    bridge = e07_custom_bridge.TeleprinterBridge(out_file, answers, StringIO())
     columns = [TableColumn('guest')]
     cells = [[TableCell('Ann')]]
-    with pytest.raises(NotImplementedError):
-        bridge.ask_table(columns, cells, 'guests', min_rows=1, max_rows=5)
+    result = bridge.ask_table(columns, cells, 'guests', min_rows=1, max_rows=5)
+    assert result == [['Ann'], ['Bo']]
+    assert '1) APPEND ROW' in out_file.getvalue()
 
 
 def test_e07_fold_rule() -> None:

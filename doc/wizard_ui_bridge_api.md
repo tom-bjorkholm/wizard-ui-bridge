@@ -155,6 +155,12 @@
     * [run](#wizard_ui_bridge._matrix_console.ConsoleMatrix.run)
 * [wizard\_ui\_bridge.\_fake](#wizard_ui_bridge._fake)
   * [ask\_form\_faking](#wizard_ui_bridge._fake.ask_form_faking)
+* [wizard\_ui\_bridge.\_table\_matrix](#wizard_ui_bridge._table_matrix)
+  * [TableMatrix](#wizard_ui_bridge._table_matrix.TableMatrix)
+    * [\_\_init\_\_](#wizard_ui_bridge._table_matrix.TableMatrix.__init__)
+    * [request](#wizard_ui_bridge._table_matrix.TableMatrix.request)
+    * [values](#wizard_ui_bridge._table_matrix.TableMatrix.values)
+    * [cell\_name](#wizard_ui_bridge._table_matrix.TableMatrix.cell_name)
 * [wizard\_ui\_bridge.bridge\_helpers](#wizard_ui_bridge.bridge_helpers)
   * [NO\_CHOICE](#wizard_ui_bridge.bridge_helpers.NO_CHOICE)
   * [check\_text\_args](#wizard_ui_bridge.bridge_helpers.check_text_args)
@@ -2160,14 +2166,16 @@ console and graphical bridges derive from WizardUiBridge.
 
 An application that drives the wizard is responsible for implementing
 the typed ask methods of its bridge, together with show(). A concrete
-bridge implements ask_text(), ask_choice(), ask_multi(), ask_yes_no()
-and ask_table(); ask_path() has a permanent base implementation that a
-bridge may override for a native file or directory picker.
+bridge implements ask_text(), ask_choice(), ask_multi() and ask_yes_no();
+ask_path() has a permanent base implementation that a bridge may override
+for a native file or directory picker.
 
 A GUI, textual, curses or web application should override ask_form() and
 ask_matrix_form() to show the whole form or matrix at once, so the user sees
 every question together and answers them in any order. The base
 implementations are permanent and suitable for a console text interface.
+The permanent base ask_table() asks the table through ask_matrix_form(),
+so a bridge gets a table question shown the way it shows a matrix form.
 
 A GUI, textual, curses or web application should also override ask_path() to
 provide a native file or directory picker. The base implementation asks for
@@ -2189,13 +2197,15 @@ the wizard to use a console text user interface or a graphical user
 interface.
 
 A concrete bridge implements ask_text(), ask_choice(), ask_multi(),
-ask_yes_no(), ask_table() and show(). It may override ask_path() for
-a native file or directory picker; otherwise the base implementation
-asks for text and validates the path. It may override ask_form() and
+ask_yes_no() and show(). It may override ask_path() for a native file
+or directory picker; otherwise the base implementation asks for text
+and validates the path. It may override ask_form() and
 ask_matrix_form() to show the whole form or matrix at once, so the
 user sees every question together and answers them in any order.
 Overriding ask_form(), ask_matrix_form() and ask_path() is strongly
-recommended for a GUI, textual, curses or web application.
+recommended for a GUI, textual, curses or web application. The base
+ask_table() asks through ask_matrix_form(), so a bridge only overrides
+ask_table() for a table widget of its own.
 
 Any ask method may raise a WizardNavigation subclass to request back,
 cancel-level or abort instead of returning an answer.
@@ -2545,15 +2555,28 @@ TableCell per column. Read-only columns show the fixed text in
 each cell, such as a column of parameter names, while editable
 columns show pre-filled or empty values the user may change.
 
-The application is responsible for implementing this method with
-a real table widget. The base class has no implementation, but
-the helpers in wizard_ui_bridge.bridge_helpers fill a table one
-cell at a time for a bridge that asks one question at a time.
+The base implementation is permanent. It asks the table as a
+matrix form with ask_matrix_form(), so a bridge that shows a
+matrix form shows a table the same way. Row 0 of the matrix is a
+header row of bold labels with the column headers, and each table
+row is the matrix row below it. A read-only cell is a label, and
+an editable cell is a text cell, or a choice cell when it has
+choices, with help_text as its help text and its value as its
+default. Each row the user adds is built from the cells shared by
+every starting row, as bridge_helpers.new_row_template() does,
+with every column editable. A console names each cell by the
+read-only texts of its row and its column header. A bridge may
+override this method to show its own table widget, and the
+helpers in wizard_ui_bridge.bridge_helpers fill a table one cell
+at a time for a bridge that asks one question at a time.
 
 How an empty editable cell is reported follows its TableCell: a
 nullable cell reports None, a free-text cell reports an empty
 string, and a cell with choices treats empty as not yet a valid
-value.
+value. In the base implementation a pre-filled value is the
+default of a matrix cell, which an empty answer returns, so a
+pre-filled cell cannot be emptied there, and is never None even
+when nullable.
 
 When partial_check is given, the bridge calls it after the user
 changes a cell, passing the whole table as it currently stands
@@ -2561,7 +2584,9 @@ and the (row, column) position of the changed cell, both 0-based.
 The callback returns (accepted, message); the bridge uses message
 to give early feedback. The callback must tolerate empty or partly
 filled cells, and it gives advisory feedback only: the wizard
-still validates the final table.
+still validates the final table. In the base implementation a
+message is shown when the cell is not accepted, as the partial
+validator of ask_matrix_form() shows it.
 
 **Arguments**:
 
@@ -2577,7 +2602,8 @@ still validates the final table.
 - `min_rows` - Minimum number of rows the user must leave in the
   table, or None when rows are fixed to the rows in
   cells. A variable number of rows requires both
-  min_rows and max_rows to be non-None.
+  min_rows and max_rows to be non-None, and
+  0 <= min_rows <= len(cells) <= max_rows.
 - `max_rows` - Maximum number of rows the user may add the table
   to, or None when rows are fixed to the rows in
   cells. A variable number of rows requires both
@@ -2596,7 +2622,9 @@ still validates the final table.
 
 **Raises**:
 
-- `NotImplementedError` - The bridge does not implement ask_table().
+- `ValueError` - A row of cells does not hold one cell per column,
+  or a variable number of rows breaks
+  0 <= min_rows <= len(cells) <= max_rows.
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
@@ -3299,6 +3327,95 @@ def ask_form_faking(
 Show a form, faking the fields the bridge cannot show as text.
 
 Raises RuntimeError when a field is unsupported and cannot be faked.
+
+<a id="wizard_ui_bridge._table_matrix"></a>
+
+# wizard\_ui\_bridge.\_table\_matrix
+
+Ask a table question as a matrix form.
+
+The base WizardUiBridge.ask_table() describes the table as a matrix form
+with TableMatrix, asks it with ask_matrix_form() and turns the answers
+back into table cells. Row 0 of the matrix is a header of bold labels,
+and each table row is the matrix row below it, so table row r is matrix
+row r + 1. A read-only cell of a starting row is a label, and an editable
+cell is a text cell, or a choice cell when it has choices. The last row
+of the cell specification is bridge_helpers.new_row_template() with every
+column editable, and the matrix repeats it for each row the user appends.
+
+A TableCell separates the value an input starts with from what an empty
+cell means, while an Ask*Cell uses its default for both. So a pre-filled
+value is the default of its cell, and a nullable TableCell with a value
+is asked as a cell that is not nullable.
+
+<a id="wizard_ui_bridge._table_matrix.TableMatrix"></a>
+
+## TableMatrix Objects
+
+```python
+class TableMatrix()
+```
+
+A table question described as the cells of a matrix form.
+
+<a id="wizard_ui_bridge._table_matrix.TableMatrix.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__(columns: Sequence[TableColumn],
+             cells: Sequence[Sequence[TableCell]],
+             partial_check: Optional[PartialCheck],
+             help_text: Optional[str]) -> None
+```
+
+Build the matrix cells of the header, starting and new rows.
+
+Each input cell gets help_text as its help text.
+
+**Raises**:
+
+- `ValueError` - A row of cells does not hold one cell per column.
+
+<a id="wizard_ui_bridge._table_matrix.TableMatrix.request"></a>
+
+#### request
+
+```python
+def request(question: str, min_rows: Optional[int],
+            max_rows: Optional[int]) -> MatrixRequest
+```
+
+Return the matrix request of the table.
+
+**Raises**:
+
+- `ValueError` - A variable number of rows, with both min_rows and
+  max_rows given, does not satisfy 0 <= min_rows <=
+  number of starting rows <= max_rows.
+
+<a id="wizard_ui_bridge._table_matrix.TableMatrix.values"></a>
+
+#### values
+
+```python
+def values(answers: AnswerCells) -> list[list[Optional[str]]]
+```
+
+Return the table of cell values that matrix answers give.
+
+<a id="wizard_ui_bridge._table_matrix.TableMatrix.cell_name"></a>
+
+#### cell\_name
+
+```python
+def cell_name(_answers: AnswerCells, position: CellPosition) -> str
+```
+
+Return the name of a cell, such as 'city / Rename to'.
+
+The texts of the read-only cells of the row, or 'Row 2' when it
+has none, are followed by the header of the column.
 
 <a id="wizard_ui_bridge.bridge_helpers"></a>
 

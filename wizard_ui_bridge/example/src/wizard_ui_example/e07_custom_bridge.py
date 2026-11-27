@@ -26,16 +26,22 @@ Correctness first: the base class does most of the work
 A WizardUiBridge is designed so a new bridge is *correct from day one and
 improved incrementally*. Only a handful of methods have no default and must
 be implemented: the mandatory ask methods ``ask_text``, ``ask_yes_no``,
-``ask_choice``, ``ask_multi`` and ``ask_table``, plus ``show``. Everything
-else has a permanent base implementation this bridge simply inherits:
+``ask_choice`` and ``ask_multi``, plus ``show``. Everything else has a
+permanent base implementation this bridge simply inherits:
 
 - ``ask_path`` asks for text through ``ask_text`` and validates the path,
 - ``ask_int`` asks for text and re-asks until the value is a number in range,
 - ``ask_form`` asks the form's fields one at a time with the typed ask
-  methods above.
+  methods above,
+- ``ask_matrix_form`` asks the cells of a matrix one at a time, and offers a
+  menu to append or delete the last row or column when the matrix may be
+  resized,
+- ``ask_table`` describes the table as a matrix form and asks it with
+  ``ask_matrix_form``.
 
 So the moment the mandatory methods work, this bridge can already run any of
-the earlier wizards unchanged, path questions and whole forms included.
+the earlier wizards unchanged, path questions, whole forms and tables
+included.
 
 Help on request
 ---------------
@@ -50,16 +56,16 @@ example proves it by importing the export-settings wizard from
 ``e02_question_kinds`` and running that unchanged code through the new
 bridge. A bridge works with *any* wizard; a wizard runs on *any* bridge.
 
-One correctness gap is deliberately left open, not hidden: a table question
-with both min_rows and max_rows asks for a *variable* number of rows, which
-the user can only supply if the bridge lets them add and remove rows. That is
-correctness, not polish -- a wizard that expects the user to extend a table
-(a translation table, say) cannot receive those rows otherwise. Implementing
-the add/remove interface is left out here only for brevity, so ask_table()
-raises NotImplementedError for a variable-row request rather than silently
-returning just the starting rows; WizardUiBridgeConsole,
-WizardUiBridgeTextual and the WizardUiBridgeTk of the companion package
-wizard-tk-bridge show three ways to implement it.
+A table question with both min_rows and max_rows asks for a *variable*
+number of rows, which the user can only supply if the bridge lets them add
+and remove rows. That is correctness, not polish -- a wizard that expects
+the user to extend a table (a translation table, say) cannot receive those
+rows otherwise. The inherited ``ask_table`` covers it, since a matrix form
+may grow and shrink by whole rows, so this bridge needs no table code of its
+own. WizardUiBridgeConsole, WizardUiBridgeTextual and the WizardUiBridgeTk
+of the companion package wizard-tk-bridge override ``ask_table`` with table
+editors of their own, which is a user experience rung, not a correctness
+requirement.
 
 User experience second: the "override to improve" move
 ------------------------------------------------------
@@ -81,8 +87,9 @@ console and Textual bridges in this package are two reference rungs, and
 the WizardUiBridgeTk of the companion package wizard-tk-bridge is a
 graphical bridge that has climbed all six:
 
-1. Whole-screen ``ask_form`` -- show every field at once instead of one at a
-   time. See ``WizardUiBridgeTextual.ask_form``.
+1. Whole-screen ``ask_form`` and ``ask_matrix_form`` -- show every field or
+   cell at once instead of one at a time. The inherited ``ask_table`` then
+   shows a whole table too. See ``WizardUiBridgeTextual.ask_form``.
 2. A native ``ask_path`` picker -- a file/directory dialog instead of typed
    text. The text bridges validate typed text; a GUI toolkit supplies a
    real dialog, as the Tk bridge does.
@@ -97,8 +104,8 @@ graphical bridge that has climbed all six:
 
 The helper modules ``wizard_ui_bridge.bridge_helpers`` and
 ``wizard_ui_bridge.form_helpers`` exist to make climbing this ladder cheaper:
-they interpret raw answers, run the table loop and validate form prefills
-exactly as the built-in bridges do. This example already uses the
+they interpret raw answers, fill a table one cell at a time and validate form
+prefills exactly as the built-in bridges do. This example already uses the
 ``bridge_helpers`` functions so the mandatory methods stay a few lines each.
 
 Running it
@@ -121,9 +128,9 @@ from typing import Literal, Optional, Sequence, TextIO, overload
 from wizard_ui_example.e02_question_kinds import ask_export_settings, summarize
 from wizard_ui_bridge import make_text_ui_bridge, UiBridgeType, \
     WizardUiBridge, WizardNavigation, WizardBack, WizardCancelLevel, \
-    WizardAbort, TableColumn, TableCell, PartialCheck
+    WizardAbort
 from wizard_ui_bridge.bridge_helpers import check_text_args, text_answer, \
-    question_with_default, ask_yes_no, ask_one, ask_many, run_table, int_text
+    question_with_default, ask_yes_no, ask_one, ask_many, int_text
 
 # The glyphs the teleprinter can print. Every other character, including any
 # lowercase letter or slash, would jam the device, so the bridge folds all
@@ -175,10 +182,11 @@ class TeleprinterBridge(WizardUiBridge):
 
     The class implements only the mandatory ask methods and show(), routes
     side notes through error_file(), and overrides ask_int() to show its
-    range up front. Every other method -- ask_path(), ask_form() and the
-    rest -- is inherited from WizardUiBridge, so this bridge is a complete,
-    correct bridge despite its small size. See the module docstring for the
-    device it targets and the UX ladder a real bridge should climb.
+    range up front. Every other method -- ask_path(), ask_form(),
+    ask_table() and the rest -- is inherited from WizardUiBridge, so this
+    bridge is a complete, correct bridge despite its small size. See the
+    module docstring for the device it targets and the UX ladder a real
+    bridge should climb.
     """
 
     def __init__(self, stdout_file: TextIO, stdin_file: TextIO,
@@ -224,8 +232,8 @@ class TeleprinterBridge(WizardUiBridge):
         teleprinter can show and type back cleanly. A numeric answer is
         returned as its 0-based menu index and any other answer as its text,
         which is the raw-answer shape the bridge_helpers functions expect.
-        This method is also the AskReader that run_table() calls, which is
-        why it takes help_text as a keyword-only parameter.
+        Each ask method passes the help text of its question as the
+        keyword-only help_text, printed when the user asks for help.
         """
         while True:
             self._print_question(question, re_ask_reason, choices)
@@ -333,39 +341,6 @@ class TeleprinterBridge(WizardUiBridge):
                              reason, choices, help_text=help_text)
         return ask_many(reader, choices, default, min_select, max_select,
                         re_ask_reason, one_based=False)
-
-    # pylint: disable-next=too-many-arguments
-    def ask_table(self, columns: Sequence[TableColumn],
-                  cells: list[list[TableCell]], question: str, *,
-                  re_ask_reason: Optional[str] = None,
-                  partial_check: Optional[PartialCheck] = None,
-                  min_rows: Optional[int] = None,
-                  max_rows: Optional[int] = None,
-                  help_text: Optional[str] = None
-                  ) -> list[list[Optional[str]]]:
-        """Fill a fixed-row table; see WizardUiBridge.ask_table.
-
-        run_table asks each editable cell one at a time through the same
-        reader as the other questions, passing it the help text of the
-        table.
-
-        Both min_rows and max_rows being given means the wizard wants a
-        *variable* number of rows, so the user must be able to add and
-        remove rows. That is a matter of correctness, not polish: a wizard
-        that expects the user to extend a table (a translation table, say)
-        cannot receive those rows unless the bridge offers the add/remove
-        interface. Implementing it is left out here only for brevity, so
-        this bridge refuses a variable-row request with NotImplementedError
-        rather than silently return just the starting rows. See the
-        variable-row table in WizardUiBridgeConsole and WizardUiBridgeTextual
-        for two worked implementations.
-        """
-        if min_rows is not None and max_rows is not None:
-            raise NotImplementedError(
-                'TeleprinterBridge supports only fixed-row tables; '
-                'add/remove-row editing is left out for brevity.')
-        return run_table(self._ask, self.show, columns, cells, question,
-                         re_ask_reason, partial_check, help_text)
 
     # pylint: disable-next=too-many-arguments
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
