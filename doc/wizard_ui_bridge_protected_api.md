@@ -65,6 +65,7 @@
     * [\_ask\_raw](#wizard_ui_bridge.console.WizardUiBridgeConsole._ask_raw)
     * [ask\_choice](#wizard_ui_bridge.console.WizardUiBridgeConsole.ask_choice)
     * [ask\_multi](#wizard_ui_bridge.console.WizardUiBridgeConsole.ask_multi)
+    * [\_prompt](#wizard_ui_bridge.console.WizardUiBridgeConsole._prompt)
     * [\_emit\_question](#wizard_ui_bridge.console.WizardUiBridgeConsole._emit_question)
     * [\_read\_answer](#wizard_ui_bridge.console.WizardUiBridgeConsole._read_answer)
     * [\_read\_sensitive](#wizard_ui_bridge.console.WizardUiBridgeConsole._read_sensitive)
@@ -88,6 +89,10 @@
   * [row\_name](#wizard_ui_bridge.matrix_helpers.row_name)
   * [column\_name](#wizard_ui_bridge.matrix_helpers.column_name)
   * [message\_name](#wizard_ui_bridge.matrix_helpers.message_name)
+* [wizard\_ui\_bridge.\_help](#wizard_ui_bridge._help)
+  * [HelpKwargs](#wizard_ui_bridge._help.HelpKwargs)
+  * [help\_kwargs](#wizard_ui_bridge._help.help_kwargs)
+  * [\_accepts\_help](#wizard_ui_bridge._help._accepts_help)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [\_OrderedValue](#wizard_ui_bridge.matrix_cell_defs._OrderedValue)
     * [\_\_lt\_\_](#wizard_ui_bridge.matrix_cell_defs._OrderedValue.__lt__)
@@ -125,7 +130,31 @@
   * [AnswerTimeCell](#wizard_ui_bridge.matrix_cell_defs.AnswerTimeCell)
   * [AnswerDateTimeCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDateTimeCell)
   * [AnswerDurationCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDurationCell)
+* [wizard\_ui\_bridge.\_textual\_table](#wizard_ui_bridge._textual_table)
+  * [\_TableApp](#wizard_ui_bridge._textual_table._TableApp)
+    * [\_\_init\_\_](#wizard_ui_bridge._textual_table._TableApp.__init__)
+    * [compose](#wizard_ui_bridge._textual_table._TableApp.compose)
+    * [on\_mount](#wizard_ui_bridge._textual_table._TableApp.on_mount)
+    * [\_focus\_first\_cell](#wizard_ui_bridge._textual_table._TableApp._focus_first_cell)
+    * [\_grid\_cells](#wizard_ui_bridge._textual_table._TableApp._grid_cells)
+    * [\_row\_widgets](#wizard_ui_bridge._textual_table._TableApp._row_widgets)
+    * [\_is\_readonly](#wizard_ui_bridge._textual_table._TableApp._is_readonly)
+    * [\_cell\_widget](#wizard_ui_bridge._textual_table._TableApp._cell_widget)
+    * [\_on\_input](#wizard_ui_bridge._textual_table._TableApp._on_input)
+    * [\_on\_select](#wizard_ui_bridge._textual_table._TableApp._on_select)
+    * [\_recheck](#wizard_ui_bridge._textual_table._TableApp._recheck)
+    * [action\_submit](#wizard_ui_bridge._textual_table._TableApp.action_submit)
+    * [\_submit\_clicked](#wizard_ui_bridge._textual_table._TableApp._submit_clicked)
+    * [\_add\_clicked](#wizard_ui_bridge._textual_table._TableApp._add_clicked)
+    * [\_remove\_clicked](#wizard_ui_bridge._textual_table._TableApp._remove_clicked)
+    * [\_add\_row](#wizard_ui_bridge._textual_table._TableApp._add_row)
+    * [\_remove\_row](#wizard_ui_bridge._textual_table._TableApp._remove_row)
+    * [\_report](#wizard_ui_bridge._textual_table._TableApp._report)
+    * [\_set\_status](#wizard_ui_bridge._textual_table._TableApp._set_status)
+    * [\_read\_cell](#wizard_ui_bridge._textual_table._TableApp._read_cell)
 * [wizard\_ui\_bridge.arg\_types](#wizard_ui_bridge.arg_types)
+  * [AskReader](#wizard_ui_bridge.arg_types.AskReader)
+    * [\_\_call\_\_](#wizard_ui_bridge.arg_types.AskReader.__call__)
   * [WizardNavigation](#wizard_ui_bridge.arg_types.WizardNavigation)
   * [WizardBack](#wizard_ui_bridge.arg_types.WizardBack)
   * [WizardCancelLevel](#wizard_ui_bridge.arg_types.WizardCancelLevel)
@@ -226,6 +255,7 @@
   * [\_VarTable](#wizard_ui_bridge._table._VarTable)
     * [\_\_init\_\_](#wizard_ui_bridge._table._VarTable.__init__)
     * [step](#wizard_ui_bridge._table._VarTable.step)
+    * [\_menu\_help](#wizard_ui_bridge._table._VarTable._menu_help)
     * [\_accept](#wizard_ui_bridge._table._VarTable._accept)
     * [\_add](#wizard_ui_bridge._table._VarTable._add)
     * [\_delete](#wizard_ui_bridge._table._VarTable._delete)
@@ -259,6 +289,11 @@
     * [\_focused\_day](#wizard_ui_bridge._calendar._CalendarScreen._focused_day)
     * [\_focus\_day](#wizard_ui_bridge._calendar._CalendarScreen._focus_day)
     * [\_nearest\_enabled](#wizard_ui_bridge._calendar._CalendarScreen._nearest_enabled)
+* [wizard\_ui\_bridge.\_textual\_nav](#wizard_ui_bridge._textual_nav)
+  * [\_NavApp](#wizard_ui_bridge._textual_nav._NavApp)
+    * [\_\_init\_\_](#wizard_ui_bridge._textual_nav._NavApp.__init__)
+    * [action\_nav\_back](#wizard_ui_bridge._textual_nav._NavApp.action_nav_back)
+    * [action\_nav\_cancel](#wizard_ui_bridge._textual_nav._NavApp.action_nav_cancel)
 * [wizard\_ui\_bridge.\_matrix\_console](#wizard_ui_bridge._matrix_console)
   * [\_Line](#wizard_ui_bridge._matrix_console._Line)
   * [\_Menu](#wizard_ui_bridge._matrix_console._Menu)
@@ -272,6 +307,8 @@
     * [\_question](#wizard_ui_bridge._matrix_console.ConsoleMatrix._question)
     * [\_menu](#wizard_ui_bridge._matrix_console.ConsoleMatrix._menu)
     * [\_label](#wizard_ui_bridge._matrix_console.ConsoleMatrix._label)
+    * [\_menu\_help](#wizard_ui_bridge._matrix_console.ConsoleMatrix._menu_help)
+    * [\_words](#wizard_ui_bridge._matrix_console.ConsoleMatrix._words)
     * [\_fits](#wizard_ui_bridge._matrix_console.ConsoleMatrix._fits)
     * [\_resizable](#wizard_ui_bridge._matrix_console.ConsoleMatrix._resizable)
     * [\_has\_input](#wizard_ui_bridge._matrix_console.ConsoleMatrix._has_input)
@@ -365,10 +402,6 @@
   * [\_uniform](#wizard_ui_bridge.bridge_helpers._uniform)
   * [new\_row\_template](#wizard_ui_bridge.bridge_helpers.new_row_template)
 * [wizard\_ui\_bridge.textual\_bridge](#wizard_ui_bridge.textual_bridge)
-  * [\_NavApp](#wizard_ui_bridge.textual_bridge._NavApp)
-    * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge._NavApp.__init__)
-    * [action\_nav\_back](#wizard_ui_bridge.textual_bridge._NavApp.action_nav_back)
-    * [action\_nav\_cancel](#wizard_ui_bridge.textual_bridge._NavApp.action_nav_cancel)
   * [\_TextApp](#wizard_ui_bridge.textual_bridge._TextApp)
     * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge._TextApp.__init__)
     * [compose](#wizard_ui_bridge.textual_bridge._TextApp.compose)
@@ -389,27 +422,6 @@
     * [\_selections](#wizard_ui_bridge.textual_bridge._MultiApp._selections)
     * [\_clicked](#wizard_ui_bridge.textual_bridge._MultiApp._clicked)
     * [action\_submit](#wizard_ui_bridge.textual_bridge._MultiApp.action_submit)
-  * [\_TableApp](#wizard_ui_bridge.textual_bridge._TableApp)
-    * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge._TableApp.__init__)
-    * [compose](#wizard_ui_bridge.textual_bridge._TableApp.compose)
-    * [on\_mount](#wizard_ui_bridge.textual_bridge._TableApp.on_mount)
-    * [\_focus\_first\_cell](#wizard_ui_bridge.textual_bridge._TableApp._focus_first_cell)
-    * [\_grid\_cells](#wizard_ui_bridge.textual_bridge._TableApp._grid_cells)
-    * [\_row\_widgets](#wizard_ui_bridge.textual_bridge._TableApp._row_widgets)
-    * [\_is\_readonly](#wizard_ui_bridge.textual_bridge._TableApp._is_readonly)
-    * [\_cell\_widget](#wizard_ui_bridge.textual_bridge._TableApp._cell_widget)
-    * [\_on\_input](#wizard_ui_bridge.textual_bridge._TableApp._on_input)
-    * [\_on\_select](#wizard_ui_bridge.textual_bridge._TableApp._on_select)
-    * [\_recheck](#wizard_ui_bridge.textual_bridge._TableApp._recheck)
-    * [action\_submit](#wizard_ui_bridge.textual_bridge._TableApp.action_submit)
-    * [\_submit\_clicked](#wizard_ui_bridge.textual_bridge._TableApp._submit_clicked)
-    * [\_add\_clicked](#wizard_ui_bridge.textual_bridge._TableApp._add_clicked)
-    * [\_remove\_clicked](#wizard_ui_bridge.textual_bridge._TableApp._remove_clicked)
-    * [\_add\_row](#wizard_ui_bridge.textual_bridge._TableApp._add_row)
-    * [\_remove\_row](#wizard_ui_bridge.textual_bridge._TableApp._remove_row)
-    * [\_report](#wizard_ui_bridge.textual_bridge._TableApp._report)
-    * [\_set\_status](#wizard_ui_bridge.textual_bridge._TableApp._set_status)
-    * [\_read\_cell](#wizard_ui_bridge.textual_bridge._TableApp._read_cell)
   * [\_FormApp](#wizard_ui_bridge.textual_bridge._FormApp)
     * [\_\_init\_\_](#wizard_ui_bridge.textual_bridge._FormApp.__init__)
     * [compose](#wizard_ui_bridge.textual_bridge._FormApp.compose)
@@ -734,7 +746,8 @@ The base WizardUiBridge.ask_form() and ask_matrix_form() both ask one
 question at a time. Every Ask*Field derives from its Ask*Cell, so a
 single function asks either, given the question to show, through the
 public typed ask methods of the bridge, which a derived bridge may
-override.
+override. The help text of the cell is passed as help_text, so a console
+user can ask to see it.
 
 <a id="wizard_ui_bridge._ask_cell.ask_cell_value"></a>
 
@@ -1224,7 +1237,8 @@ Console text user interface bridge for a wizard.
 This module provides the concrete console bridge used when the wizard
 talks to a user through plain text streams. It recognises reserved
 navigation tokens so a console user can step back, cancel the current
-level or abandon the whole wizard.
+level or abandon the whole wizard, and the help token ':?', which shows
+the help text of the question and then asks the same question again.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole"></a>
 
@@ -1263,7 +1277,8 @@ def ask_text(question: str,
              nullable: bool = False,
              *,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask for free text on the console; see WizardUiBridge.ask_text.
@@ -1290,7 +1305,9 @@ a nullable choice field through ask_choice(nullable=True).
 ```python
 def ask_yes_no(question: str,
                default: bool,
-               re_ask_reason: Optional[str] = None) -> bool
+               re_ask_reason: Optional[str] = None,
+               *,
+               help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question on the console; see ask_yes_no.
@@ -1307,7 +1324,8 @@ def ask_table(columns: Sequence[TableColumn],
               re_ask_reason: Optional[str] = None,
               partial_check: Optional[PartialCheck] = None,
               min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None) -> list[list[Optional[str]]]
+              max_rows: Optional[int] = None,
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Ask the user to fill a table on the console; see ask_table.
@@ -1323,14 +1341,16 @@ fixed rows in cells are filled one editable cell at a time.
 ```python
 def _ask_raw(question: str,
              re_ask_reason: Optional[str] = None,
-             choices: Optional[Sequence[str]] = None) -> str | int
+             choices: Optional[Sequence[str]] = None,
+             *,
+             help_text: Optional[str] = None) -> str | int
 ```
 
-Emit one question and read a navigation-checked raw answer.
+Ask one question and read a navigation-checked raw answer.
 
 Returns the entered text, or a 0-based index into choices when
 choices are offered, which is the raw-answer shape the table
-helpers expect.
+helpers expect (see arg_types.AskReader).
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole.ask_choice"></a>
 
@@ -1342,7 +1362,8 @@ def ask_choice(question: str,
                choices: Sequence[str],
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
-               nullable: bool = False) -> Optional[str]
+               nullable: bool = False,
+               help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask one choice on the console; see WizardUiBridge.ask_choice.
@@ -1361,10 +1382,30 @@ def ask_multi(question: str,
               default: Optional[Sequence[str]] = None,
               min_select: int = 0,
               max_select: Optional[int] = None,
-              re_ask_reason: Optional[str] = None) -> list[str]
+              re_ask_reason: Optional[str] = None,
+              help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask several choices on the console; see WizardUiBridge.ask_multi.
+
+<a id="wizard_ui_bridge.console.WizardUiBridgeConsole._prompt"></a>
+
+#### \_prompt
+
+```python
+def _prompt(question: str,
+            re_ask_reason: Optional[str],
+            lines: Sequence[str],
+            help_text: Optional[str],
+            *,
+            sensitive: bool = False) -> str
+```
+
+Ask one question until the answer is not a request for help.
+
+The help token shows the help text, or a note that there is none,
+and asks the same question again, with the same re-ask reason. A
+navigation token raises its navigation request.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole._emit_question"></a>
 
@@ -1649,6 +1690,53 @@ Return the name of a cell for a message the bridge writes itself.
 
 The CellNamer of the request names the cell when it is given and
 returns a non-empty name; otherwise cell_name() does.
+
+<a id="wizard_ui_bridge._help"></a>
+
+# wizard\_ui\_bridge.\_help
+
+Pass a help text only to the ask methods and readers that accept it.
+
+The typed ask methods, ask_table() and the AskReader of the table helpers
+gained a keyword-only help_text parameter after bridges outside this
+package were written. The code of this package calls them through
+help_kwargs(), which leaves the help text out, with a DeprecationWarning,
+for a method or reader that does not accept it yet, so an older bridge
+keeps working until it is updated.
+
+<a id="wizard_ui_bridge._help.HelpKwargs"></a>
+
+## HelpKwargs Objects
+
+```python
+class HelpKwargs(TypedDict)
+```
+
+The keyword arguments that carry a help text to an ask method.
+
+<a id="wizard_ui_bridge._help.help_kwargs"></a>
+
+#### help\_kwargs
+
+```python
+def help_kwargs(method: Callable[..., object],
+                help_text: Optional[str]) -> HelpKwargs
+```
+
+Return help_text as keyword arguments for method, if it takes them.
+
+A method that takes neither a help_text parameter nor **kwargs gets
+no keyword arguments, and a DeprecationWarning names the method.
+
+<a id="wizard_ui_bridge._help._accepts_help"></a>
+
+#### \_accepts\_help
+
+```python
+def _accepts_help(method: Callable[..., object]) -> bool
+```
+
+Return whether method takes help_text, by name or as **kwargs.
 
 <a id="wizard_ui_bridge.matrix_cell_defs"></a>
 
@@ -2287,11 +2375,303 @@ An answer to a duration cell in a matrix form.
 - `value` - The value of the answer, or None when the user did not fill in
   anything and the cell is nullable.
 
+<a id="wizard_ui_bridge._textual_table"></a>
+
+# wizard\_ui\_bridge.\_textual\_table
+
+The editable table screen of the Textual bridge.
+
+The screen shows a table question as a grid of inputs and drop-downs,
+with buttons to add and remove rows when the number of rows may vary.
+
+<a id="wizard_ui_bridge._textual_table._TableApp"></a>
+
+## \_TableApp Objects
+
+```python
+class _TableApp(_NavApp[list[list[Optional[str]]]])
+```
+
+Editable grid returning every cell the user left.
+
+Read-only columns show fixed text in the template rows. Editable
+cells are a text input, or a drop-down when the cell offers choices.
+An empty editable cell is reported as None when the cell is nullable
+and as an empty string for a free-text cell, while a drop-down is
+blank only when the cell is nullable.
+
+When min_rows and max_rows are both given the table has a variable
+number of rows: an Add row and a Remove row button grow the table up
+to max_rows and shrink it down to min_rows. Every cell in an added
+row is editable, even in a read-only column, and its descriptor comes
+from new_row_template().
+
+A rejected cell is framed in the error colour while the shared status
+line names it, so the user sees which cell of the grid to correct.
+
+<a id="wizard_ui_bridge._textual_table._TableApp.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__(columns: Sequence[TableColumn],
+             cells: list[list[TableCell]],
+             question: str,
+             messages: list[str],
+             partial_check: Optional[PartialCheck],
+             min_rows: Optional[int] = None,
+             max_rows: Optional[int] = None) -> None
+```
+
+Store the columns, starting rows, prompt, check and bounds.
+
+<a id="wizard_ui_bridge._textual_table._TableApp.compose"></a>
+
+#### compose
+
+```python
+def compose() -> ComposeResult
+```
+
+Lay out the header, the editable grid, the buttons and footer.
+
+<a id="wizard_ui_bridge._textual_table._TableApp.on_mount"></a>
+
+#### on\_mount
+
+```python
+def on_mount() -> None
+```
+
+Size the grid, keep the scroll unfocused, focus a cell.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._focus_first_cell"></a>
+
+#### \_focus\_first\_cell
+
+```python
+def _focus_first_cell() -> None
+```
+
+Move focus to the first editable cell of the first row.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._grid_cells"></a>
+
+#### \_grid\_cells
+
+```python
+def _grid_cells() -> Iterator[Widget]
+```
+
+Yield the header labels and then the rows, top to bottom.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._row_widgets"></a>
+
+#### \_row\_widgets
+
+```python
+def _row_widgets(row: int) -> Iterator[Widget]
+```
+
+Yield the widgets of one data row, left to right.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._is_readonly"></a>
+
+#### \_is\_readonly
+
+```python
+def _is_readonly(row: int, col: int) -> bool
+```
+
+Return whether a cell shows fixed text instead of a widget.
+
+Cells in added rows are always editable, even in a column that is
+read-only in the template rows.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._cell_widget"></a>
+
+#### \_cell\_widget
+
+```python
+def _cell_widget(row: int, col: int) -> Widget
+```
+
+Return the widget shown for one cell of the grid.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._on_input"></a>
+
+#### \_on\_input
+
+```python
+@on(Input.Changed)
+def _on_input(event: Input.Changed) -> None
+```
+
+Re-check the table after a text cell changes.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._on_select"></a>
+
+#### \_on\_select
+
+```python
+@on(Select.Changed)
+def _on_select(event: Select.Changed) -> None
+```
+
+Re-check the table after a drop-down cell changes.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._recheck"></a>
+
+#### \_recheck
+
+```python
+def _recheck(position: Optional[tuple[int, int]]) -> None
+```
+
+Update the changed cell and show any partial-check message.
+
+<a id="wizard_ui_bridge._textual_table._TableApp.action_submit"></a>
+
+#### action\_submit
+
+```python
+def action_submit() -> None
+```
+
+Exit returning every cell, including the read-only columns.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._submit_clicked"></a>
+
+#### \_submit\_clicked
+
+```python
+@on(Button.Pressed, '#submit')
+def _submit_clicked(_event: Button.Pressed) -> None
+```
+
+Submit the table when the submit button is pressed.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._add_clicked"></a>
+
+#### \_add\_clicked
+
+```python
+@on(Button.Pressed, '#add_row')
+def _add_clicked(_event: Button.Pressed) -> None
+```
+
+Add a row when the add-row button is pressed.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._remove_clicked"></a>
+
+#### \_remove\_clicked
+
+```python
+@on(Button.Pressed, '#remove_row')
+def _remove_clicked(_event: Button.Pressed) -> None
+```
+
+Remove the last row when the remove-row button is pressed.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._add_row"></a>
+
+#### \_add\_row
+
+```python
+def _add_row() -> None
+```
+
+Append one editable row, up to max_rows.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._remove_row"></a>
+
+#### \_remove\_row
+
+```python
+def _remove_row() -> None
+```
+
+Remove the last row, down to min_rows.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._report"></a>
+
+#### \_report
+
+```python
+def _report(position: Optional[tuple[int, int]], message: str) -> None
+```
+
+Show a message, naming and framing the cell it complains of.
+
+A message given no cell position, such as one about the number of
+rows, is about the whole table: it is shown unchanged and no cell
+is framed.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._set_status"></a>
+
+#### \_set\_status
+
+```python
+def _set_status(message: str) -> None
+```
+
+Show a status message below the table.
+
+<a id="wizard_ui_bridge._textual_table._TableApp._read_cell"></a>
+
+#### \_read\_cell
+
+```python
+def _read_cell(row: int, col: int) -> Optional[str]
+```
+
+Return the current value of one cell for the result table.
+
 <a id="wizard_ui_bridge.arg_types"></a>
 
 # wizard\_ui\_bridge.arg\_types
 
 Types used as arguments to the WizardUiBridge class.
+
+<a id="wizard_ui_bridge.arg_types.AskReader"></a>
+
+## AskReader Objects
+
+```python
+class AskReader(Protocol)
+```
+
+A reader of one raw user answer, used by the table helpers.
+
+It takes a prompt, an optional re-ask reason, optional choices and a
+keyword-only help text, and returns the raw user answer as text or a
+0-based choice index. The shared table helpers take one, so every
+bridge that fills a table one cell at a time supplies its own reader
+and shares the table code. A reader without the help_text parameter
+still works but is deprecated: the table helpers then leave the help
+text out and issue a DeprecationWarning.
+
+<a id="wizard_ui_bridge.arg_types.AskReader.__call__"></a>
+
+#### \_\_call\_\_
+
+```python
+def __call__(question: str,
+             re_ask_reason: Optional[str],
+             choices: Optional[Sequence[str]],
+             *,
+             help_text: Optional[str] = None) -> str | int
+```
+
+Ask one question and return the raw answer.
+
+**Arguments**:
+
+- `question` - The prompt to show.
+- `re_ask_reason` - The reason for re-asking, or None.
+- `choices` - The choices to offer as a menu, or None for text.
+- `help_text` - The help text to show when the user asks for help,
+  or None when there is no help.
 
 <a id="wizard_ui_bridge.arg_types.WizardNavigation"></a>
 
@@ -2741,7 +3121,7 @@ empty, the cell is named as by matrix_helpers.cell_name().
   the help text should be displayed immediately before
   expecting input for that cell. If this is False, the help text
   should only be displayed in response to an explicit request
-  from the user.
+  from the user, which is the answer ':?' on the console.
 - `show_horizontal_label` - If this is True, the label closest to
   the left of the cell asked for in the same row is displayed
   for each cell asked for in the console, or the 1-based row
@@ -3108,6 +3488,13 @@ recommended for a GUI, textual, curses or web application.
 Any ask method may raise a WizardNavigation subclass to request back,
 cancel-level or abort instead of returning an answer.
 
+Every typed ask method and ask_table() take a keyword-only help_text,
+which a console bridge shows when the user asks for help. A GUI
+bridge that overrides ask_form() and ask_matrix_form() may ignore it.
+The base class calls an ask method of a derived bridge that lacks the
+help_text parameter without it, and issues a DeprecationWarning, so
+an older bridge keeps working until it is updated.
+
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.ask_text"></a>
 
 #### ask\_text
@@ -3118,7 +3505,8 @@ def ask_text(question: str,
              nullable: bool = False,
              *,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask a free-text question and return the entered text.
@@ -3139,6 +3527,10 @@ a real text-entry control. The base class has no implementation.
 - `sensitive` - True when the bridge must avoid echoing the
   entered text, such as for passwords. A default is
   not allowed for a sensitive question.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -3166,7 +3558,8 @@ def ask_int(question: str,
             nullable: bool = False,
             min_value: Optional[int] = None,
             max_value: Optional[int] = None,
-            default: Optional[int] = None) -> Optional[int]
+            default: Optional[int] = None,
+            help_text: Optional[str] = None) -> Optional[int]
 ```
 
 Ask for an integer, optionally within inclusive bounds.
@@ -3189,6 +3582,10 @@ derived bridge may override it with a direct numeric control.
   The max value is inclusive.
 - `default` - The value returned by an empty answer, or None for
   no default. Not allowed together with nullable.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -3213,7 +3610,8 @@ derived bridge may override it with a direct numeric control.
 def ask_path(question: str,
              re_ask_reason: Optional[str] = None,
              *,
-             options: Optional[PathAskOptions] = None) -> Optional[Path]
+             options: Optional[PathAskOptions] = None,
+             help_text: Optional[str] = None) -> Optional[Path]
 ```
 
 Ask a question for a path and return the accepted path.
@@ -3227,6 +3625,10 @@ asks for text through ask_text(), then validates the answer.
 - `question` - The question to ask the user.
 - `re_ask_reason` - The reason for re-asking the question.
 - `options` - Path options. None only rejects existing directories.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -3247,7 +3649,9 @@ asks for text through ask_text(), then validates the answer.
 ```python
 def ask_yes_no(question: str,
                default: bool,
-               re_ask_reason: Optional[str] = None) -> bool
+               re_ask_reason: Optional[str] = None,
+               *,
+               help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question and return the chosen boolean.
@@ -3265,6 +3669,10 @@ implementation.
   choice.
 - `re_ask_reason` - The reason for re-asking the question, for
   instance that the user's answer was invalid.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -3288,7 +3696,8 @@ def ask_choice(question: str,
                choices: Sequence[str],
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
-               nullable: bool = False) -> Optional[str]
+               nullable: bool = False,
+               help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask the user to pick exactly one of choices and return it.
@@ -3317,6 +3726,10 @@ overloads on its override. The base class has no implementation.
   first question when not None.
 - `nullable` - When True the user may select no choice, which is
   reported as None.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -3345,7 +3758,8 @@ def ask_multi(question: str,
               default: Optional[Sequence[str]] = None,
               min_select: int = 0,
               max_select: Optional[int] = None,
-              re_ask_reason: Optional[str] = None) -> list[str]
+              re_ask_reason: Optional[str] = None,
+              help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask the user to pick several of choices and return them.
@@ -3373,6 +3787,10 @@ implementation.
   for no upper bound.
 - `re_ask_reason` - The reason for re-asking, shown before the
   first question when not None.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -3403,7 +3821,8 @@ def ask_table(columns: Sequence[TableColumn],
               re_ask_reason: Optional[str] = None,
               partial_check: Optional[PartialCheck] = None,
               min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None) -> list[list[Optional[str]]]
+              max_rows: Optional[int] = None,
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Ask the user to fill in a table and return its cells.
@@ -3451,6 +3870,10 @@ still validates the final table.
   to, or None when rows are fixed to the rows in
   cells. A variable number of rows requires both
   min_rows and max_rows to be non-None.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -3487,7 +3910,9 @@ The base implementation is permanent and suitable for a console
 text interface: it shows long_question, then asks each field in
 turn with the typed ask methods ask_text(), ask_int(),
 ask_yes_no(), ask_path(), ask_choice() and ask_multi(), and
-returns one AnswerField per field in the same order.
+returns one AnswerField per field in the same order. A field's
+help text is shown before the field is asked, and is also passed
+as help_text, so a console user can ask to see it again.
 
 Any serious application or library using GUI, textual, curses or
 web interfaces should override this method to show the whole form
@@ -3641,9 +4066,13 @@ at the end of the matrix, where an empty answer is done, and when
 the number of cells in a line may change, also after the first
 row (or column, in column order) with input cells, so the user
 can set the width before the other rows are asked. An appended
-row or column asks its new cells at once. WizardBack steps back
-to the previously asked cell, and from the first cell propagates
-so the wizard steps to the previous question.
+row or column asks its new cells at once. Each cell is asked with
+its help text as help_text, and the resize menu with a help text
+that explains its actions; the help text of a cell is also shown
+before the cell is asked when request.console_question has
+use_help_text set. WizardBack steps back to the previously asked
+cell, and from the first cell propagates so the wizard steps to
+the previous question.
 
 In the base implementation the partial validator is called first
 for the whole matrix, then after each cell is answered and after
@@ -4048,7 +4477,8 @@ def __call__(question: str,
              re_ask_reason: Optional[str] = ...,
              nullable: bool = ...,
              *,
-             default: Optional[str] = ...) -> Optional[str]
+             default: Optional[str] = ...,
+             help_text: Optional[str] = ...) -> Optional[str]
 ```
 
 Ask for free text and return it, or None for an empty answer.
@@ -4078,6 +4508,7 @@ Re-ask a typed field or cell through ask_text until it is usable.
 The hint is shown after the question and repeated in the parse-error
 message, so a console user learns the accepted text format. An empty
 answer yields the field default, or None when the field is nullable.
+The help text of the field is passed to ask_text as help_text.
 
 <a id="wizard_ui_bridge._parse._resolve"></a>
 
@@ -4187,9 +4618,11 @@ The console editor shows the whole table as a numbered overview each
 round and then asks one action prompt last, so the actions and any
 re-ask reason stay visible after a long table has scrolled off the
 screen. A row number edits that row, ':+' adds a row and ':- N' deletes
-row N, while a blank answer accepts the table. Editing a row reuses the
-same per-cell helpers as a fixed table, so choice cells, the erase token
-and per-cell navigation behave identically.
+row N, while a blank answer accepts the table. Asked for help, the action
+prompt explains these actions, followed by the help text of the table.
+Editing a row reuses the same per-cell helpers as a fixed table, so choice
+cells, the erase token, the help text and per-cell navigation behave
+identically.
 
 <a id="wizard_ui_bridge._table._ADD_ROW"></a>
 
@@ -4225,10 +4658,10 @@ read-only in the template rows, mirroring the Textual bridge.
 ```python
 def __init__(columns: Sequence[TableColumn], cells: list[list[TableCell]],
              partial_check: Optional[PartialCheck], min_rows: int,
-             max_rows: int) -> None
+             max_rows: int, help_text: Optional[str]) -> None
 ```
 
-Start from the given rows and remember the row bounds.
+Start from the given rows and remember the bounds and help.
 
 <a id="wizard_ui_bridge._table._VarTable.step"></a>
 
@@ -4239,6 +4672,16 @@ def step(ask: AskReader, reason: Optional[str]) -> bool
 ```
 
 Run one menu round; return True when the table is accepted.
+
+<a id="wizard_ui_bridge._table._VarTable._menu_help"></a>
+
+#### \_menu\_help
+
+```python
+def _menu_help() -> str
+```
+
+Return the explanation of the menu actions and the table help.
 
 <a id="wizard_ui_bridge._table._VarTable._accept"></a>
 
@@ -4320,7 +4763,8 @@ def _run_variable_table(ask: AskReader, show: Callable[[str], None],
                         cells: list[list[TableCell]], question: str,
                         re_ask_reason: Optional[str],
                         partial_check: Optional[PartialCheck], min_rows: int,
-                        max_rows: int) -> list[list[Optional[str]]]
+                        max_rows: int,
+                        help_text: Optional[str]) -> list[list[Optional[str]]]
 ```
 
 Edit a variable-row table through the console row-menu interface.
@@ -4611,6 +5055,67 @@ def _nearest_enabled(target: int) -> Optional[int]
 
 Return the enabled day nearest target, or None when none are.
 
+<a id="wizard_ui_bridge._textual_nav"></a>
+
+# wizard\_ui\_bridge.\_textual\_nav
+
+The base screen of the Textual bridge, which turns keys into navigation.
+
+Every screen of the Textual bridge derives from _NavApp, so the keys
+that ask to go back or cancel the current level work the same way on
+every screen.
+
+<a id="wizard_ui_bridge._textual_nav._NavApp"></a>
+
+## \_NavApp Objects
+
+```python
+class _NavApp(App[_T])
+```
+
+Base screen translating navigation keys into wizard requests.
+
+A subclass lays out one question. ctrl+b records a request to go
+back and ctrl+o a request to cancel the current level; the mnemonic
+for ctrl+o is "out one level". Both exit the screen with no value so
+the bridge can raise the matching request. The built-in ctrl+q quit
+also exits with no value, which the bridge treats as an abort. These
+keys avoid the editing shortcuts that the text input widget binds,
+so they work on every screen.
+
+<a id="wizard_ui_bridge._textual_nav._NavApp.__init__"></a>
+
+#### \_\_init\_\_
+
+```python
+def __init__() -> None
+```
+
+Initialize with no pending navigation request.
+
+<a id="wizard_ui_bridge._textual_nav._NavApp.action_nav_back"></a>
+
+#### action\_nav\_back
+
+```python
+def action_nav_back() -> None
+```
+
+Record a request to return to the previous question.
+
+The name avoids App.action_back, the built-in screen-history
+action, so this records a wizard back request instead.
+
+<a id="wizard_ui_bridge._textual_nav._NavApp.action_nav_cancel"></a>
+
+#### action\_nav\_cancel
+
+```python
+def action_nav_cancel() -> None
+```
+
+Record a request to cancel the current level.
+
 <a id="wizard_ui_bridge._matrix_console"></a>
 
 # wizard\_ui\_bridge.\_matrix\_console
@@ -4635,7 +5140,8 @@ offers a menu at two points:
 
 An appended line or item asks its new input cells at once, before the
 menu is offered again; cells of lines still waiting in the queue are
-asked with those lines. WizardBack steps back to the previously asked
+asked with those lines. Asked for help, a menu explains its actions.
+WizardBack steps back to the previously asked
 cell that can still be asked, also from a menu, and propagates from the
 first cell. The cells passed on the way back are walked again, so a cell
 skipped as disabled is asked if it is enabled by then, as in the base
@@ -4787,6 +5293,26 @@ def _label(menu: _Menu, add_lines: int, add_items: int) -> str
 ```
 
 Return the menu text of one resize action.
+
+<a id="wizard_ui_bridge._matrix_console.ConsoleMatrix._menu_help"></a>
+
+#### \_menu\_help
+
+```python
+def _menu_help(menu: _Menu) -> str
+```
+
+Return the help text that explains the actions of a menu.
+
+<a id="wizard_ui_bridge._matrix_console.ConsoleMatrix._words"></a>
+
+#### \_words
+
+```python
+def _words() -> tuple[str, str]
+```
+
+Return the words for a line and an item, such as row, column.
 
 <a id="wizard_ui_bridge._matrix_console.ConsoleMatrix._fits"></a>
 
@@ -5513,18 +6039,22 @@ Re-ask through reader until a yes/no answer is understood.
 #### run\_table
 
 ```python
-def run_table(
-        ask: AskReader, show: Callable[[str], None],
-        columns: Sequence[TableColumn], cells: list[list[TableCell]],
-        question: str, re_ask_reason: Optional[str],
-        partial_check: Optional[PartialCheck]) -> list[list[Optional[str]]]
+def run_table(ask: AskReader,
+              show: Callable[[str], None],
+              columns: Sequence[TableColumn],
+              cells: list[list[TableCell]],
+              question: str,
+              re_ask_reason: Optional[str],
+              partial_check: Optional[PartialCheck],
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Show one table question and fill its editable cells via ask.
 
 The read-only cells stay fixed and only the editable cells are asked,
-one at a time, through the ask reader. This is the shared core of a
-fixed-row table in any bridge that asks one question at a time.
+one at a time, through the ask reader, which gets help_text to show
+when the user asks for help. This is the shared core of a fixed-row
+table in any bridge that asks one question at a time.
 
 <a id="wizard_ui_bridge.bridge_helpers._fill_table"></a>
 
@@ -5533,7 +6063,8 @@ fixed-row table in any bridge that asks one question at a time.
 ```python
 def _fill_table(ask: AskReader, columns: Sequence[TableColumn],
                 cells: list[list[TableCell]], table: list[list[Optional[str]]],
-                partial_check: Optional[PartialCheck]) -> None
+                partial_check: Optional[PartialCheck],
+                help_text: Optional[str]) -> None
 ```
 
 Fill the editable cells, stepping back one cell on WizardBack.
@@ -5548,10 +6079,13 @@ moves between cells.
 #### fill\_cell
 
 ```python
-def fill_cell(
-        ask: AskReader, columns: Sequence[TableColumn], row: list[TableCell],
-        col: int, current: Optional[str],
-        check: Callable[[Optional[str]], Optional[str]]) -> Optional[str]
+def fill_cell(ask: AskReader,
+              columns: Sequence[TableColumn],
+              row: list[TableCell],
+              col: int,
+              current: Optional[str],
+              check: Callable[[Optional[str]], Optional[str]],
+              help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask one editable cell until its value is accepted.
@@ -5566,6 +6100,8 @@ Ask one editable cell until its value is accepted.
   enter and shown in the prompt.
 - `check` - Records a candidate in the table and returns an error
   message, or None when the candidate is accepted.
+- `help_text` - The help text the ask reader shows when the user asks
+  for help, or None when there is no help.
   
 
 **Returns**:
@@ -5920,57 +6456,6 @@ error_file() are buffered and rendered in the header of the next
 screen, so nothing is written straight to the terminal where it would
 corrupt the Textual display.
 
-<a id="wizard_ui_bridge.textual_bridge._NavApp"></a>
-
-## \_NavApp Objects
-
-```python
-class _NavApp(App[_T])
-```
-
-Base screen translating navigation keys into wizard requests.
-
-A subclass lays out one question. ctrl+b records a request to go
-back and ctrl+o a request to cancel the current level; the mnemonic
-for ctrl+o is "out one level". Both exit the screen with no value so
-the bridge can raise the matching request. The built-in ctrl+q quit
-also exits with no value, which the bridge treats as an abort. These
-keys avoid the editing shortcuts that the text input widget binds,
-so they work on every screen.
-
-<a id="wizard_ui_bridge.textual_bridge._NavApp.__init__"></a>
-
-#### \_\_init\_\_
-
-```python
-def __init__() -> None
-```
-
-Initialize with no pending navigation request.
-
-<a id="wizard_ui_bridge.textual_bridge._NavApp.action_nav_back"></a>
-
-#### action\_nav\_back
-
-```python
-def action_nav_back() -> None
-```
-
-Record a request to return to the previous question.
-
-The name avoids App.action_back, the built-in screen-history
-action, so this records a wizard back request instead.
-
-<a id="wizard_ui_bridge.textual_bridge._NavApp.action_nav_cancel"></a>
-
-#### action\_nav\_cancel
-
-```python
-def action_nav_cancel() -> None
-```
-
-Record a request to cancel the current level.
-
 <a id="wizard_ui_bridge.textual_bridge._TextApp"></a>
 
 ## \_TextApp Objects
@@ -6181,249 +6666,6 @@ def action_submit() -> None
 ```
 
 Exit with the selection, or show why the count is wrong.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp"></a>
-
-## \_TableApp Objects
-
-```python
-class _TableApp(_NavApp[list[list[Optional[str]]]])
-```
-
-Editable grid returning every cell the user left.
-
-Read-only columns show fixed text in the template rows. Editable
-cells are a text input, or a drop-down when the cell offers choices.
-An empty editable cell is reported as None when the cell is nullable
-and as an empty string for a free-text cell, while a drop-down is
-blank only when the cell is nullable.
-
-When min_rows and max_rows are both given the table has a variable
-number of rows: an Add row and a Remove row button grow the table up
-to max_rows and shrink it down to min_rows. Every cell in an added
-row is editable, even in a read-only column, and its descriptor comes
-from new_row_template().
-
-A rejected cell is framed in the error colour while the shared status
-line names it, so the user sees which cell of the grid to correct.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp.__init__"></a>
-
-#### \_\_init\_\_
-
-```python
-def __init__(columns: Sequence[TableColumn],
-             cells: list[list[TableCell]],
-             question: str,
-             messages: list[str],
-             partial_check: Optional[PartialCheck],
-             min_rows: Optional[int] = None,
-             max_rows: Optional[int] = None) -> None
-```
-
-Store the columns, starting rows, prompt, check and bounds.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp.compose"></a>
-
-#### compose
-
-```python
-def compose() -> ComposeResult
-```
-
-Lay out the header, the editable grid, the buttons and footer.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp.on_mount"></a>
-
-#### on\_mount
-
-```python
-def on_mount() -> None
-```
-
-Size the grid, keep the scroll unfocused, focus a cell.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._focus_first_cell"></a>
-
-#### \_focus\_first\_cell
-
-```python
-def _focus_first_cell() -> None
-```
-
-Move focus to the first editable cell of the first row.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._grid_cells"></a>
-
-#### \_grid\_cells
-
-```python
-def _grid_cells() -> Iterator[Widget]
-```
-
-Yield the header labels and then the rows, top to bottom.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._row_widgets"></a>
-
-#### \_row\_widgets
-
-```python
-def _row_widgets(row: int) -> Iterator[Widget]
-```
-
-Yield the widgets of one data row, left to right.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._is_readonly"></a>
-
-#### \_is\_readonly
-
-```python
-def _is_readonly(row: int, col: int) -> bool
-```
-
-Return whether a cell shows fixed text instead of a widget.
-
-Cells in added rows are always editable, even in a column that is
-read-only in the template rows.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._cell_widget"></a>
-
-#### \_cell\_widget
-
-```python
-def _cell_widget(row: int, col: int) -> Widget
-```
-
-Return the widget shown for one cell of the grid.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._on_input"></a>
-
-#### \_on\_input
-
-```python
-@on(Input.Changed)
-def _on_input(event: Input.Changed) -> None
-```
-
-Re-check the table after a text cell changes.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._on_select"></a>
-
-#### \_on\_select
-
-```python
-@on(Select.Changed)
-def _on_select(event: Select.Changed) -> None
-```
-
-Re-check the table after a drop-down cell changes.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._recheck"></a>
-
-#### \_recheck
-
-```python
-def _recheck(position: Optional[tuple[int, int]]) -> None
-```
-
-Update the changed cell and show any partial-check message.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp.action_submit"></a>
-
-#### action\_submit
-
-```python
-def action_submit() -> None
-```
-
-Exit returning every cell, including the read-only columns.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._submit_clicked"></a>
-
-#### \_submit\_clicked
-
-```python
-@on(Button.Pressed, '#submit')
-def _submit_clicked(_event: Button.Pressed) -> None
-```
-
-Submit the table when the submit button is pressed.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._add_clicked"></a>
-
-#### \_add\_clicked
-
-```python
-@on(Button.Pressed, '#add_row')
-def _add_clicked(_event: Button.Pressed) -> None
-```
-
-Add a row when the add-row button is pressed.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._remove_clicked"></a>
-
-#### \_remove\_clicked
-
-```python
-@on(Button.Pressed, '#remove_row')
-def _remove_clicked(_event: Button.Pressed) -> None
-```
-
-Remove the last row when the remove-row button is pressed.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._add_row"></a>
-
-#### \_add\_row
-
-```python
-def _add_row() -> None
-```
-
-Append one editable row, up to max_rows.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._remove_row"></a>
-
-#### \_remove\_row
-
-```python
-def _remove_row() -> None
-```
-
-Remove the last row, down to min_rows.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._report"></a>
-
-#### \_report
-
-```python
-def _report(position: Optional[tuple[int, int]], message: str) -> None
-```
-
-Show a message, naming and framing the cell it complains of.
-
-A message given no cell position, such as one about the number of
-rows, is about the whole table: it is shown unchanged and no cell
-is framed.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._set_status"></a>
-
-#### \_set\_status
-
-```python
-def _set_status(message: str) -> None
-```
-
-Show a status message below the table.
-
-<a id="wizard_ui_bridge.textual_bridge._TableApp._read_cell"></a>
-
-#### \_read\_cell
-
-```python
-def _read_cell(row: int, col: int) -> Optional[str]
-```
-
-Return the current value of one cell for the result table.
 
 <a id="wizard_ui_bridge.textual_bridge._FormApp"></a>
 
@@ -6813,6 +7055,9 @@ This bridge draws on the controlling terminal itself, so it takes no
 streams. Use make_text_ui_bridge() to obtain this bridge when a
 terminal is available and a console bridge otherwise.
 
+The ask methods accept help_text but ignore it; ask_form() shows the
+help text of each field as a tooltip instead.
+
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.__init__"></a>
 
 #### \_\_init\_\_
@@ -6833,7 +7078,8 @@ def ask_text(question: str,
              nullable: bool = False,
              *,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask for free text; see WizardUiBridge.ask_text.
@@ -6846,7 +7092,8 @@ Ask for free text; see WizardUiBridge.ask_text.
 def ask_path(question: str,
              re_ask_reason: Optional[str] = None,
              *,
-             options: Optional[PathAskOptions] = None) -> Optional[Path]
+             options: Optional[PathAskOptions] = None,
+             help_text: Optional[str] = None) -> Optional[Path]
 ```
 
 Ask for a path with a directory tree and editable path input.
@@ -6858,7 +7105,9 @@ Ask for a path with a directory tree and editable path input.
 ```python
 def ask_yes_no(question: str,
                default: bool,
-               re_ask_reason: Optional[str] = None) -> bool
+               re_ask_reason: Optional[str] = None,
+               *,
+               help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question; see WizardUiBridge.ask_yes_no.
@@ -6873,7 +7122,8 @@ def ask_choice(question: str,
                choices: Sequence[str],
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
-               nullable: bool = False) -> Optional[str]
+               nullable: bool = False,
+               help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask the user to pick one choice; see ask_choice.
@@ -6892,7 +7142,8 @@ def ask_multi(question: str,
               default: Optional[Sequence[str]] = None,
               min_select: int = 0,
               max_select: Optional[int] = None,
-              re_ask_reason: Optional[str] = None) -> list[str]
+              re_ask_reason: Optional[str] = None,
+              help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask the user to pick several choices; see ask_multi.
@@ -6909,7 +7160,8 @@ def ask_table(columns: Sequence[TableColumn],
               re_ask_reason: Optional[str] = None,
               partial_check: Optional[PartialCheck] = None,
               min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None) -> list[list[Optional[str]]]
+              max_rows: Optional[int] = None,
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Ask the user to fill a table; see WizardUiBridge.ask_table.

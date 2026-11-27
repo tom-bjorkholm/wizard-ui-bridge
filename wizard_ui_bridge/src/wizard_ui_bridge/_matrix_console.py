@@ -19,7 +19,8 @@ offers a menu at two points:
 
 An appended line or item asks its new input cells at once, before the
 menu is offered again; cells of lines still waiting in the queue are
-asked with those lines. WizardBack steps back to the previously asked
+asked with those lines. Asked for help, a menu explains its actions.
+WizardBack steps back to the previously asked
 cell that can still be asked, also from a menu, and propagates from the
 first cell. The cells passed on the way back are walked again, so a cell
 skipped as disabled is asked if it is enabled by then, as in the base
@@ -47,6 +48,7 @@ from wizard_ui_bridge.matrix_defs import CellPosition, MatrixDimension, \
 from wizard_ui_bridge.matrix_helpers import cell_at, cell_name, \
     column_name, row_name, valid_cell_prefills
 from wizard_ui_bridge._ask_cell import ask_cell_value
+from wizard_ui_bridge._help import help_kwargs
 if TYPE_CHECKING:
     from wizard_ui_bridge.bridge import WizardUiBridge
 
@@ -191,8 +193,9 @@ class ConsoleMatrix:
         labels = list(actions)
         question = (f'Rows: {self._shape.rows}, columns: '
                     f'{self._shape.columns}. What next?')
+        extra = help_kwargs(self._bridge.ask_choice, self._menu_help(menu))
         add_lines, add_items = actions[self._bridge.ask_choice(
-            question, choices=labels, default=labels[0])]
+            question, choices=labels, default=labels[0], **extra)]
         if (add_lines, add_items) == (0, 0):
             return []
         self._reshape(self._dimension(lines + add_lines, items + add_items))
@@ -207,12 +210,28 @@ class ConsoleMatrix:
 
     def _label(self, menu: _Menu, add_lines: int, add_items: int) -> str:
         """Return the menu text of one resize action."""
-        row_order = self._request.console_question.row_order
-        line, item = ('row', 'column') if row_order else ('column', 'row')
+        line, item = self._words()
         if (add_lines, add_items) == (0, 0):
             return 'Done' if menu is _Menu.END else f'Next {line}'
         verb = 'Append' if add_lines + add_items > 0 else 'Delete last'
         return f'{verb} {line if add_lines else item}'
+
+    def _menu_help(self, menu: _Menu) -> str:
+        """Return the help text that explains the actions of a menu."""
+        line, item = self._words()
+        first = ('Done accepts the matrix as it is.' if menu is _Menu.END
+                 else f'Next {line} goes on to ask the other {line}s.')
+        return (f'{first} Append adds a {line} or {item} at the end and '
+                'asks its cells at once. Delete last removes the last '
+                f'{line} or {item} together with its answers. Only the '
+                'actions that keep the matrix within its allowed size are '
+                'offered. An empty answer selects the first action.')
+
+    def _words(self) -> tuple[str, str]:
+        """Return the words for a line and an item, such as row, column."""
+        if self._request.console_question.row_order:
+            return 'row', 'column'
+        return 'column', 'row'
 
     def _fits(self, add_lines: int, add_items: int) -> bool:
         """Return whether a resize keeps the matrix within its bounds."""

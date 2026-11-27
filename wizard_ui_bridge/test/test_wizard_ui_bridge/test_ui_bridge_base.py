@@ -39,9 +39,11 @@ class _TextBridge(WizardUiBridge):
             raise answer
         return answer
 
+    # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False) -> Optional[str]:
+                 sensitive: bool = False,
+                 help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted answer using ask_text semantics."""
         if sensitive and default is not None:
             raise ValueError('default is not allowed for sensitive input')

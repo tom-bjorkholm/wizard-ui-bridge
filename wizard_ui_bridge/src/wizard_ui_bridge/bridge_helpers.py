@@ -18,6 +18,7 @@ from config_as_json import InvalidConfiguration, string_best_match
 from wizard_ui_bridge.arg_types import PartialCheck, \
     AskReader, WizardBack, WizardPathKind, PathAskOptions, TableColumn, \
     TableCell, check_nullable, check_choice_args, check_multi_args
+from wizard_ui_bridge._help import help_kwargs
 
 
 _ERASE_TOKEN = ':e'  # empties an editable cell in a one-cell-at-a-time table
@@ -165,26 +166,29 @@ def ask_yes_no(reader: Callable[[Optional[str]], str | int], default: bool,
 def run_table(ask: AskReader, show: Callable[[str], None],
               columns: Sequence[TableColumn], cells: list[list[TableCell]],
               question: str, re_ask_reason: Optional[str],
-              partial_check: Optional[PartialCheck]
-              ) -> list[list[Optional[str]]]:
+              partial_check: Optional[PartialCheck],
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]:
     """Show one table question and fill its editable cells via ask.
 
     The read-only cells stay fixed and only the editable cells are asked,
-    one at a time, through the ask reader. This is the shared core of a
-    fixed-row table in any bridge that asks one question at a time.
+    one at a time, through the ask reader, which gets help_text to show
+    when the user asks for help. This is the shared core of a fixed-row
+    table in any bridge that asks one question at a time.
     """
     show(question)
     if re_ask_reason is not None:
         show(re_ask_reason)
     table: list[list[Optional[str]]] = [
         [cell.value for cell in row] for row in cells]
-    _fill_table(ask, columns, cells, table, partial_check)
+    _fill_table(ask, columns, cells, table, partial_check, help_text)
     return table
 
 
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def _fill_table(ask: AskReader, columns: Sequence[TableColumn],
                 cells: list[list[TableCell]], table: list[list[Optional[str]]],
-                partial_check: Optional[PartialCheck]) -> None:
+                partial_check: Optional[PartialCheck],
+                help_text: Optional[str]) -> None:
     """Fill the editable cells, stepping back one cell on WizardBack.
 
     WizardBack from the first editable cell has no earlier cell to
@@ -200,7 +204,7 @@ def _fill_table(ask: AskReader, columns: Sequence[TableColumn],
         check = cell_checker(table, (row, col), partial_check)
         try:
             table[row][col] = fill_cell(ask, columns, cells[row], col,
-                                        table[row][col], check)
+                                        table[row][col], check, help_text)
         except WizardBack:
             if position == 0:
                 raise
@@ -212,8 +216,8 @@ def _fill_table(ask: AskReader, columns: Sequence[TableColumn],
 # pylint: disable-next=too-many-arguments,too-many-positional-arguments
 def fill_cell(ask: AskReader, columns: Sequence[TableColumn],
               row: list[TableCell], col: int, current: Optional[str],
-              check: Callable[[Optional[str]], Optional[str]]
-              ) -> Optional[str]:
+              check: Callable[[Optional[str]], Optional[str]],
+              help_text: Optional[str] = None) -> Optional[str]:
     """Ask one editable cell until its value is accepted.
 
     Args:
@@ -225,6 +229,8 @@ def fill_cell(ask: AskReader, columns: Sequence[TableColumn],
                  enter and shown in the prompt.
         check: Records a candidate in the table and returns an error
                message, or None when the candidate is accepted.
+        help_text: The help text the ask reader shows when the user asks
+                   for help, or None when there is no help.
 
     Returns:
         The accepted cell value, or None for an empty nullable cell.
@@ -236,8 +242,9 @@ def fill_cell(ask: AskReader, columns: Sequence[TableColumn],
     cell = row[col]
     prompt = _cell_prompt(columns, row, col, current)
     reason: Optional[str] = None
+    extra = help_kwargs(ask, help_text)
     while True:
-        answer = ask(prompt, reason, cell.choices)
+        answer = ask(prompt, reason, cell.choices, **extra)
         rejected, candidate = _cell_value(answer, cell, current)
         if rejected is not None:
             reason = rejected

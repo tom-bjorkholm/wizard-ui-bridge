@@ -33,15 +33,21 @@ again with a re_ask_reason that explains why. re_ask_reason is the shared
 argument every ask method takes for exactly this: showing why a question is
 being asked again.
 
-Note that per-question help text is not a feature of the one-at-a-time ask
-methods; it belongs to the form fields shown in e05_ask_form.py.
+help_text: help on request
+--------------------------
+Every ask method also takes a keyword-only help_text. The console bridge
+does not print it up front; it shows it when the user answers ``:?``, and
+then asks the same question again. Here the output-file question carries a
+help text that explains the extension rule. The form fields of
+e05_ask_form.py carry a help text in the same way.
 
 Cancelling and scripting
 -----------------------
 Any ask method may raise a WizardNavigation request (``:b``, ``:c`` or
-``:q`` on the console). This example treats any of them as "the user gave
-up" and stops. Tests force the console bridge and feed answers through a
-redirected input stream, so the program is fully scriptable.
+``:q`` on the console; ``:?`` asks for help and is no navigation
+request). This example treats any of them as "the user gave up" and stops.
+Tests force the console bridge and feed answers through a redirected input
+stream, so the program is fully scriptable.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -58,6 +64,8 @@ from wizard_ui_bridge import make_text_ui_bridge, UiBridgeType, \
 
 _FORMATS = ('CSV', 'Excel', 'HTML')
 _EXTENSIONS = {'CSV': '.csv', 'Excel': '.xlsx', 'HTML': '.html'}
+_PATH_HELP = ('The new file the report is written to. Its extension must '
+              'match the output format: .csv, .xlsx or .html.')
 _COLUMNS = ('City', 'Country', 'Continent', 'Population')
 _DEFAULT_COLUMNS = ('City', 'Country', 'Continent')
 # The output file must not exist yet, so the export never overwrites a file
@@ -88,8 +96,10 @@ def ask_output_path(bridge: WizardUiBridge, output_format: str) -> Path:
     expected = _EXTENSIONS[output_format]
     reason: Optional[str] = None
     while True:
+        # help_text is shown only when the user asks for it (:? on the
+        # console), so it can explain more than the short question can.
         path = bridge.ask_path('Output file to create', re_ask_reason=reason,
-                               options=_NEW_FILE)
+                               options=_NEW_FILE, help_text=_PATH_HELP)
         assert path is not None  # a non-existing-file question is not nullable
         if path.suffix.lower() == expected:
             return path

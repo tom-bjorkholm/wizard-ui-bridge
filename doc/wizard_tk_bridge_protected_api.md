@@ -2582,6 +2582,10 @@ class WizardUiBridgeTk(WizardUiBridge)
 
 Bridge that answers wizard prompts through Tkinter widgets.
 
+The ask methods accept help_text but ignore it; ask_form() and
+ask_matrix_form() show the help text of each field or cell as a
+tooltip instead.
+
 <a id="wizard_tk_bridge.tk_bridge.WizardUiBridgeTk.__init__"></a>
 
 #### \_\_init\_\_
@@ -2621,7 +2625,8 @@ def ask_text(question: str,
              nullable: bool = False,
              *,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask for free text; see WizardUiBridge.ask_text.
@@ -2637,7 +2642,8 @@ def ask_int(question: str,
             nullable: bool = False,
             min_value: Optional[int] = None,
             max_value: Optional[int] = None,
-            default: Optional[int] = None) -> Optional[int]
+            default: Optional[int] = None,
+            help_text: Optional[str] = None) -> Optional[int]
 ```
 
 Ask for an integer within optional bounds; see ask_int.
@@ -2650,7 +2656,8 @@ Ask for an integer within optional bounds; see ask_int.
 def ask_path(question: str,
              re_ask_reason: Optional[str] = None,
              *,
-             options: Optional[PathAskOptions] = None) -> Optional[Path]
+             options: Optional[PathAskOptions] = None,
+             help_text: Optional[str] = None) -> Optional[Path]
 ```
 
 Ask for a path with a native file or directory picker.
@@ -2662,7 +2669,9 @@ Ask for a path with a native file or directory picker.
 ```python
 def ask_yes_no(question: str,
                default: bool,
-               re_ask_reason: Optional[str] = None) -> bool
+               re_ask_reason: Optional[str] = None,
+               *,
+               help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question with dedicated yes and no buttons.
@@ -2677,7 +2686,8 @@ def ask_choice(question: str,
                choices: Sequence[str],
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
-               nullable: bool = False) -> Optional[str]
+               nullable: bool = False,
+               help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask the user to pick one choice from a single-selection list.
@@ -2695,7 +2705,8 @@ def ask_multi(question: str,
               default: Optional[Sequence[str]] = None,
               min_select: int = 0,
               max_select: Optional[int] = None,
-              re_ask_reason: Optional[str] = None) -> list[str]
+              re_ask_reason: Optional[str] = None,
+              help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask the user to pick several choices from a multi-selection list.
@@ -2712,7 +2723,8 @@ def ask_table(columns: Sequence[TableColumn],
               re_ask_reason: Optional[str] = None,
               partial_check: Optional[PartialCheck] = None,
               min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None) -> list[list[Optional[str]]]
+              max_rows: Optional[int] = None,
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Ask the user to fill an editable table of the given rows.

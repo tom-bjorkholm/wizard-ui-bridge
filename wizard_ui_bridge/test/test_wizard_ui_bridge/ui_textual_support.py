@@ -19,7 +19,8 @@ from textual.widgets import Button, Input
 
 from wizard_ui_bridge import WizardNavigation, WizardUiBridgeTextual
 from wizard_ui_bridge.form_defs import AnswerField, AskField
-from wizard_ui_bridge.textual_bridge import _NavApp, _FormApp
+from wizard_ui_bridge.textual_bridge import _FormApp
+from wizard_ui_bridge._textual_nav import _NavApp
 from wizard_ui_bridge._path import _PickerScreen
 
 

@@ -35,7 +35,17 @@ else has a permanent base implementation this bridge simply inherits:
   methods above.
 
 So the moment the mandatory methods work, this bridge can already run any of
-the earlier wizards unchanged, path questions and whole forms included. This
+the earlier wizards unchanged, path questions and whole forms included.
+
+Help on request
+---------------
+Every ask method takes a keyword-only ``help_text``. The wizard, or the base
+``ask_form`` for a form field, passes the help text of the question there,
+and a bridge decides how to offer it. A text bridge like this one offers it
+on request: the answer ``:?`` prints the help text and asks the same question
+again. A graphical bridge would rather show it as a tooltip. A bridge written
+before ``help_text`` existed still works, but the base class then leaves the
+help text out and issues a DeprecationWarning, so do accept the parameter. This
 example proves it by importing the export-settings wizard from
 ``e02_question_kinds`` and running that unchanged code through the new
 bridge. A bridge works with *any* wizard; a wizard runs on *any* bridge.
@@ -120,10 +130,15 @@ from wizard_ui_bridge.bridge_helpers import check_text_args, text_answer, \
 # output into this set before printing it.
 _ALLOWED = frozenset('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:-()[]?\n')
 _REPLACEMENT = '?'
-_NAV_HINT = '(:b back  :c cancel  :q abort)'
+_NAV_HINT = '(:b back  :c cancel  :q abort  :? help)'
 # One reserved navigation token per WizardNavigation subclass. Answering with
 # a token asks to move within the wizard instead of answering the question.
 _NAV_TOKENS = {':b': WizardBack, ':c': WizardCancelLevel, ':q': WizardAbort}
+# The help token is not a navigation move: the bridge answers it itself, by
+# printing the help text and asking the same question again, so the wizard
+# never sees it.
+_HELP_TOKEN = ':?'
+_NO_HELP = 'No help is available for this question.'
 
 
 def _fold(text: str) -> str:
@@ -201,30 +216,45 @@ class TeleprinterBridge(WizardUiBridge):
         return text
 
     def _ask(self, question: str, re_ask_reason: Optional[str] = None,
-             choices: Optional[Sequence[str]] = None) -> str | int:
+             choices: Optional[Sequence[str]] = None, *,
+             help_text: Optional[str] = None) -> str | int:
         """Print one question and read a navigation-checked raw answer.
 
         Choices are printed as a numbered menu, because digits are glyphs the
         teleprinter can show and type back cleanly. A numeric answer is
         returned as its 0-based menu index and any other answer as its text,
         which is the raw-answer shape the bridge_helpers functions expect.
+        This method is also the AskReader that run_table() calls, which is
+        why it takes help_text as a keyword-only parameter.
         """
+        while True:
+            self._print_question(question, re_ask_reason, choices)
+            text = self._read()
+            if text.strip() != _HELP_TOKEN:
+                break
+            # A request for help is not an answer: print the help text and
+            # loop to ask the very same question again.
+            self._emit(help_text or _NO_HELP)
+        if choices is None:
+            return text
+        number = int_text(text)
+        return text if number is None else number
+
+    def _print_question(self, question: str, re_ask_reason: Optional[str],
+                        choices: Optional[Sequence[str]]) -> None:
+        """Print the re-ask reason, the question, its menu and the hint."""
         if re_ask_reason is not None:
             self._emit(re_ask_reason)
         self._emit(question)
         for index, choice in enumerate(choices or ()):
             self._emit(f'{index}) {choice}')
         self._emit(_NAV_HINT)
-        text = self._read()
-        if choices is None:
-            return text
-        number = int_text(text)
-        return text if number is None else number
 
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False) -> Optional[str]:
+                 sensitive: bool = False,
+                 help_text: Optional[str] = None) -> Optional[str]:
         """Ask for free text; see WizardUiBridge.ask_text.
 
         The teleprinter cannot hide what it prints, so a sensitive answer is
@@ -236,38 +266,43 @@ class TeleprinterBridge(WizardUiBridge):
         # bundled bridge rejects.
         check_text_args(default, sensitive, nullable)
         answer = self._ask(question_with_default(question, default),
-                           re_ask_reason)
+                           re_ask_reason, help_text=help_text)
         assert isinstance(answer, str)  # no choices, so the answer is text
         return text_answer(answer, nullable, default)
 
     def ask_yes_no(self, question: str, default: bool,
-                   re_ask_reason: Optional[str] = None) -> bool:
+                   re_ask_reason: Optional[str] = None, *,
+                   help_text: Optional[str] = None) -> bool:
         """Ask a yes/no question; see WizardUiBridge.ask_yes_no."""
         def reader(reason: Optional[str]) -> str | int:
-            return self._ask(question, reason, ('yes', 'no'))
+            return self._ask(question, reason, ('yes', 'no'),
+                             help_text=help_text)
         return ask_yes_no(reader, default, re_ask_reason)
 
     # The base class declares ask_choice() with two overloads, so a caller
     # that leaves nullable out gets a plain str back while a caller passing
     # nullable gets Optional[str]. An override must repeat both overloads,
     # otherwise mypy reports it as incompatible with the base class.
+    # pylint: disable=too-many-arguments
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
-                   nullable: Literal[False] = False) -> str: ...
+                   nullable: Literal[False] = False,
+                   help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool) -> Optional[str]: ...
+                   re_ask_reason: Optional[str] = None, nullable: bool,
+                   help_text: Optional[str] = None) -> Optional[str]: ...
+    # pylint: enable=too-many-arguments
 
     # pylint: disable-next=too-many-arguments
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool = False) -> Optional[str]:
+                   re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   help_text: Optional[str] = None) -> Optional[str]:
         """Ask for one choice; see WizardUiBridge.ask_choice.
 
         A nullable choice may be left empty, which reports no choice (None).
@@ -279,7 +314,7 @@ class TeleprinterBridge(WizardUiBridge):
             else question
 
         def reader(reason: Optional[str]) -> str | int:
-            return self._ask(prompt, reason, choices)
+            return self._ask(prompt, reason, choices, help_text=help_text)
         # ask_one() re-asks until the answer is valid. With nullable=True it
         # returns None for an empty answer, and it raises ValueError when
         # nullable is combined with a default.
@@ -290,11 +325,12 @@ class TeleprinterBridge(WizardUiBridge):
     def ask_multi(self, question: str, *, choices: Sequence[str],
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
-                  re_ask_reason: Optional[str] = None) -> list[str]:
+                  re_ask_reason: Optional[str] = None,
+                  help_text: Optional[str] = None) -> list[str]:
         """Ask for several choices; see WizardUiBridge.ask_multi."""
         def reader(reason: Optional[str]) -> str | int:
             return self._ask(f'{question} (numbers separated by commas)',
-                             reason, choices)
+                             reason, choices, help_text=help_text)
         return ask_many(reader, choices, default, min_select, max_select,
                         re_ask_reason, one_based=False)
 
@@ -304,11 +340,14 @@ class TeleprinterBridge(WizardUiBridge):
                   re_ask_reason: Optional[str] = None,
                   partial_check: Optional[PartialCheck] = None,
                   min_rows: Optional[int] = None,
-                  max_rows: Optional[int] = None) -> list[list[Optional[str]]]:
+                  max_rows: Optional[int] = None,
+                  help_text: Optional[str] = None
+                  ) -> list[list[Optional[str]]]:
         """Fill a fixed-row table; see WizardUiBridge.ask_table.
 
         run_table asks each editable cell one at a time through the same
-        reader as the other questions.
+        reader as the other questions, passing it the help text of the
+        table.
 
         Both min_rows and max_rows being given means the wizard wants a
         *variable* number of rows, so the user must be able to add and
@@ -326,13 +365,13 @@ class TeleprinterBridge(WizardUiBridge):
                 'TeleprinterBridge supports only fixed-row tables; '
                 'add/remove-row editing is left out for brevity.')
         return run_table(self._ask, self.show, columns, cells, question,
-                         re_ask_reason, partial_check)
+                         re_ask_reason, partial_check, help_text)
 
     # pylint: disable-next=too-many-arguments
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
                 nullable: bool = False, min_value: Optional[int] = None,
-                max_value: Optional[int] = None,
-                default: Optional[int] = None) -> Optional[int]:
+                max_value: Optional[int] = None, default: Optional[int] = None,
+                help_text: Optional[str] = None) -> Optional[int]:
         """Ask for an integer, naming the accepted range up front.
 
         This is the one convenience method the bridge overrides to improve on
@@ -344,7 +383,7 @@ class TeleprinterBridge(WizardUiBridge):
         return super().ask_int(_int_prompt(question, min_value, max_value),
                                re_ask_reason, nullable=nullable,
                                min_value=min_value, max_value=max_value,
-                               default=default)
+                               default=default, help_text=help_text)
 
 
 def _present(bridge: WizardUiBridge, summary: str) -> None:

@@ -49,6 +49,9 @@
   * [row\_name](#wizard_ui_bridge.matrix_helpers.row_name)
   * [column\_name](#wizard_ui_bridge.matrix_helpers.column_name)
   * [message\_name](#wizard_ui_bridge.matrix_helpers.message_name)
+* [wizard\_ui\_bridge.\_help](#wizard_ui_bridge._help)
+  * [HelpKwargs](#wizard_ui_bridge._help.HelpKwargs)
+  * [help\_kwargs](#wizard_ui_bridge._help.help_kwargs)
 * [wizard\_ui\_bridge.matrix\_cell\_defs](#wizard_ui_bridge.matrix_cell_defs)
   * [value\_out\_of\_range](#wizard_ui_bridge.matrix_cell_defs.value_out_of_range)
   * [check\_bounds](#wizard_ui_bridge.matrix_cell_defs.check_bounds)
@@ -79,6 +82,8 @@
   * [AnswerDateTimeCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDateTimeCell)
   * [AnswerDurationCell](#wizard_ui_bridge.matrix_cell_defs.AnswerDurationCell)
 * [wizard\_ui\_bridge.arg\_types](#wizard_ui_bridge.arg_types)
+  * [AskReader](#wizard_ui_bridge.arg_types.AskReader)
+    * [\_\_call\_\_](#wizard_ui_bridge.arg_types.AskReader.__call__)
   * [WizardNavigation](#wizard_ui_bridge.arg_types.WizardNavigation)
   * [WizardBack](#wizard_ui_bridge.arg_types.WizardBack)
   * [WizardCancelLevel](#wizard_ui_bridge.arg_types.WizardCancelLevel)
@@ -194,7 +199,8 @@ The base WizardUiBridge.ask_form() and ask_matrix_form() both ask one
 question at a time. Every Ask*Field derives from its Ask*Cell, so a
 single function asks either, given the question to show, through the
 public typed ask methods of the bridge, which a derived bridge may
-override.
+override. The help text of the cell is passed as help_text, so a console
+user can ask to see it.
 
 <a id="wizard_ui_bridge._ask_cell.ask_cell_value"></a>
 
@@ -645,7 +651,8 @@ Console text user interface bridge for a wizard.
 This module provides the concrete console bridge used when the wizard
 talks to a user through plain text streams. It recognises reserved
 navigation tokens so a console user can step back, cancel the current
-level or abandon the whole wizard.
+level or abandon the whole wizard, and the help token ':?', which shows
+the help text of the question and then asks the same question again.
 
 <a id="wizard_ui_bridge.console.WizardUiBridgeConsole"></a>
 
@@ -684,7 +691,8 @@ def ask_text(question: str,
              nullable: bool = False,
              *,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask for free text on the console; see WizardUiBridge.ask_text.
@@ -711,7 +719,9 @@ a nullable choice field through ask_choice(nullable=True).
 ```python
 def ask_yes_no(question: str,
                default: bool,
-               re_ask_reason: Optional[str] = None) -> bool
+               re_ask_reason: Optional[str] = None,
+               *,
+               help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question on the console; see ask_yes_no.
@@ -728,7 +738,8 @@ def ask_table(columns: Sequence[TableColumn],
               re_ask_reason: Optional[str] = None,
               partial_check: Optional[PartialCheck] = None,
               min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None) -> list[list[Optional[str]]]
+              max_rows: Optional[int] = None,
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Ask the user to fill a table on the console; see ask_table.
@@ -747,7 +758,8 @@ def ask_choice(question: str,
                choices: Sequence[str],
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
-               nullable: bool = False) -> Optional[str]
+               nullable: bool = False,
+               help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask one choice on the console; see WizardUiBridge.ask_choice.
@@ -766,7 +778,8 @@ def ask_multi(question: str,
               default: Optional[Sequence[str]] = None,
               min_select: int = 0,
               max_select: Optional[int] = None,
-              re_ask_reason: Optional[str] = None) -> list[str]
+              re_ask_reason: Optional[str] = None,
+              help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask several choices on the console; see WizardUiBridge.ask_multi.
@@ -930,6 +943,43 @@ Return the name of a cell for a message the bridge writes itself.
 
 The CellNamer of the request names the cell when it is given and
 returns a non-empty name; otherwise cell_name() does.
+
+<a id="wizard_ui_bridge._help"></a>
+
+# wizard\_ui\_bridge.\_help
+
+Pass a help text only to the ask methods and readers that accept it.
+
+The typed ask methods, ask_table() and the AskReader of the table helpers
+gained a keyword-only help_text parameter after bridges outside this
+package were written. The code of this package calls them through
+help_kwargs(), which leaves the help text out, with a DeprecationWarning,
+for a method or reader that does not accept it yet, so an older bridge
+keeps working until it is updated.
+
+<a id="wizard_ui_bridge._help.HelpKwargs"></a>
+
+## HelpKwargs Objects
+
+```python
+class HelpKwargs(TypedDict)
+```
+
+The keyword arguments that carry a help text to an ask method.
+
+<a id="wizard_ui_bridge._help.help_kwargs"></a>
+
+#### help\_kwargs
+
+```python
+def help_kwargs(method: Callable[..., object],
+                help_text: Optional[str]) -> HelpKwargs
+```
+
+Return help_text as keyword arguments for method, if it takes them.
+
+A method that takes neither a help_text parameter nor **kwargs gets
+no keyword arguments, and a DeprecationWarning names the method.
 
 <a id="wizard_ui_bridge.matrix_cell_defs"></a>
 
@@ -1489,6 +1539,46 @@ An answer to a duration cell in a matrix form.
 
 Types used as arguments to the WizardUiBridge class.
 
+<a id="wizard_ui_bridge.arg_types.AskReader"></a>
+
+## AskReader Objects
+
+```python
+class AskReader(Protocol)
+```
+
+A reader of one raw user answer, used by the table helpers.
+
+It takes a prompt, an optional re-ask reason, optional choices and a
+keyword-only help text, and returns the raw user answer as text or a
+0-based choice index. The shared table helpers take one, so every
+bridge that fills a table one cell at a time supplies its own reader
+and shares the table code. A reader without the help_text parameter
+still works but is deprecated: the table helpers then leave the help
+text out and issue a DeprecationWarning.
+
+<a id="wizard_ui_bridge.arg_types.AskReader.__call__"></a>
+
+#### \_\_call\_\_
+
+```python
+def __call__(question: str,
+             re_ask_reason: Optional[str],
+             choices: Optional[Sequence[str]],
+             *,
+             help_text: Optional[str] = None) -> str | int
+```
+
+Ask one question and return the raw answer.
+
+**Arguments**:
+
+- `question` - The prompt to show.
+- `re_ask_reason` - The reason for re-asking, or None.
+- `choices` - The choices to offer as a menu, or None for text.
+- `help_text` - The help text to show when the user asks for help,
+  or None when there is no help.
+
 <a id="wizard_ui_bridge.arg_types.WizardNavigation"></a>
 
 ## WizardNavigation Objects
@@ -1897,7 +1987,7 @@ empty, the cell is named as by matrix_helpers.cell_name().
   the help text should be displayed immediately before
   expecting input for that cell. If this is False, the help text
   should only be displayed in response to an explicit request
-  from the user.
+  from the user, which is the answer ':?' on the console.
 - `show_horizontal_label` - If this is True, the label closest to
   the left of the cell asked for in the same row is displayed
   for each cell asked for in the console, or the 1-based row
@@ -2110,6 +2200,13 @@ recommended for a GUI, textual, curses or web application.
 Any ask method may raise a WizardNavigation subclass to request back,
 cancel-level or abort instead of returning an answer.
 
+Every typed ask method and ask_table() take a keyword-only help_text,
+which a console bridge shows when the user asks for help. A GUI
+bridge that overrides ask_form() and ask_matrix_form() may ignore it.
+The base class calls an ask method of a derived bridge that lacks the
+help_text parameter without it, and issues a DeprecationWarning, so
+an older bridge keeps working until it is updated.
+
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.ask_text"></a>
 
 #### ask\_text
@@ -2120,7 +2217,8 @@ def ask_text(question: str,
              nullable: bool = False,
              *,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask a free-text question and return the entered text.
@@ -2141,6 +2239,10 @@ a real text-entry control. The base class has no implementation.
 - `sensitive` - True when the bridge must avoid echoing the
   entered text, such as for passwords. A default is
   not allowed for a sensitive question.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -2168,7 +2270,8 @@ def ask_int(question: str,
             nullable: bool = False,
             min_value: Optional[int] = None,
             max_value: Optional[int] = None,
-            default: Optional[int] = None) -> Optional[int]
+            default: Optional[int] = None,
+            help_text: Optional[str] = None) -> Optional[int]
 ```
 
 Ask for an integer, optionally within inclusive bounds.
@@ -2191,6 +2294,10 @@ derived bridge may override it with a direct numeric control.
   The max value is inclusive.
 - `default` - The value returned by an empty answer, or None for
   no default. Not allowed together with nullable.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -2215,7 +2322,8 @@ derived bridge may override it with a direct numeric control.
 def ask_path(question: str,
              re_ask_reason: Optional[str] = None,
              *,
-             options: Optional[PathAskOptions] = None) -> Optional[Path]
+             options: Optional[PathAskOptions] = None,
+             help_text: Optional[str] = None) -> Optional[Path]
 ```
 
 Ask a question for a path and return the accepted path.
@@ -2229,6 +2337,10 @@ asks for text through ask_text(), then validates the answer.
 - `question` - The question to ask the user.
 - `re_ask_reason` - The reason for re-asking the question.
 - `options` - Path options. None only rejects existing directories.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -2249,7 +2361,9 @@ asks for text through ask_text(), then validates the answer.
 ```python
 def ask_yes_no(question: str,
                default: bool,
-               re_ask_reason: Optional[str] = None) -> bool
+               re_ask_reason: Optional[str] = None,
+               *,
+               help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question and return the chosen boolean.
@@ -2267,6 +2381,10 @@ implementation.
   choice.
 - `re_ask_reason` - The reason for re-asking the question, for
   instance that the user's answer was invalid.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -2290,7 +2408,8 @@ def ask_choice(question: str,
                choices: Sequence[str],
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
-               nullable: bool = False) -> Optional[str]
+               nullable: bool = False,
+               help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask the user to pick exactly one of choices and return it.
@@ -2319,6 +2438,10 @@ overloads on its override. The base class has no implementation.
   first question when not None.
 - `nullable` - When True the user may select no choice, which is
   reported as None.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -2347,7 +2470,8 @@ def ask_multi(question: str,
               default: Optional[Sequence[str]] = None,
               min_select: int = 0,
               max_select: Optional[int] = None,
-              re_ask_reason: Optional[str] = None) -> list[str]
+              re_ask_reason: Optional[str] = None,
+              help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask the user to pick several of choices and return them.
@@ -2375,6 +2499,10 @@ implementation.
   for no upper bound.
 - `re_ask_reason` - The reason for re-asking, shown before the
   first question when not None.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -2405,7 +2533,8 @@ def ask_table(columns: Sequence[TableColumn],
               re_ask_reason: Optional[str] = None,
               partial_check: Optional[PartialCheck] = None,
               min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None) -> list[list[Optional[str]]]
+              max_rows: Optional[int] = None,
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Ask the user to fill in a table and return its cells.
@@ -2453,6 +2582,10 @@ still validates the final table.
   to, or None when rows are fixed to the rows in
   cells. A variable number of rows requires both
   min_rows and max_rows to be non-None.
+- `help_text` - A help text for the question, or None for no help.
+  A console bridge shows it when the user asks for
+  help. A GUI bridge that overrides ask_form() and
+  ask_matrix_form() may ignore it.
   
 
 **Returns**:
@@ -2489,7 +2622,9 @@ The base implementation is permanent and suitable for a console
 text interface: it shows long_question, then asks each field in
 turn with the typed ask methods ask_text(), ask_int(),
 ask_yes_no(), ask_path(), ask_choice() and ask_multi(), and
-returns one AnswerField per field in the same order.
+returns one AnswerField per field in the same order. A field's
+help text is shown before the field is asked, and is also passed
+as help_text, so a console user can ask to see it again.
 
 Any serious application or library using GUI, textual, curses or
 web interfaces should override this method to show the whole form
@@ -2643,9 +2778,13 @@ at the end of the matrix, where an empty answer is done, and when
 the number of cells in a line may change, also after the first
 row (or column, in column order) with input cells, so the user
 can set the width before the other rows are asked. An appended
-row or column asks its new cells at once. WizardBack steps back
-to the previously asked cell, and from the first cell propagates
-so the wizard steps to the previous question.
+row or column asks its new cells at once. Each cell is asked with
+its help text as help_text, and the resize menu with a help text
+that explains its actions; the help text of a cell is also shown
+before the cell is asked when request.console_question has
+use_help_text set. WizardBack steps back to the previously asked
+cell, and from the first cell propagates so the wizard steps to
+the previous question.
 
 In the base implementation the partial validator is called first
 for the whole matrix, then after each cell is answered and after
@@ -2952,6 +3091,7 @@ Re-ask a typed field or cell through ask_text until it is usable.
 The hint is shown after the question and repeated in the parse-error
 message, so a console user learns the accepted text format. An empty
 answer yields the field default, or None when the field is nullable.
+The help text of the field is passed to ask_text as help_text.
 
 <a id="wizard_ui_bridge._parse.resolve_new"></a>
 
@@ -3075,7 +3215,8 @@ offers a menu at two points:
 
 An appended line or item asks its new input cells at once, before the
 menu is offered again; cells of lines still waiting in the queue are
-asked with those lines. WizardBack steps back to the previously asked
+asked with those lines. Asked for help, a menu explains its actions.
+WizardBack steps back to the previously asked
 cell that can still be asked, also from a menu, and propagates from the
 first cell. The cells passed on the way back are walked again, so a cell
 skipped as disabled is asked if it is enabled by then, as in the base
@@ -3240,28 +3381,35 @@ Re-ask through reader until a yes/no answer is understood.
 #### run\_table
 
 ```python
-def run_table(
-        ask: AskReader, show: Callable[[str], None],
-        columns: Sequence[TableColumn], cells: list[list[TableCell]],
-        question: str, re_ask_reason: Optional[str],
-        partial_check: Optional[PartialCheck]) -> list[list[Optional[str]]]
+def run_table(ask: AskReader,
+              show: Callable[[str], None],
+              columns: Sequence[TableColumn],
+              cells: list[list[TableCell]],
+              question: str,
+              re_ask_reason: Optional[str],
+              partial_check: Optional[PartialCheck],
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Show one table question and fill its editable cells via ask.
 
 The read-only cells stay fixed and only the editable cells are asked,
-one at a time, through the ask reader. This is the shared core of a
-fixed-row table in any bridge that asks one question at a time.
+one at a time, through the ask reader, which gets help_text to show
+when the user asks for help. This is the shared core of a fixed-row
+table in any bridge that asks one question at a time.
 
 <a id="wizard_ui_bridge.bridge_helpers.fill_cell"></a>
 
 #### fill\_cell
 
 ```python
-def fill_cell(
-        ask: AskReader, columns: Sequence[TableColumn], row: list[TableCell],
-        col: int, current: Optional[str],
-        check: Callable[[Optional[str]], Optional[str]]) -> Optional[str]
+def fill_cell(ask: AskReader,
+              columns: Sequence[TableColumn],
+              row: list[TableCell],
+              col: int,
+              current: Optional[str],
+              check: Callable[[Optional[str]], Optional[str]],
+              help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask one editable cell until its value is accepted.
@@ -3276,6 +3424,8 @@ Ask one editable cell until its value is accepted.
   enter and shown in the prompt.
 - `check` - Records a candidate in the table and returns an error
   message, or None when the candidate is accepted.
+- `help_text` - The help text the ask reader shows when the user asks
+  for help, or None when there is no help.
   
 
 **Returns**:
@@ -3484,6 +3634,9 @@ This bridge draws on the controlling terminal itself, so it takes no
 streams. Use make_text_ui_bridge() to obtain this bridge when a
 terminal is available and a console bridge otherwise.
 
+The ask methods accept help_text but ignore it; ask_form() shows the
+help text of each field as a tooltip instead.
+
 <a id="wizard_ui_bridge.textual_bridge.WizardUiBridgeTextual.__init__"></a>
 
 #### \_\_init\_\_
@@ -3504,7 +3657,8 @@ def ask_text(question: str,
              nullable: bool = False,
              *,
              default: Optional[str] = None,
-             sensitive: bool = False) -> Optional[str]
+             sensitive: bool = False,
+             help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask for free text; see WizardUiBridge.ask_text.
@@ -3517,7 +3671,8 @@ Ask for free text; see WizardUiBridge.ask_text.
 def ask_path(question: str,
              re_ask_reason: Optional[str] = None,
              *,
-             options: Optional[PathAskOptions] = None) -> Optional[Path]
+             options: Optional[PathAskOptions] = None,
+             help_text: Optional[str] = None) -> Optional[Path]
 ```
 
 Ask for a path with a directory tree and editable path input.
@@ -3529,7 +3684,9 @@ Ask for a path with a directory tree and editable path input.
 ```python
 def ask_yes_no(question: str,
                default: bool,
-               re_ask_reason: Optional[str] = None) -> bool
+               re_ask_reason: Optional[str] = None,
+               *,
+               help_text: Optional[str] = None) -> bool
 ```
 
 Ask a yes/no question; see WizardUiBridge.ask_yes_no.
@@ -3544,7 +3701,8 @@ def ask_choice(question: str,
                choices: Sequence[str],
                default: Optional[str] = None,
                re_ask_reason: Optional[str] = None,
-               nullable: bool = False) -> Optional[str]
+               nullable: bool = False,
+               help_text: Optional[str] = None) -> Optional[str]
 ```
 
 Ask the user to pick one choice; see ask_choice.
@@ -3563,7 +3721,8 @@ def ask_multi(question: str,
               default: Optional[Sequence[str]] = None,
               min_select: int = 0,
               max_select: Optional[int] = None,
-              re_ask_reason: Optional[str] = None) -> list[str]
+              re_ask_reason: Optional[str] = None,
+              help_text: Optional[str] = None) -> list[str]
 ```
 
 Ask the user to pick several choices; see ask_multi.
@@ -3580,7 +3739,8 @@ def ask_table(columns: Sequence[TableColumn],
               re_ask_reason: Optional[str] = None,
               partial_check: Optional[PartialCheck] = None,
               min_rows: Optional[int] = None,
-              max_rows: Optional[int] = None) -> list[list[Optional[str]]]
+              max_rows: Optional[int] = None,
+              help_text: Optional[str] = None) -> list[list[Optional[str]]]
 ```
 
 Ask the user to fill a table; see WizardUiBridge.ask_table.

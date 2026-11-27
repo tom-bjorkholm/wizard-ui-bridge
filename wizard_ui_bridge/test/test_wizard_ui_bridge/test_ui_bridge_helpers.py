@@ -39,9 +39,10 @@ class _Reader:
         return self.answers.pop(0)
 
     def cell(self, question: str, reason: Optional[str] = None,
-             choices: Optional[Sequence[str]] = None) -> str | int:
+             choices: Optional[Sequence[str]] = None, *,
+             help_text: Optional[str] = None) -> str | int:
         """Return the next answer to a table cell reader."""
-        _ = (question, choices)
+        _ = (question, choices, help_text)
         return self.one(reason)
 
 

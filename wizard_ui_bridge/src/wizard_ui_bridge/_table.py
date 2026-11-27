@@ -9,9 +9,11 @@ The console editor shows the whole table as a numbered overview each
 round and then asks one action prompt last, so the actions and any
 re-ask reason stay visible after a long table has scrolled off the
 screen. A row number edits that row, ':+' adds a row and ':- N' deletes
-row N, while a blank answer accepts the table. Editing a row reuses the
-same per-cell helpers as a fixed table, so choice cells, the erase token
-and per-cell navigation behave identically.
+row N, while a blank answer accepts the table. Asked for help, the action
+prompt explains these actions, followed by the help text of the table.
+Editing a row reuses the same per-cell helpers as a fixed table, so choice
+cells, the erase token, the help text and per-cell navigation behave
+identically.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -22,12 +24,13 @@ from wizard_ui_bridge.arg_types import AskReader, \
     PartialCheck, TableCell, TableColumn, WizardBack
 from wizard_ui_bridge.bridge_helpers import cell_checker, \
     fill_cell, int_text, new_row_template
+from wizard_ui_bridge._help import help_kwargs
 
 _ADD_ROW = ':+'  # appends a row in the variable-row console table editor
 _DEL_ROW = ':-'  # deletes a row in the variable-row console table editor
 _BAD_MENU = 'Enter a row number, :+, :- N, or blank to accept.'
-_ROW_MENU_HELP = ('Enter a row number to edit it, :+ to add a row, '
-                  ':- N to delete row N, blank to accept.')
+_ROW_MENU_PROMPT = ('Enter a row number to edit it, :+ to add a row, '
+                    ':- N to delete row N, blank to accept.')
 
 
 # pylint: disable-next=too-many-instance-attributes,too-few-public-methods
@@ -44,9 +47,10 @@ class _VarTable:
     def __init__(self, columns: Sequence[TableColumn],
                  cells: list[list[TableCell]],
                  partial_check: Optional[PartialCheck], min_rows: int,
-                 max_rows: int) -> None:
-        """Start from the given rows and remember the row bounds."""
+                 max_rows: int, help_text: Optional[str]) -> None:
+        """Start from the given rows and remember the bounds and help."""
         self._columns = columns
+        self._help = help_text
         self._check = partial_check
         self._min = min_rows
         self._max = max_rows
@@ -60,7 +64,8 @@ class _VarTable:
     def step(self, ask: AskReader, reason: Optional[str]) -> bool:
         """Run one menu round; return True when the table is accepted."""
         self.reason = None
-        answer = ask(_ROW_MENU_HELP, reason, None)
+        answer = ask(_ROW_MENU_PROMPT, reason, None,
+                     **help_kwargs(ask, self._menu_help()))
         token = (answer if isinstance(answer, str) else str(answer)).strip()
         if token == '':
             return self._accept()
@@ -71,6 +76,16 @@ class _VarTable:
         else:
             self._edit(ask, token)
         return False
+
+    def _menu_help(self) -> str:
+        """Return the explanation of the menu actions and the table help."""
+        actions = ('Each row of the table above has a number. Enter a row '
+                   'number to edit the cells of that row one at a time, :+ '
+                   'to append a new row and edit it, or :- followed by a row '
+                   'number, such as :- 2, to delete that row. A blank answer '
+                   f'accepts the table, which must keep {self._min} to '
+                   f'{self._max} rows.')
+        return f'{actions}\n{self._help}' if self._help else actions
 
     def _accept(self) -> bool:
         """Accept the table when its row count is within the bounds."""
@@ -133,7 +148,8 @@ class _VarTable:
         """Ask one editable cell and store its accepted value."""
         check = cell_checker(self.table, (row, col), self._check)
         self.table[row][col] = fill_cell(ask, self._columns, self._rows[row],
-                                         col, self.table[row][col], check)
+                                         col, self.table[row][col], check,
+                                         self._help)
 
     def _editable(self, row: int, col: int) -> bool:
         """Return whether one cell can be edited in the console table."""
@@ -146,9 +162,11 @@ def _run_variable_table(ask: AskReader, show: Callable[[str], None],
                         cells: list[list[TableCell]], question: str,
                         re_ask_reason: Optional[str],
                         partial_check: Optional[PartialCheck], min_rows: int,
-                        max_rows: int) -> list[list[Optional[str]]]:
+                        max_rows: int,
+                        help_text: Optional[str]) -> list[list[Optional[str]]]:
     """Edit a variable-row table through the console row-menu interface."""
-    editor = _VarTable(columns, cells, partial_check, min_rows, max_rows)
+    editor = _VarTable(columns, cells, partial_check, min_rows, max_rows,
+                       help_text)
     reason = re_ask_reason
     while True:
         show(question)

@@ -50,7 +50,12 @@ from wizard_tk_bridge.wizard_window import WizardWindow
 
 
 class WizardUiBridgeTk(WizardUiBridge):
-    """Bridge that answers wizard prompts through Tkinter widgets."""
+    """Bridge that answers wizard prompts through Tkinter widgets.
+
+    The ask methods accept help_text but ignore it; ask_form() and
+    ask_matrix_form() show the help text of each field or cell as a
+    tooltip instead.
+    """
 
     def __init__(self, parent: Optional[tk.Misc] = None,
                  area: Optional[tk.Misc] = None, modal: bool = True,
@@ -83,9 +88,11 @@ class WizardUiBridgeTk(WizardUiBridge):
         self._log = log
         self._window: Optional[WizardWindow] = None
 
+    # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False) -> Optional[str]:
+                 sensitive: bool = False,
+                 help_text: Optional[str] = None) -> Optional[str]:
         """Ask for free text; see WizardUiBridge.ask_text."""
         check_text_args(default, sensitive, nullable)
         return self._window_obj().ask_text(question, re_ask_reason, nullable,
@@ -94,8 +101,8 @@ class WizardUiBridgeTk(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
                 nullable: bool = False, min_value: Optional[int] = None,
-                max_value: Optional[int] = None,
-                default: Optional[int] = None) -> Optional[int]:
+                max_value: Optional[int] = None, default: Optional[int] = None,
+                help_text: Optional[str] = None) -> Optional[int]:
         """Ask for an integer within optional bounds; see ask_int."""
         check_nullable(nullable, default is not None)
         check_bounds(min_value, max_value, default)
@@ -103,34 +110,39 @@ class WizardUiBridgeTk(WizardUiBridge):
                                           min_value, max_value, default)
 
     def ask_path(self, question: str, re_ask_reason: Optional[str] = None, *,
-                 options: Optional[PathAskOptions] = None) -> Optional[Path]:
+                 options: Optional[PathAskOptions] = None,
+                 help_text: Optional[str] = None) -> Optional[Path]:
         """Ask for a path with a native file or directory picker."""
         path_options = PathAskOptions() if options is None else options
         return self._window_obj().ask_path(question, path_options,
                                            re_ask_reason)
 
     def ask_yes_no(self, question: str, default: bool,
-                   re_ask_reason: Optional[str] = None) -> bool:
+                   re_ask_reason: Optional[str] = None, *,
+                   help_text: Optional[str] = None) -> bool:
         """Ask a yes/no question with dedicated yes and no buttons."""
         return self._window_obj().ask_yes_no(question, default, re_ask_reason)
 
+    # pylint: disable=too-many-arguments
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
-                   nullable: Literal[False] = False) -> str: ...
+                   nullable: Literal[False] = False,
+                   help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool) -> Optional[str]: ...
+                   re_ask_reason: Optional[str] = None, nullable: bool,
+                   help_text: Optional[str] = None) -> Optional[str]: ...
+    # pylint: enable=too-many-arguments
 
     # pylint: disable-next=too-many-arguments
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool = False) -> Optional[str]:
+                   re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   help_text: Optional[str] = None) -> Optional[str]:
         """Ask the user to pick one choice from a single-selection list.
 
         A nullable choice is offered with a leading '(none)' entry.
@@ -143,7 +155,8 @@ class WizardUiBridgeTk(WizardUiBridge):
     def ask_multi(self, question: str, *, choices: Sequence[str],
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
-                  re_ask_reason: Optional[str] = None) -> list[str]:
+                  re_ask_reason: Optional[str] = None,
+                  help_text: Optional[str] = None) -> list[str]:
         """Ask the user to pick several choices from a multi-selection list."""
         check_multi_args(choices, default, min_select, max_select)
         return self._window_obj().ask_multi(question, choices, default,
@@ -156,7 +169,9 @@ class WizardUiBridgeTk(WizardUiBridge):
                   re_ask_reason: Optional[str] = None,
                   partial_check: Optional[PartialCheck] = None,
                   min_rows: Optional[int] = None,
-                  max_rows: Optional[int] = None) -> list[list[Optional[str]]]:
+                  max_rows: Optional[int] = None,
+                  help_text: Optional[str] = None
+                  ) -> list[list[Optional[str]]]:
         """Ask the user to fill an editable table of the given rows.
 
         With both ``min_rows`` and ``max_rows`` given the table has a

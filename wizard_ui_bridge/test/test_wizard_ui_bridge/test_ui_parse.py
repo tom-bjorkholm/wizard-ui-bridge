@@ -195,9 +195,9 @@ def _reader(answers: list[Optional[str]]) -> Callable[..., Optional[str]]:
     remaining = list(answers)
 
     def ask_text(question: str, re_ask_reason: Optional[str] = None,
-                 nullable: bool = False, *,
-                 default: Optional[str] = None) -> Optional[str]:
-        _ = (question, re_ask_reason, nullable, default)
+                 nullable: bool = False, *, default: Optional[str] = None,
+                 help_text: Optional[str] = None) -> Optional[str]:
+        _ = (question, re_ask_reason, nullable, default, help_text)
         return remaining.pop(0)
     return ask_text
 

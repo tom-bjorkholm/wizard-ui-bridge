@@ -27,6 +27,7 @@ from wizard_ui_bridge.form_defs import AskField, AnswerField, AskTextField, \
     AskFloatField, AskDateField, AskTimeField, AskDateTimeField, \
     AskDurationField, AnswerFloatField, AnswerDateField, AnswerTimeField, \
     AnswerDateTimeField, AnswerDurationField
+from wizard_ui_bridge._help import help_kwargs
 
 FLOAT_HINT = 'a number'
 DATE_HINT = 'a date as YYYY-MM-DD'
@@ -145,8 +146,8 @@ class _AskText(Protocol):
     """The bridge ask_text() signature the typed re-ask loop calls."""
 
     def __call__(self, question: str, re_ask_reason: Optional[str] = ...,
-                 nullable: bool = ..., *,
-                 default: Optional[str] = ...) -> Optional[str]:
+                 nullable: bool = ..., *, default: Optional[str] = ...,
+                 help_text: Optional[str] = ...) -> Optional[str]:
         """Ask for free text and return it, or None for an empty answer."""
 
 
@@ -154,6 +155,7 @@ class _AskText(Protocol):
 class _TypedCell(Protocol[_OrderedT]):
     """The attributes shared by the ordered typed cells and fields."""
 
+    help_text: Optional[str]
     nullable: bool
     default: Optional[_OrderedT]
     min_value: Optional[_OrderedT]
@@ -168,13 +170,16 @@ def ask_typed(ask_text: _AskText, question: str, field: _TypedCell[_OrderedT],
     The hint is shown after the question and repeated in the parse-error
     message, so a console user learns the accepted text format. An empty
     answer yields the field default, or None when the field is nullable.
+    The help text of the field is passed to ask_text as help_text.
     """
     question = f'{question} ({hint})'
     default_text = (None if field.default is None
                     else format_new_value(field.default))
     reason: Optional[str] = None
+    extra = help_kwargs(ask_text, field.help_text)
     while True:
-        text = ask_text(question, reason, field.nullable, default=default_text)
+        text = ask_text(question, reason, field.nullable, default=default_text,
+                        **extra)
         if text is None:
             return None
         value = parse(text)

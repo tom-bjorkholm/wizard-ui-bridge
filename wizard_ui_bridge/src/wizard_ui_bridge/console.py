@@ -4,7 +4,8 @@
 This module provides the concrete console bridge used when the wizard
 talks to a user through plain text streams. It recognises reserved
 navigation tokens so a console user can step back, cancel the current
-level or abandon the whole wizard.
+level or abandon the whole wizard, and the help token ':?', which shows
+the help text of the question and then asks the same question again.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -25,7 +26,9 @@ from wizard_ui_bridge._table import _run_variable_table
 _BACK = ':b'
 _CANCEL = ':c'
 _ABORT = ':q'
-_NAV_HINT = '(:b=back  :c=cancel level  :q=abort)'
+_HELP = ':?'
+_NAV_HINT = '(:b=back  :c=cancel level  :q=abort  :?=help)'
+_NO_HELP = 'No help is available for this question.'
 _NONE_LINE = f'0: {NO_CHOICE}'
 
 
@@ -48,13 +51,13 @@ class WizardUiBridgeConsole(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False) -> Optional[str]:
+                 sensitive: bool = False,
+                 help_text: Optional[str] = None) -> Optional[str]:
         """Ask for free text on the console; see WizardUiBridge.ask_text."""
         check_text_args(default, sensitive, nullable)
         prompt = question_with_default(question, default)
-        self._emit_question(prompt, re_ask_reason, [])
-        text = self._read_sensitive(prompt) if sensitive \
-            else self._read_answer(prompt)
+        text = self._prompt(prompt, re_ask_reason, [], help_text,
+                            sensitive=sensitive)
         return text_answer(text, nullable, default)
 
     def supports_form_field(self, field: AskField) -> bool:
@@ -68,13 +71,14 @@ class WizardUiBridgeConsole(WizardUiBridge):
         return isinstance(field, ALL_ASK_FIELD_TYPES)
 
     def ask_yes_no(self, question: str, default: bool,
-                   re_ask_reason: Optional[str] = None) -> bool:
+                   re_ask_reason: Optional[str] = None, *,
+                   help_text: Optional[str] = None) -> bool:
         """Ask a yes/no question on the console; see ask_yes_no."""
         def reader(reason: Optional[str]) -> str | int:
             marked = ('yes',) if default else ('no',)
             menu_lines = _menu_lines(('yes', 'no'), marked=marked)
-            self._emit_question(question, reason, menu_lines)
-            return _to_index(self._read_answer(question))
+            return _to_index(self._prompt(question, reason, menu_lines,
+                                          help_text))
         return ask_yes_no(reader, default, re_ask_reason)
 
     # pylint: disable-next=too-many-arguments
@@ -83,7 +87,9 @@ class WizardUiBridgeConsole(WizardUiBridge):
                   re_ask_reason: Optional[str] = None,
                   partial_check: Optional[PartialCheck] = None,
                   min_rows: Optional[int] = None,
-                  max_rows: Optional[int] = None) -> list[list[Optional[str]]]:
+                  max_rows: Optional[int] = None,
+                  help_text: Optional[str] = None
+                  ) -> list[list[Optional[str]]]:
         """Ask the user to fill a table on the console; see ask_table.
 
         With both min_rows and max_rows given the table has a variable
@@ -93,39 +99,44 @@ class WizardUiBridgeConsole(WizardUiBridge):
         if min_rows is not None and max_rows is not None:
             return _run_variable_table(self._ask_raw, self.show, columns,
                                        cells, question, re_ask_reason,
-                                       partial_check, min_rows, max_rows)
+                                       partial_check, min_rows, max_rows,
+                                       help_text)
         return run_table(self._ask_raw, self.show, columns, cells, question,
-                         re_ask_reason, partial_check)
+                         re_ask_reason, partial_check, help_text)
 
     def _ask_raw(self, question: str, re_ask_reason: Optional[str] = None,
-                 choices: Optional[Sequence[str]] = None) -> str | int:
-        """Emit one question and read a navigation-checked raw answer.
+                 choices: Optional[Sequence[str]] = None, *,
+                 help_text: Optional[str] = None) -> str | int:
+        """Ask one question and read a navigation-checked raw answer.
 
         Returns the entered text, or a 0-based index into choices when
         choices are offered, which is the raw-answer shape the table
-        helpers expect.
+        helpers expect (see arg_types.AskReader).
         """
-        self._emit_question(question, re_ask_reason, _menu_lines(choices))
-        text = self._read_answer(question)
+        text = self._prompt(question, re_ask_reason, _menu_lines(choices),
+                            help_text)
         return text if choices is None else _to_index(text)
 
+    # pylint: disable=too-many-arguments
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
-                   nullable: Literal[False] = False) -> str: ...
+                   nullable: Literal[False] = False,
+                   help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool) -> Optional[str]: ...
+                   re_ask_reason: Optional[str] = None, nullable: bool,
+                   help_text: Optional[str] = None) -> Optional[str]: ...
+    # pylint: enable=too-many-arguments
 
     # pylint: disable-next=too-many-arguments
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool = False) -> Optional[str]:
+                   re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   help_text: Optional[str] = None) -> Optional[str]:
         """Ask one choice on the console; see WizardUiBridge.ask_choice.
 
         A nullable choice adds the menu line '0: (none)'. Answering 0, or
@@ -137,8 +148,8 @@ class WizardUiBridgeConsole(WizardUiBridge):
             lines.insert(0, _NONE_LINE)
 
         def reader(reason: Optional[str]) -> str | int:
-            self._emit_question(question, reason, lines)
-            return _single_index(self._read_answer(question), nullable)
+            return _single_index(self._prompt(question, reason, lines,
+                                              help_text), nullable)
         return ask_one(reader, choices, default, re_ask_reason,
                        nullable=nullable)
 
@@ -146,14 +157,32 @@ class WizardUiBridgeConsole(WizardUiBridge):
     def ask_multi(self, question: str, *, choices: Sequence[str],
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
-                  re_ask_reason: Optional[str] = None) -> list[str]:
+                  re_ask_reason: Optional[str] = None,
+                  help_text: Optional[str] = None) -> list[str]:
         """Ask several choices on the console; see WizardUiBridge.ask_multi."""
         def reader(reason: Optional[str]) -> str | int:
-            self._emit_question(_multi_question(question), reason,
-                                _menu_lines(choices, default))
-            return self._read_answer(question)
+            return self._prompt(_multi_question(question), reason,
+                                _menu_lines(choices, default), help_text)
         return ask_many(reader, choices, default, min_select, max_select,
                         re_ask_reason, one_based=True)
+
+    # pylint: disable-next=too-many-arguments
+    def _prompt(self, question: str, re_ask_reason: Optional[str],
+                lines: Sequence[str], help_text: Optional[str], *,
+                sensitive: bool = False) -> str:
+        """Ask one question until the answer is not a request for help.
+
+        The help token shows the help text, or a note that there is none,
+        and asks the same question again, with the same re-ask reason. A
+        navigation token raises its navigation request.
+        """
+        while True:
+            self._emit_question(question, re_ask_reason, lines)
+            text = self._read_sensitive(question) if sensitive \
+                else self._read_answer(question)
+            if text.strip() != _HELP:
+                return text
+            self.show(help_text or _NO_HELP)
 
     def _emit_question(self, question: str, re_ask_reason: Optional[str],
                        lines: Sequence[str]) -> None:

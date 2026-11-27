@@ -7,7 +7,7 @@
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import Callable, Optional, Sequence
+from typing import Callable, Optional, Protocol, Sequence
 
 
 type PartialCheck = Callable[
@@ -19,15 +19,32 @@ It receives the whole table as it currently stands and the 0-based
 value is accepted together with a message to show the user.
 """
 
-type AskReader = Callable[
-    [str, Optional[str], Optional[Sequence[str]]], str | int]
-"""A reader of one raw user answer, used by the table helpers.
 
-It takes a prompt, an optional re-ask reason and optional choices and
-returns the raw user answer as text or a 0-based choice index. The
-shared table helpers take one, so every bridge that fills a table one
-cell at a time supplies its own reader and shares the table code.
-"""
+# pylint: disable-next=too-few-public-methods
+class AskReader(Protocol):
+    """A reader of one raw user answer, used by the table helpers.
+
+    It takes a prompt, an optional re-ask reason, optional choices and a
+    keyword-only help text, and returns the raw user answer as text or a
+    0-based choice index. The shared table helpers take one, so every
+    bridge that fills a table one cell at a time supplies its own reader
+    and shares the table code. A reader without the help_text parameter
+    still works but is deprecated: the table helpers then leave the help
+    text out and issue a DeprecationWarning.
+    """
+
+    def __call__(self, question: str, re_ask_reason: Optional[str],
+                 choices: Optional[Sequence[str]], /, *,
+                 help_text: Optional[str] = None) -> str | int:
+        """Ask one question and return the raw answer.
+
+        Args:
+            question: The prompt to show.
+            re_ask_reason: The reason for re-asking, or None.
+            choices: The choices to offer as a menu, or None for text.
+            help_text: The help text to show when the user asks for help,
+                       or None when there is no help.
+        """
 
 
 class WizardNavigation(Exception):

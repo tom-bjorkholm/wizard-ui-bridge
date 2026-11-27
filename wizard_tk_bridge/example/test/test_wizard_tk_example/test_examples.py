@@ -37,32 +37,37 @@ class _FakeBridge(WizardUiBridge):
             raise answer
         return answer
 
+    # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False) -> Optional[str]:
+                 sensitive: bool = False,
+                 help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted text answer."""
         self.defaults.append(default)
         answer = self._next()
         assert answer is None or isinstance(answer, str)
         return answer
 
+    # pylint: disable=too-many-arguments
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
-                   nullable: Literal[False] = False) -> str: ...
+                   nullable: Literal[False] = False,
+                   help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool) -> Optional[str]: ...
+                   re_ask_reason: Optional[str] = None, nullable: bool,
+                   help_text: Optional[str] = None) -> Optional[str]: ...
+    # pylint: enable=too-many-arguments
 
     # pylint: disable-next=too-many-arguments
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool = False) -> Optional[str]:
+                   re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted choice answer."""
         self.defaults.append(default)
         answer = self._next()
@@ -70,7 +75,8 @@ class _FakeBridge(WizardUiBridge):
         return answer
 
     def ask_yes_no(self, question: str, default: bool,
-                   re_ask_reason: Optional[str] = None) -> bool:
+                   re_ask_reason: Optional[str] = None, *,
+                   help_text: Optional[str] = None) -> bool:
         """Return the next scripted yes/no answer."""
         self.defaults.append(default)
         answer = self._next()

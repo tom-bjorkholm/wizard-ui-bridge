@@ -13,7 +13,7 @@ import pytest
 from textual.widgets import Input, Static
 from wizard_ui_bridge import TableCell, TableColumn, WizardBack, \
     WizardCancelLevel
-from wizard_ui_bridge.textual_bridge import _TableApp
+from wizard_ui_bridge._textual_table import _TableApp
 from wizard_ui_bridge._textual_widgets import _parse_cell_id
 from .ui_textual_support import drive, _CannedBridge
 

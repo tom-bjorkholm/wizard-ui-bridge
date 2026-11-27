@@ -5,7 +5,8 @@ The base WizardUiBridge.ask_form() and ask_matrix_form() both ask one
 question at a time. Every Ask*Field derives from its Ask*Cell, so a
 single function asks either, given the question to show, through the
 public typed ask methods of the bridge, which a derived bridge may
-override.
+override. The help text of the cell is passed as help_text, so a console
+user can ask to see it.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -16,6 +17,7 @@ from wizard_ui_bridge.matrix_cell_defs import AskCell, AskTextCell, \
     AskIntCell, AskPathCell, AskYesNoCell, AskChoiceCell, \
     AskMultiChoiceCell, AskFloatCell, AskDateCell, AskTimeCell, \
     AskDateTimeCell, AskDurationCell, PrefillValueType
+from wizard_ui_bridge._help import help_kwargs
 from wizard_ui_bridge._parse import ask_typed, parse_float, parse_date, \
     parse_time, parse_datetime, parse_duration, FLOAT_HINT, DATE_HINT, \
     TIME_HINT, DATETIME_HINT, DURATION_HINT
@@ -62,23 +64,29 @@ def _ask_typed_value(bridge: 'WizardUiBridge', question: str,
 def _ask_basic_value(bridge: 'WizardUiBridge', question: str,
                      cell: AskCell) -> Optional[PrefillValueType]:
     """Ask one of the original cell kinds with its typed ask method."""
+    help_text = cell.help_text
     if isinstance(cell, AskTextCell):
         return bridge.ask_text(question, nullable=cell.nullable,
-                               default=cell.default, sensitive=cell.sensitive)
+                               default=cell.default, sensitive=cell.sensitive,
+                               **help_kwargs(bridge.ask_text, help_text))
     if isinstance(cell, AskIntCell):
         return bridge.ask_int(question, nullable=cell.nullable,
                               min_value=cell.min_value,
-                              max_value=cell.max_value, default=cell.default)
+                              max_value=cell.max_value, default=cell.default,
+                              **help_kwargs(bridge.ask_int, help_text))
     if isinstance(cell, AskPathCell):
-        return bridge.ask_path(question, options=cell.path_options)
+        return bridge.ask_path(question, options=cell.path_options,
+                               **help_kwargs(bridge.ask_path, help_text))
     if isinstance(cell, AskYesNoCell):
-        return bridge.ask_yes_no(question, cell.default)
+        return bridge.ask_yes_no(question, cell.default,
+                                 **help_kwargs(bridge.ask_yes_no, help_text))
     if isinstance(cell, AskChoiceCell):
         return _ask_choice_value(bridge, question, cell)
     assert isinstance(cell, AskMultiChoiceCell)
     return bridge.ask_multi(question, choices=cell.choices,
                             default=cell.default, min_select=cell.min_select,
-                            max_select=cell.max_select)
+                            max_select=cell.max_select,
+                            **help_kwargs(bridge.ask_multi, help_text))
 
 
 def _ask_choice_value(bridge: 'WizardUiBridge', question: str,
@@ -88,7 +96,9 @@ def _ask_choice_value(bridge: 'WizardUiBridge', question: str,
     A bridge whose ask_choice() predates the nullable parameter still
     asks a non-nullable choice this way.
     """
+    extra = help_kwargs(bridge.ask_choice, cell.help_text)
     if cell.nullable:
-        return bridge.ask_choice(question, choices=cell.choices, nullable=True)
+        return bridge.ask_choice(question, choices=cell.choices, nullable=True,
+                                 **extra)
     return bridge.ask_choice(question, choices=cell.choices,
-                             default=cell.default)
+                             default=cell.default, **extra)

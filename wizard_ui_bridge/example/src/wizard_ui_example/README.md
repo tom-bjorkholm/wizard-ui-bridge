@@ -96,7 +96,8 @@ the optional nickname is left blank.
 
 **Cancelling.** Any ask method may raise a `WizardNavigation` request instead of
 returning, when the user asks to go back, cancel or abort (`:b`, `:c` or `:q` on
-the console). A single question has nowhere to go back to, so the example treats
+the console; `:?` instead shows the help text of the question, if any, and asks
+it again). A single question has nowhere to go back to, so the example treats
 any such request as "the user gave up".
 
 ```sh
@@ -129,8 +130,11 @@ format, which `ask_path()` cannot know. So the example checks it and, when it
 fails, calls `ask_path()` again with a `re_ask_reason` that explains why.
 `re_ask_reason` is the shared argument every ask method takes for exactly this.
 
-Per-question help text is *not* a feature of the one-at-a-time ask methods; it
-belongs to the form fields shown in `e05_ask_form.py`.
+**`help_text`: help on request.** Every ask method also takes a keyword-only
+`help_text`. The console bridge does not print it up front: the user answers
+`:?` to see it, and the same question is then asked again. Here the output-file
+question carries a help text that explains the extension rule. The form fields
+of `e05_ask_form.py` carry a help text in the same way.
 
 The same export settings appear again in `e05_ask_form.py` as one whole form.
 Reading `e02` then `e05` is the intended way to see the difference between asking
@@ -174,7 +178,9 @@ the ask method's `default`. The password is the one exception: a sensitive
 question cannot carry a default, so it is entered again on return.
 
 The console tokens (`:b`, `:c`, `:q`) make the whole flow scriptable, which is
-how the tests drive back, cancel and abort.
+how the tests drive back, cancel and abort. The console also accepts `:?`, which
+is no navigation request: it shows the help text of the question and asks the
+question again.
 
 ```sh
 python -m wizard_ui_example.e03_navigation
@@ -247,7 +253,8 @@ class per kind of question:
 | `AskMultiChoiceField` | pick several of a fixed list | check-box list |
 
 Every field carries a `short_question` (the label) and an optional `help_text`
-(a tooltip in a graphical or textual bridge). A path field is configured with
+(a tooltip in a graphical or textual bridge; the console prints it before the
+field and shows it again when the user answers `:?`). A path field is configured with
 `PathAskOptions`, whose `WizardPathKind` says whether the path must exist and
 whether it must be a file or a directory:
 
@@ -403,6 +410,17 @@ Implementing the add/remove interface is left out here only for brevity, so
 than silently returning just the starting rows. See the variable-row table in
 `WizardUiBridgeConsole`, `WizardUiBridgeTextual` and the `WizardUiBridgeTk` of
 the companion package `wizard-tk-bridge` for three implementations.
+
+### Help on request
+
+Every ask method takes a keyword-only `help_text`, and so does the reader that
+`run_table` calls. The wizard passes the help text of a question there, and
+the base `ask_form` passes the help text of each field. The teleprinter bridge
+offers it on request, like the console bridge: the answer `:?` prints the help
+text and asks the same question again, so the wizard never sees the request.
+Try it on the output-file question, which carries a help text in `e02`. A
+bridge written before `help_text` existed still works, but the base class then
+leaves the help text out and issues a `DeprecationWarning`.
 
 ### User experience second: the "override to improve" move
 

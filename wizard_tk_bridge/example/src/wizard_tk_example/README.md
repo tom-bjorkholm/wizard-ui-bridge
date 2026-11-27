@@ -232,7 +232,9 @@ window or area, so a session does not jump around the display.
 **Navigation.** Every question carries **Back**, **Out one level** and
 **Abort** buttons, which raise `WizardBack`, `WizardCancelLevel` and
 `WizardAbort` — the same three requests the console bridge spells `:b`, `:c`
-and `:q`. Closing the wizard's window, or pressing Cmd-W (Ctrl-W on Windows),
+and `:q`. (The console's fourth token, `:?` for help, has no button: the Tk
+bridge shows the help text of a form field or matrix cell as a tooltip.)
+Closing the wizard's window, or pressing Cmd-W (Ctrl-W on Windows),
 is an abort. `run_e03_navigation.py` is the one to run to see them at work.
 
 **Messages.** `show()` appends to a message area kept above the current

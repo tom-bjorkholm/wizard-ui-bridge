@@ -36,6 +36,7 @@ class _FormBridge(WizardUiBridge):
         self.asked: list[str] = []
         self.defaults: list[object] = []
         self.nullables: list[bool] = []
+        self.helps: list[Optional[str]] = []
 
     def _next(self) -> object:
         """Return the next scripted answer, raising a scripted exception."""
@@ -48,10 +49,13 @@ class _FormBridge(WizardUiBridge):
         """Record a shown message."""
         self.shown.append(message)
 
+    # pylint: disable-next=too-many-arguments
     def ask_text(self, question: str, re_ask_reason: Optional[str] = None,
                  nullable: bool = False, *, default: Optional[str] = None,
-                 sensitive: bool = False) -> Optional[str]:
+                 sensitive: bool = False,
+                 help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted text answer."""
+        self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
         answer = self._next()
@@ -61,9 +65,10 @@ class _FormBridge(WizardUiBridge):
     # pylint: disable-next=too-many-arguments
     def ask_int(self, question: str, re_ask_reason: Optional[str] = None, *,
                 nullable: bool = False, min_value: Optional[int] = None,
-                max_value: Optional[int] = None,
-                default: Optional[int] = None) -> Optional[int]:
+                max_value: Optional[int] = None, default: Optional[int] = None,
+                help_text: Optional[str] = None) -> Optional[int]:
         """Return the next scripted integer answer."""
+        self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
         answer = self._next()
@@ -71,8 +76,10 @@ class _FormBridge(WizardUiBridge):
         return answer
 
     def ask_path(self, question: str, re_ask_reason: Optional[str] = None, *,
-                 options: Optional[PathAskOptions] = None) -> Optional[Path]:
+                 options: Optional[PathAskOptions] = None,
+                 help_text: Optional[str] = None) -> Optional[Path]:
         """Return the next scripted path answer."""
+        self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(None if options is None else options.default)
         answer = self._next()
@@ -80,32 +87,38 @@ class _FormBridge(WizardUiBridge):
         return answer
 
     def ask_yes_no(self, question: str, default: bool,
-                   re_ask_reason: Optional[str] = None) -> bool:
+                   re_ask_reason: Optional[str] = None, *,
+                   help_text: Optional[str] = None) -> bool:
         """Return the next scripted yes/no answer."""
+        self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
         answer = self._next()
         assert isinstance(answer, bool)
         return answer
 
+    # pylint: disable=too-many-arguments
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
                    re_ask_reason: Optional[str] = None,
-                   nullable: Literal[False] = False) -> str: ...
+                   nullable: Literal[False] = False,
+                   help_text: Optional[str] = None) -> str: ...
 
     @overload
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool) -> Optional[str]: ...
+                   re_ask_reason: Optional[str] = None, nullable: bool,
+                   help_text: Optional[str] = None) -> Optional[str]: ...
+    # pylint: enable=too-many-arguments
 
     # pylint: disable-next=too-many-arguments
     def ask_choice(self, question: str, *, choices: Sequence[str],
                    default: Optional[str] = None,
-                   re_ask_reason: Optional[str] = None,
-                   nullable: bool = False) -> Optional[str]:
+                   re_ask_reason: Optional[str] = None, nullable: bool = False,
+                   help_text: Optional[str] = None) -> Optional[str]:
         """Return the next scripted choice answer, recording nullable."""
+        self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
         self.nullables.append(nullable)
@@ -117,8 +130,10 @@ class _FormBridge(WizardUiBridge):
     def ask_multi(self, question: str, *, choices: Sequence[str],
                   default: Optional[Sequence[str]] = None, min_select: int = 0,
                   max_select: Optional[int] = None,
-                  re_ask_reason: Optional[str] = None) -> list[str]:
+                  re_ask_reason: Optional[str] = None,
+                  help_text: Optional[str] = None) -> list[str]:
         """Return the next scripted multi-choice answer."""
+        self.helps.append(help_text)
         self.asked.append(question)
         self.defaults.append(default)
         answer = self._next()

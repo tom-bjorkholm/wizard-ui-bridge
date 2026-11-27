@@ -267,7 +267,7 @@ class MatrixConsoleQuestion(NamedTuple):
             the help text should be displayed immediately before
             expecting input for that cell. If this is False, the help text
             should only be displayed in response to an explicit request
-            from the user.
+            from the user, which is the answer ':?' on the console.
         show_horizontal_label: If this is True, the label closest to
             the left of the cell asked for in the same row is displayed
             for each cell asked for in the console, or the 1-based row
