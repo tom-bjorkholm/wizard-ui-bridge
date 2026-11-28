@@ -330,7 +330,7 @@ def test_prefill_duration() -> None:
                               AskDurationField('L', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         _ = answers
         prefill: PrefillValues = ()
         if changed == 0:

@@ -30,7 +30,7 @@ import tkinter as tk
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 from wizard_ui_bridge import AnswerCells, AnswerFields, AskFields, \
-    MatrixRequest, PartialFormValidator, PathAskOptions, WizardAbort, \
+    MatrixRequest, LiveFormValidator, PathAskOptions, WizardAbort, \
     WizardBack, WizardCancelLevel, WizardNavigation
 from wizard_ui_bridge.bridge_helpers import multi_count_message, \
     offered_choices, path_answer, text_answer
@@ -218,7 +218,7 @@ class WizardWindow:
 
     def ask_form(self, long_question: str, fields: AskFields,
                  re_ask: Optional[str],
-                 validator: Optional[PartialFormValidator]) -> AnswerFields:
+                 validator: Optional[LiveFormValidator]) -> AnswerFields:
         """Ask a whole form on one screen and return its answers."""
         self._begin(long_question, re_ask)
         self._form = FormEditor(self._content, fields, validator, self._finish)

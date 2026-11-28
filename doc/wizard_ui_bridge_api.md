@@ -116,6 +116,7 @@
   * [MatrixConsoleQuestion](#wizard_ui_bridge.matrix_defs.MatrixConsoleQuestion)
   * [MatrixRequest](#wizard_ui_bridge.matrix_defs.MatrixRequest)
 * [wizard\_ui\_bridge.form\_helpers](#wizard_ui_bridge.form_helpers)
+  * [live\_validator\_of](#wizard_ui_bridge.form_helpers.live_validator_of)
   * [nullable\_choice](#wizard_ui_bridge.form_helpers.nullable_choice)
   * [initial\_answer](#wizard_ui_bridge.form_helpers.initial_answer)
   * [answer\_of](#wizard_ui_bridge.form_helpers.answer_of)
@@ -165,7 +166,9 @@
     * [\_\_init\_\_](#wizard_ui_bridge._matrix_console.ConsoleMatrix.__init__)
     * [run](#wizard_ui_bridge._matrix_console.ConsoleMatrix.run)
 * [wizard\_ui\_bridge.\_fake](#wizard_ui_bridge._fake)
+  * [LiveKwargs](#wizard_ui_bridge._fake.LiveKwargs)
   * [ask\_form\_faking](#wizard_ui_bridge._fake.ask_form_faking)
+  * [live\_kwargs](#wizard_ui_bridge._fake.live_kwargs)
 * [wizard\_ui\_bridge.\_table\_matrix](#wizard_ui_bridge._table_matrix)
   * [TableMatrix](#wizard_ui_bridge._table_matrix.TableMatrix)
     * [\_\_init\_\_](#wizard_ui_bridge._table_matrix.TableMatrix.__init__)
@@ -654,15 +657,18 @@ Result of validating a partly filled form.
   other rows' inputs, as a tuple of (row_index, value)
   pairs. Each value must match the answer type of the
   field in that row. A bridge applies each request
-  during live editing as if the user had typed the
-  value; setting a value equal to the one already there
-  is a no-op, so a validator that emits a stable value
-  does not loop. The validator owns idempotency: it
-  should emit a prefill only when it means to fill or
-  overwrite the target. A prefill aimed at the row that
-  just changed is ignored, so writing back never fights
-  the user's current edit. A prefill aimed at a disabled
-  row is still applied, so the value shows in the greyed
+  when the form is first shown and during live editing
+  as if the user had typed the value; setting a value
+  equal to the one already there is a no-op, so a
+  validator that emits a stable value does not loop.
+  The validator owns idempotency: it should emit a
+  prefill only when it means to fill or overwrite the
+  target. A prefill aimed at the row that just changed
+  is ignored, so writing back never fights the user's
+  current edit; when the form is first shown no row has
+  changed, so none is ignored. A prefill aimed at a
+  disabled row is still applied, so the value shows in
+  the greyed
   row and takes effect if the row is later enabled. A
   row index outside the form, or a value whose type does
   not match the field, raises an exception, since both
@@ -2287,6 +2293,27 @@ Every Ask*Field of a form derives from the Ask*Cell of a matrix form, so
 the helpers that only need what a field and a cell have in common take a
 cell, and serve both questions.
 
+<a id="wizard_ui_bridge.form_helpers.live_validator_of"></a>
+
+#### live\_validator\_of
+
+```python
+def live_validator_of(
+    partial_validator: Optional[PartialFormValidator],
+    live_validator: Optional[LiveFormValidator]
+) -> Optional[LiveFormValidator]
+```
+
+Return the validator a caller of ask_form() gave, as a live one.
+
+ask_form() takes the deprecated partial_validator next to its
+replacement live_validator until version 2.0, when partial_validator
+and this function will be removed. A bridge that overrides ask_form()
+calls this first. The deprecated partial_validator issues a
+DeprecationWarning, pointing at the caller of ask_form(), and is
+wrapped so that it gets the index 0 where a live validator gets None,
+as if row 0 had changed. Raises TypeError when both are given.
+
 <a id="wizard_ui_bridge.form_helpers.nullable_choice"></a>
 
 #### nullable\_choice
@@ -2313,8 +2340,8 @@ Return the starting answer for a field or input cell.
 
 The value is the field's start value, else its default, or the empty
 or not-yet-answered state when the field has neither. A choice field
-with neither starts as None, which tells a partial validator the
-choice is not answered yet; a bridge must not leave that None in a
+with neither starts as None, which tells a live or partial validator
+the choice is not answered yet; a bridge must not leave that None in a
 submitted form.
 A form field gets its Answer*Field and a matrix cell its Answer*Cell.
 A label cell has no answer and must not be passed.
@@ -2342,7 +2369,8 @@ Optional. A label cell has no answer and must not be passed.
 
 ```python
 def valid_prefills(
-        fields: Sequence[AskField], changed: int, prefill_values: PrefillValues
+        fields: Sequence[AskField], changed: Optional[int],
+        prefill_values: PrefillValues
 ) -> Iterator[tuple[int, PrefillValueType]]
 ```
 
@@ -2350,7 +2378,8 @@ Yield the prefill requests a bridge should apply, validated.
 
 Each yielded (index, value) pair is ready to place into the row's
 input. A prefill aimed at the changed row is skipped, so writing back
-never fights the user's current edit. A row index outside the form
+never fights the user's current edit; with changed None no row is
+skipped. A row index outside the form
 raises IndexError and a value whose Python type does not match the
 field raises TypeError, since both are validator bugs. A choice value
 not among the field's choices, any prefill of a sensitive text field,
@@ -2468,6 +2497,14 @@ A path question takes it in its PathAskOptions. The base class calls
 a typed ask method of a derived bridge that lacks start_value with
 the start value as the default instead, not nullable, and issues a
 DeprecationWarning; the user then cannot empty the answer.
+
+ask_form() and ask_form_w_fake() take the validator of the form as
+live_validator. The older partial_validator is deprecated and will
+be removed in version 2.0. A bridge that overrides ask_form() should
+accept both, and turn them into one validator with
+wizard_ui_bridge.form_helpers.live_validator_of(). ask_form_w_fake()
+passes a live validator as partial_validator to an ask_form() override
+that lacks live_validator, and issues a DeprecationWarning.
 
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.ask_text"></a>
 
@@ -2933,8 +2970,8 @@ def ask_form(
         ask_fields: AskFields,
         *,
         re_ask_reason: Optional[str] = None,
-        partial_validator: Optional[PartialFormValidator] = None
-) -> AnswerFields
+        partial_validator: Optional[PartialFormValidator] = None,
+        live_validator: Optional[LiveFormValidator] = None) -> AnswerFields
 ```
 
 Ask the user to fill in a form and return the answers.
@@ -2960,19 +2997,23 @@ See wizard_ui_bridge.form_defs for the AskFields, and the
 description of how each field type is typically implemented in a GUI
 or textual interface.
 
-When partial_validator is given, the base implementation calls it
-after each field is answered, passing the current answers and the
-index of the field just answered. It shows the returned message and
-skips asking the fields listed in disable_row_idxs, filling them
-with their start value, default or not-yet-answered value
-instead. Each prefill is offered as the start value of its field
-when that field is asked. WizardBack steps to the previous asked
+When live_validator is given, the base implementation calls it
+first for the whole form, with None, without showing its message,
+and then after each field is answered, passing the current answers
+and the index of the field just answered. It shows the returned
+message and skips asking the fields listed in disable_row_idxs,
+filling them with their start value, default or not-yet-answered
+value instead. Each prefill is offered as the start value of its
+field when that field is asked. WizardBack steps to the previous asked
 field, which starts with the answer the user gave it; from the
 first field it propagates so the wizard steps to the previous
 question.
 
-The verdict of partial_validator is advisory to the caller. A
-bridge that overrides this method should, where its user interface
+The verdict of live_validator is advisory to the caller. A bridge
+that overrides this method should call it with None when the form
+is first shown, to find the rows that start disabled and any
+prefills, but show its message only once the user has changed the
+form or tried to submit it. It should, where its user interface
 makes it reasonable, refuse to accept the form while the verdict
 is not valid, but the caller must not rely on that: the base
 implementation only shows the message, so the wizard must validate
@@ -2987,9 +3028,13 @@ the final answers.
 - `ask_fields` - Description of each field in the form.
 - `re_ask_reason` - The reason for re-asking, for instance how a
   value failed validation.
-- `partial_validator` - Optional callback for early per-field
-  feedback. It receives the current answers
-  and the changed field index, and returns a
+- `partial_validator` - Deprecated, use live_validator. It will be
+  removed in version 2.0. It is called as
+  live_validator, but with 0 in place of None.
+- `live_validator` - Optional callback for live feedback on the
+  partly filled form. It receives the current
+  answers and the changed field index, or None
+  when no field has changed yet, and returns a
   PartFormValidationResult.
   
 
@@ -3002,6 +3047,7 @@ the final answers.
 - `WizardBack` - The user asked to return to the previous question.
 - `WizardCancelLevel` - The user cancelled the current level.
 - `WizardAbort` - The user abandoned the whole wizard.
+- `TypeError` - Both partial_validator and live_validator are given.
 
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.supports_form_field"></a>
 
@@ -3041,8 +3087,8 @@ def ask_form_w_fake(
         ask_fields: AskFields,
         *,
         re_ask_reason: Optional[str] = None,
-        partial_validator: Optional[PartialFormValidator] = None
-) -> AnswerFields
+        partial_validator: Optional[PartialFormValidator] = None,
+        live_validator: Optional[LiveFormValidator] = None) -> AnswerFields
 ```
 
 Ask the user to fill in a form faking unsupported field types.
@@ -3064,9 +3110,13 @@ back to the original field types before returning.
 - `ask_fields` - Description of each field in the form.
 - `re_ask_reason` - The reason for re-asking, for instance how a
   value failed validation.
-- `partial_validator` - Optional callback for early per-field
-  feedback. It receives the current answers
-  and the changed field index, and returns a
+- `partial_validator` - Deprecated, use live_validator. It will be
+  removed in version 2.0. It is called as
+  live_validator, but with 0 in place of None.
+- `live_validator` - Optional callback for live feedback on the
+  partly filled form. It receives the current
+  answers and the changed field index, or None
+  when no field has changed yet, and returns a
   PartFormValidationResult.
   
 
@@ -3082,6 +3132,7 @@ back to the original field types before returning.
 - `RuntimeError` - The bridge cannot show any field type that would
   allow the requested field types to be faked, so
   the form cannot be shown at all.
+- `TypeError` - Both partial_validator and live_validator are given.
 
 <a id="wizard_ui_bridge.bridge.WizardUiBridge.ask_matrix_form"></a>
 
@@ -3608,6 +3659,20 @@ range messages are shared with the console and Textual forms through the
 wizard_ui_bridge._parse module, so the faked fields accept exactly the
 same text.
 
+The bridge's ask_form() gets the validator as live_validator, or, with a
+DeprecationWarning, as partial_validator when it was written before
+live_validator existed.
+
+<a id="wizard_ui_bridge._fake.LiveKwargs"></a>
+
+## LiveKwargs Objects
+
+```python
+class LiveKwargs(TypedDict)
+```
+
+The keyword arguments that carry a validator to ask_form().
+
 <a id="wizard_ui_bridge._fake.ask_form_faking"></a>
 
 #### ask\_form\_faking
@@ -3616,12 +3681,27 @@ same text.
 def ask_form_faking(
         bridge: _FakeableBridge, long_question: str, ask_fields: AskFields, *,
         re_ask_reason: Optional[str],
-        partial_validator: Optional[PartialFormValidator]) -> AnswerFields
+        live_validator: Optional[LiveFormValidator]) -> AnswerFields
 ```
 
 Show a form, faking the fields the bridge cannot show as text.
 
 Raises RuntimeError when a field is unsupported and cannot be faked.
+
+<a id="wizard_ui_bridge._fake.live_kwargs"></a>
+
+#### live\_kwargs
+
+```python
+def live_kwargs(method: Callable[..., object],
+                validator: Optional[LiveFormValidator]) -> LiveKwargs
+```
+
+Return validator as keyword arguments for a bridge's ask_form().
+
+A method that takes neither live_validator nor **kwargs gets the
+validator as partial_validator, which it calls with a row index and
+never None, and a DeprecationWarning names the method.
 
 <a id="wizard_ui_bridge._table_matrix"></a>
 
@@ -4209,8 +4289,8 @@ def ask_form(
         ask_fields: AskFields,
         *,
         re_ask_reason: Optional[str] = None,
-        partial_validator: Optional[PartialFormValidator] = None
-) -> AnswerFields
+        partial_validator: Optional[PartialFormValidator] = None,
+        live_validator: Optional[LiveFormValidator] = None) -> AnswerFields
 ```
 
 Ask the user to fill a whole form on one screen; see ask_form.

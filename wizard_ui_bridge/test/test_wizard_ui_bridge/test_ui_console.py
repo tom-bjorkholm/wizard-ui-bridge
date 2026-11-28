@@ -18,7 +18,7 @@ from typing import Callable, Optional, Sequence
 import pytest
 
 from wizard_ui_bridge import AskField, AskChoiceField, AskIntField, \
-    AskMultiChoiceField, AskTextField, AskYesNoField, PartialFormValidator, \
+    AskMultiChoiceField, AskTextField, AskYesNoField, LiveFormValidator, \
     PartialCheck, TableCell, TableColumn, \
     WizardAbort, WizardBack, WizardCancelLevel, WizardUiBridgeConsole
 from wizard_ui_bridge import AnswerField, PartFormValidationResult
@@ -354,11 +354,11 @@ def test_console_all_kinds() -> None:
 
 
 def test_console_disable(toggle_fields: list[AskField],
-                         toggle_validator: PartialFormValidator) -> None:
+                         toggle_validator: LiveFormValidator) -> None:
     """A disabled console field is skipped and keeps its start value."""
     bridge, _ = _console('2\n')
     answers = bridge.ask_form('H', toggle_fields,
-                              partial_validator=toggle_validator)
+                              live_validator=toggle_validator)
     assert answers[0].value is False
     assert answers[1].value is None
 
@@ -429,7 +429,7 @@ def test_fixed_back_first() -> None:
 
 
 def _disable_second(answers: Sequence[AnswerField],
-                    index: int) -> PartFormValidationResult:
+                    index: Optional[int]) -> PartFormValidationResult:
     """Return a validator result that always disables the second field."""
     _ = (answers, index)
     return PartFormValidationResult(True, '', (1,))
@@ -440,5 +440,5 @@ def test_back_over_disabled() -> None:
     fields = [AskTextField('A', None), AskTextField('B', None),
               AskTextField('C', None)]
     bridge, _ = _console('a\n:b\nA2\nc\n')
-    answers = bridge.ask_form('H', fields, partial_validator=_disable_second)
+    answers = bridge.ask_form('H', fields, live_validator=_disable_second)
     assert [answer.value for answer in answers] == ['A2', None, 'c']

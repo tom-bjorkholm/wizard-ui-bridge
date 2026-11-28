@@ -152,16 +152,13 @@
   * [\_with\_label](#wizard_tk_bridge.wizard_form._with_label)
   * [FormEditor](#wizard_tk_bridge.wizard_form.FormEditor)
     * [\_\_init\_\_](#wizard_tk_bridge.wizard_form.FormEditor.__init__)
-    * [\_apply\_initial](#wizard_tk_bridge.wizard_form.FormEditor._apply_initial)
-    * [\_apply\_prefills](#wizard_tk_bridge.wizard_form.FormEditor._apply_prefills)
     * [\_build\_row](#wizard_tk_bridge.wizard_form.FormEditor._build_row)
     * [answers](#wizard_tk_bridge.wizard_form.FormEditor.answers)
     * [submit](#wizard_tk_bridge.wizard_form.FormEditor.submit)
-    * [\_validator\_blocks](#wizard_tk_bridge.wizard_form.FormEditor._validator_blocks)
     * [\_changed](#wizard_tk_bridge.wizard_form.FormEditor._changed)
-    * [\_feedback](#wizard_tk_bridge.wizard_form.FormEditor._feedback)
-    * [\_run\_validator](#wizard_tk_bridge.wizard_form.FormEditor._run_validator)
-    * [\_first\_error](#wizard_tk_bridge.wizard_form.FormEditor._first_error)
+    * [\_validate](#wizard_tk_bridge.wizard_form.FormEditor._validate)
+    * [\_first\_invalid](#wizard_tk_bridge.wizard_form.FormEditor._first_invalid)
+    * [\_reveal](#wizard_tk_bridge.wizard_form.FormEditor._reveal)
     * [\_apply\_disabled](#wizard_tk_bridge.wizard_form.FormEditor._apply_disabled)
     * [\_show](#wizard_tk_bridge.wizard_form.FormEditor._show)
     * [\_read](#wizard_tk_bridge.wizard_form.FormEditor._read)
@@ -2027,11 +2024,14 @@ A whole wizard form shown on one screen.
 A form question asks several related fields at once. :class:`FormEditor`
 builds a two-column grid, a label on the left and an input widget on the
 right, one row per :class:`AskField`. It reads one :class:`AnswerField`
-per row, runs the optional partial validator after every change to show
-advisory feedback and disable irrelevant rows, and validates every
-enabled field on submit so a submitted form is always complete. The input
-of each row is a :class:`~wizard_tk_bridge.wizard_cell.CellInput`, the
-same input a matrix form shows in a cell.
+per row, and runs the optional live validator when the form is shown, to
+disable irrelevant rows and write prefills, and after every change to
+show advisory feedback as well. On submit the validator runs first, then
+every enabled field is validated, so a submitted form is always complete,
+and the keyboard focus moves to the first field that fails its own
+check. The input of each row is a
+:class:`~wizard_tk_bridge.wizard_cell.CellInput`, the same input a matrix
+form shows in a cell.
 
 <a id="wizard_tk_bridge.wizard_form.handles_field"></a>
 
@@ -2104,31 +2104,15 @@ A two-column grid that asks a whole wizard form on one screen.
 
 ```python
 def __init__(parent: tk.Misc, fields: Sequence[AskField],
-             validator: Optional[PartialFormValidator],
+             validator: Optional[LiveFormValidator],
              on_submit: Callable[[list[AnswerField]], None]) -> None
 ```
 
 Build one labelled input row per field, plus a status line.
 
-<a id="wizard_tk_bridge.wizard_form.FormEditor._apply_initial"></a>
-
-#### \_apply\_initial
-
-```python
-def _apply_initial() -> None
-```
-
-Disable the initially irrelevant rows, showing no message yet.
-
-<a id="wizard_tk_bridge.wizard_form.FormEditor._apply_prefills"></a>
-
-#### \_apply\_prefills
-
-```python
-def _apply_prefills(prefills: PrefillValues, changed: int) -> None
-```
-
-Write the validator's valid prefills into their row inputs.
+The validator is called for the whole form, with None, to disable
+the initially irrelevant rows and write prefills, showing no
+message yet.
 
 <a id="wizard_tk_bridge.wizard_form.FormEditor._build_row"></a>
 
@@ -2158,17 +2142,12 @@ Return the current answer of every row, in field order.
 def submit() -> None
 ```
 
-Validate every enabled field and submit when all pass.
+Validate the whole form and submit its answers when valid.
 
-<a id="wizard_tk_bridge.wizard_form.FormEditor._validator_blocks"></a>
-
-#### \_validator\_blocks
-
-```python
-def _validator_blocks(answers: list[AnswerField]) -> bool
-```
-
-Run the whole-form validator and return whether it blocks.
+The validator runs first, so the rows it disables are not
+checked. Every enabled field must then pass its own check, and
+the first that does not gets the keyboard focus. Last the
+validator must accept the form.
 
 <a id="wizard_tk_bridge.wizard_form.FormEditor._changed"></a>
 
@@ -2180,35 +2159,38 @@ def _changed(index: int) -> None
 
 React to a field change with live feedback and row enabling.
 
-<a id="wizard_tk_bridge.wizard_form.FormEditor._feedback"></a>
+<a id="wizard_tk_bridge.wizard_form.FormEditor._validate"></a>
 
-#### \_feedback
-
-```python
-def _feedback(answers: list[AnswerField], index: int) -> str
-```
-
-Return the live message for the field that just changed.
-
-<a id="wizard_tk_bridge.wizard_form.FormEditor._run_validator"></a>
-
-#### \_run\_validator
+#### \_validate
 
 ```python
-def _run_validator(answers: list[AnswerField], index: int) -> str
+def _validate(changed: Optional[int], live: bool) -> Optional[str]
 ```
 
-Apply the validator's disabled rows and return its message.
+Run the validator and return its message when invalid.
 
-<a id="wizard_tk_bridge.wizard_form.FormEditor._first_error"></a>
+The disabled rows of its result are applied, and while the user
+edits (live) its prefills too, which are ignored on submit.
 
-#### \_first\_error
+<a id="wizard_tk_bridge.wizard_form.FormEditor._first_invalid"></a>
+
+#### \_first\_invalid
 
 ```python
-def _first_error() -> Optional[str]
+def _first_invalid() -> Optional[int]
 ```
 
-Return the first enabled field's own error, or None.
+Return the first enabled row failing its own check, or None.
+
+<a id="wizard_tk_bridge.wizard_form.FormEditor._reveal"></a>
+
+#### \_reveal
+
+```python
+def _reveal(index: int) -> None
+```
+
+Scroll a row into view and give its input the keyboard focus.
 
 <a id="wizard_tk_bridge.wizard_form.FormEditor._apply_disabled"></a>
 
@@ -2446,8 +2428,8 @@ def ask_form(
         ask_fields: AskFields,
         *,
         re_ask_reason: Optional[str] = None,
-        partial_validator: Optional[PartialFormValidator] = None
-) -> AnswerFields
+        partial_validator: Optional[PartialFormValidator] = None,
+        live_validator: Optional[LiveFormValidator] = None) -> AnswerFields
 ```
 
 Ask a whole form on one screen; see WizardUiBridge.ask_form.
@@ -3290,7 +3272,7 @@ Show one path entry with a Browse button and return the text.
 
 ```python
 def ask_form(long_question: str, fields: AskFields, re_ask: Optional[str],
-             validator: Optional[PartialFormValidator]) -> AnswerFields
+             validator: Optional[LiveFormValidator]) -> AnswerFields
 ```
 
 Ask a whole form on one screen and return its answers.

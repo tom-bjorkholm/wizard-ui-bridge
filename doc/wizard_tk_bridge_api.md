@@ -1138,11 +1138,14 @@ A whole wizard form shown on one screen.
 A form question asks several related fields at once. :class:`FormEditor`
 builds a two-column grid, a label on the left and an input widget on the
 right, one row per :class:`AskField`. It reads one :class:`AnswerField`
-per row, runs the optional partial validator after every change to show
-advisory feedback and disable irrelevant rows, and validates every
-enabled field on submit so a submitted form is always complete. The input
-of each row is a :class:`~wizard_tk_bridge.wizard_cell.CellInput`, the
-same input a matrix form shows in a cell.
+per row, and runs the optional live validator when the form is shown, to
+disable irrelevant rows and write prefills, and after every change to
+show advisory feedback as well. On submit the validator runs first, then
+every enabled field is validated, so a submitted form is always complete,
+and the keyboard focus moves to the first field that fails its own
+check. The input of each row is a
+:class:`~wizard_tk_bridge.wizard_cell.CellInput`, the same input a matrix
+form shows in a cell.
 
 <a id="wizard_tk_bridge.wizard_form.handles_field"></a>
 
@@ -1181,11 +1184,15 @@ A two-column grid that asks a whole wizard form on one screen.
 
 ```python
 def __init__(parent: tk.Misc, fields: Sequence[AskField],
-             validator: Optional[PartialFormValidator],
+             validator: Optional[LiveFormValidator],
              on_submit: Callable[[list[AnswerField]], None]) -> None
 ```
 
 Build one labelled input row per field, plus a status line.
+
+The validator is called for the whole form, with None, to disable
+the initially irrelevant rows and write prefills, showing no
+message yet.
 
 <a id="wizard_tk_bridge.wizard_form.FormEditor.answers"></a>
 
@@ -1205,7 +1212,12 @@ Return the current answer of every row, in field order.
 def submit() -> None
 ```
 
-Validate every enabled field and submit when all pass.
+Validate the whole form and submit its answers when valid.
+
+The validator runs first, so the rows it disables are not
+checked. Every enabled field must then pass its own check, and
+the first that does not gets the keyboard focus. Last the
+validator must accept the form.
 
 <a id="wizard_tk_bridge.tk_bridge"></a>
 
@@ -1403,8 +1415,8 @@ def ask_form(
         ask_fields: AskFields,
         *,
         re_ask_reason: Optional[str] = None,
-        partial_validator: Optional[PartialFormValidator] = None
-) -> AnswerFields
+        partial_validator: Optional[PartialFormValidator] = None,
+        live_validator: Optional[LiveFormValidator] = None) -> AnswerFields
 ```
 
 Ask a whole form on one screen; see WizardUiBridge.ask_form.
@@ -1870,7 +1882,7 @@ Ask one path question with a Browse button, re-asking on error.
 
 ```python
 def ask_form(long_question: str, fields: AskFields, re_ask: Optional[str],
-             validator: Optional[PartialFormValidator]) -> AnswerFields
+             validator: Optional[LiveFormValidator]) -> AnswerFields
 ```
 
 Ask a whole form on one screen and return its answers.

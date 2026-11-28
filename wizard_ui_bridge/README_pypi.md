@@ -155,13 +155,36 @@ package. However, both repos have the common history.
 
 - Source repository: [wizard-ui-bridge](https://github.com/tom-bjorkholm/wizard-ui-bridge/)
 
+## Deprecations
+
+Each deprecated use below still works and issues a `DeprecationWarning`.
+All of them will be removed in version 2.0.
+
+- **`partial_validator` of `ask_form()` and `ask_form_w_fake()`**, and its
+  type `PartialFormValidator`. Use `live_validator` with the type
+  `LiveFormValidator` instead. A live validator gets `None` as the changed
+  row index when no row has changed yet, for instance when the form is
+  first shown; a `partial_validator` gets `0` there instead. Passing both
+  raises `TypeError`. A bridge that overrides `ask_form()` should accept
+  both until 2.0, combining them with
+  `wizard_ui_bridge.form_helpers.live_validator_of()`, which will be
+  removed in 2.0 as well. `ask_form_w_fake()` passes the validator as
+  `partial_validator` to an `ask_form()` override that does not accept
+  `live_validator`.
+- **A bridge ask method without the keyword-only `help_text`.** A typed ask
+  method, `ask_table()` or an `AskReader` of the table helpers that does not
+  accept `help_text` is called without it.
+- **A typed ask method without the keyword-only `start_value`.** Such a
+  method is called with the start value as its default instead, and not
+  nullable, so the user cannot empty the answer.
+
 ## License
 
 MIT
 
 ## Test summary
 
-- Test result: 1779 passed, 9 deselected in 55s
+- Test result: 1805 passed, 9 deselected in 58s
 - No flake8 warnings.
 - No mypy errors found.
 - No pylint warnings.

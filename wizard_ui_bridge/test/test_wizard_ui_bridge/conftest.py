@@ -4,13 +4,13 @@
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from typing import Sequence
+from typing import Optional, Sequence
 
 import pytest
 
 from wizard_ui_bridge import AskField, AskChoiceField, AskYesNoField, \
     AnswerField, AnswerYesNoField, PartFormValidationResult, \
-    PartialFormValidator
+    LiveFormValidator
 
 
 @pytest.fixture
@@ -21,10 +21,10 @@ def toggle_fields() -> list[AskField]:
 
 
 @pytest.fixture
-def toggle_validator() -> PartialFormValidator:
+def toggle_validator() -> LiveFormValidator:
     """Return a validator disabling the choice when the yes/no is off."""
     def validator(answers: Sequence[AnswerField],
-                  index: int) -> PartFormValidationResult:
+                  index: Optional[int]) -> PartFormValidationResult:
         _ = index
         first = answers[0]
         assert isinstance(first, AnswerYesNoField)

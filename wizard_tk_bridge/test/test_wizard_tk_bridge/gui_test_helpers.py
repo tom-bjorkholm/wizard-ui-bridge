@@ -124,6 +124,21 @@ def click_button(parent: tk.Misc, text: str) -> None:
     pytest.fail(f'No button labelled {text} was built.')
 
 
+def record_focus(monkeypatch: pytest.MonkeyPatch) -> list[tk.Misc]:
+    """Record each widget given the keyboard focus, in order.
+
+    A window of the tests is never shown, and Tk does not record the
+    focus of a widget in a window that is not shown.
+    """
+    focused: list[tk.Misc] = []
+
+    def _focus_set(widget: tk.Misc) -> None:
+        """Record the widget instead of focusing it."""
+        focused.append(widget)
+    monkeypatch.setattr(tk.Misc, 'focus_set', _focus_set)
+    return focused
+
+
 def set_entry(entry: tk.Entry, text: str) -> None:
     """Replace what an entry holds with the given text."""
     entry.delete(0, 'end')

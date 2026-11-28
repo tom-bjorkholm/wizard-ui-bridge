@@ -36,8 +36,8 @@ from textual.widgets.selection_list import Selection
 from wizard_ui_bridge.bridge import WizardUiBridge
 from wizard_ui_bridge.bridge_helpers import check_text_args, \
     multi_count_message, path_answer, text_answer, offered_choices
-from wizard_ui_bridge.form_helpers import answer_of, initial_answer, \
-    valid_prefills
+from wizard_ui_bridge.form_helpers import answer_of, valid_prefills, \
+    live_validator_of
 from wizard_ui_bridge.matrix_defs import AnswerCells, MatrixRequest
 from wizard_ui_bridge._textual_cell import CellInput, build_input
 from wizard_ui_bridge._textual_matrix import _MatrixApp
@@ -49,7 +49,8 @@ from wizard_ui_bridge._path import _PathPick, _start_dir, _start_value
 from wizard_ui_bridge.arg_types import WizardAbort, PathAskOptions, \
     check_choice_args, check_multi_args
 from wizard_ui_bridge.form_defs import AskField, AskFields, \
-    ALL_ASK_FIELD_TYPES, AnswerField, AnswerFields, PartialFormValidator
+    ALL_ASK_FIELD_TYPES, AnswerField, AnswerFields, LiveFormValidator, \
+    PartialFormValidator
 
 _T = TypeVar('_T')
 
@@ -197,11 +198,13 @@ class _FormApp(_NavApp[list[AnswerField]]):
     type: a text input, an integer input, a path input with a Browse
     button, a check box, a drop-down, a check-box list, a text input with
     a calendar Pick button for a date or date-time field, and a plain text
-    input for a float, time or duration field. A partial validator, when
-    given, runs after each change to show advisory feedback and to enable
-    or disable rows. On submit each enabled field is validated, so the
-    returned answers are complete and a choice with no default is always
-    answered.
+    input for a float, time or duration field. A live validator, when
+    given, runs when the form is shown, to disable rows and write
+    prefills, and after each change to show advisory feedback as well.
+    On submit the validator runs first, then each enabled field is
+    validated, so the returned answers are complete and a choice with no
+    default is always answered. The first field that fails gets the
+    keyboard focus.
 
     A rejected field is named in the shared status line and its label is
     shown in the error colour, so the user sees which of the fields on
@@ -223,7 +226,7 @@ class _FormApp(_NavApp[list[AnswerField]]):
 
     def __init__(self, question: str, fields: list[AskField],
                  messages: list[str],
-                 validator: Optional[PartialFormValidator]) -> None:
+                 validator: Optional[LiveFormValidator]) -> None:
         """Store the prompt, fields, buffered messages and validator."""
         super().__init__()
         self._question = question
@@ -231,9 +234,8 @@ class _FormApp(_NavApp[list[AnswerField]]):
         self._messages = messages
         self._validator = validator
         self._inputs: list[CellInput] = []
-        self._answers = [initial_answer(field) for field in fields]
         self._disabled: set[int] = set()
-        self._last_changed = 0
+        self._last_changed: Optional[int] = None
 
     def compose(self) -> ComposeResult:
         """Lay out the header, the field grid, submit and footer."""
@@ -259,13 +261,17 @@ class _FormApp(_NavApp[list[AnswerField]]):
             yield self._inputs[index].widget
 
     def on_mount(self) -> None:
-        """Size the grid, focus the first field, not the scroll.
+        """Size the grid, validate it, focus the first field, not the scroll.
 
-        Each input records its mounted answer as seen, so the change
-        event Textual posts as it mounts an input is not taken as an edit.
+        The validator is called for the whole form, with None, to disable
+        the rows that start irrelevant and write any prefills, but its
+        message is not shown yet. Then each input records its answer as
+        seen, so the change event Textual posts as it mounts an input, or
+        as a prefill is written, is not taken as an edit.
         """
         self.query_one('#form_scroll').can_focus = False
         self.query_one('#form_grid', Grid).styles.grid_size_columns = 2
+        self._validate(None, live=True)
         for cell_input in self._inputs:
             cell_input.settle()
         if self._fields:
@@ -307,20 +313,24 @@ class _FormApp(_NavApp[list[AnswerField]]):
         if not cell_input.take_change():
             return
         self._last_changed = index
-        self._answers[index] = self._read_field(index)
-        validator_message = self._apply_validator(index)
-        self._show_live(index, validator_message)
+        validator_message = self._validate(index, live=True)
+        self._show_live(index, validator_message or '')
 
-    def _apply_validator(self, index: int) -> str:
-        """Apply the validator's disabled rows and prefills, return message."""
+    def _validate(self, changed: Optional[int], live: bool) -> Optional[str]:
+        """Run the validator and return its message when invalid.
+
+        The disabled rows of its result are applied, and while the user
+        edits (live) its prefills too, which are ignored on submit.
+        """
         if self._validator is None:
-            return ''
-        result = self._validator(self._answers, index)
+            return None
+        result = self._validator(self.answers(), changed)
         self._apply_disabled(result.disable_row_idxs)
-        for target, value in valid_prefills(self._fields, index,
-                                            result.prefill_values):
-            self._inputs[target].write(value)
-        return '' if result.is_valid else result.message
+        if live:
+            for target, value in valid_prefills(self._fields, changed,
+                                                result.prefill_values):
+                self._inputs[target].write(value)
+        return None if result.is_valid else result.message
 
     def _show_live(self, index: int, validator_message: str) -> None:
         """Report the changed field's own error, else the validator's.
@@ -363,26 +373,26 @@ class _FormApp(_NavApp[list[AnswerField]]):
             self._inputs[index].open_dialog()
 
     def action_submit(self) -> None:
-        """Validate every enabled field and exit with the answers."""
-        for index in range(len(self._fields)):
-            self._answers[index] = self._read_field(index)
+        """Validate the whole form and exit with its answers when valid.
+
+        The live validator runs first, so the rows it disables are not
+        checked. Every enabled field must then pass its own check, and
+        the first that does not gets the keyboard focus. Last the
+        validator must accept the form.
+        """
+        problem = self._validate(self._last_changed, live=False)
         failing = self._first_error()
         if failing is not None:
+            self._inputs[failing[0]].main.focus()
             self._report(*failing)
-            return
-        if not self._validator_accepts():
-            return
-        self.exit(list(self._answers))
+        elif problem is not None:
+            self._report(None, problem)
+        else:
+            self.exit(self.answers())
 
-    def _validator_accepts(self) -> bool:
-        """Return whether the partial validator accepts the whole form."""
-        if self._validator is None:
-            return True
-        result = self._validator(self._answers, self._last_changed)
-        self._apply_disabled(result.disable_row_idxs)
-        if not result.is_valid:
-            self._report(None, result.message)
-        return result.is_valid
+    def answers(self) -> list[AnswerField]:
+        """Return the current answer of every field, in field order."""
+        return [self._read_field(index) for index in range(len(self._fields))]
 
     def _first_error(self) -> Optional[tuple[int, str]]:
         """Return the first enabled field's index and error, or None."""
@@ -544,12 +554,14 @@ class WizardUiBridgeTextual(WizardUiBridge):
 
     def ask_form(self, long_question: str, ask_fields: AskFields, *,
                  re_ask_reason: Optional[str] = None,
-                 partial_validator: Optional[PartialFormValidator] = None) \
+                 partial_validator: Optional[PartialFormValidator] = None,
+                 live_validator: Optional[LiveFormValidator] = None) \
             -> AnswerFields:
         """Ask the user to fill a whole form on one screen; see ask_form."""
+        validator = live_validator_of(partial_validator, live_validator)
         messages = self._collect(re_ask_reason)
         return self._run(_FormApp(long_question, list(ask_fields), messages,
-                                  partial_validator))
+                                  validator))
 
     def ask_matrix_form(self, request: MatrixRequest, *,
                         re_ask_reason: Optional[str] = None) -> AnswerCells:

@@ -272,13 +272,20 @@ Call `ask_form()` with the main instruction and the fields, and read back one
 ```python
 answers = bridge.ask_form(long_question, ask_fields,
                           re_ask_reason=reason,
-                          partial_validator=export_validator)
+                          live_validator=export_validator)
 title = answers[0].value        # each Answer*Field.value holds the typed answer
 ```
 
-The optional `partial_validator` gives early feedback. It receives the current
-answers and the index of the field that changed, and returns a
-`PartFormValidationResult(is_valid, message, disable_row_idxs)`:
+The optional `live_validator` gives live feedback. It receives the current
+answers and the index of the field that changed, or `None` when nothing has
+changed yet, and returns a
+`PartFormValidationResult(is_valid, message, disable_row_idxs)`. It is called
+with a form that is usually incomplete: once when the form is first shown (with
+`None`, to find the rows that start disabled; its message is not shown yet),
+after every change, and on submit. An unanswered field, or one whose text is not
+yet a valid answer, reads as not answered, so the validator must cope with that.
+(The older `partial_validator`, which never gets `None`, is deprecated and will
+be removed in version 2.0.)
 
 - `disable_row_idxs` lists rows that are irrelevant given the current answers,
   for example the CSV delimiter when the chosen format is not CSV. Disabling a
@@ -340,7 +347,7 @@ def schedule_validator(answers, changed):
 
 The prefilled value is only a starting point the user may edit. A prefill aimed
 at the row that just changed is ignored, so writing back never fights the user's
-own edit, and emitting a stable value (the same computed end) does not loop. The
+own edit (when the form is first shown no row has changed), and emitting a stable value (the same computed end) does not loop. The
 value must match the target field's answer type: a `date` for a date field, a
 `datetime` for a date-time field, a `float` for a float field, and so on.
 
@@ -562,8 +569,8 @@ given at its position. That is how a re-asked matrix keeps the user's values as
 defaults in every row. (A smaller grid repeats its last row and last cell, and
 `ask_cells` may also be a function from `CellPosition` to `AskCell`.)
 
-**Validation in two layers.** As in `e04` and `e05`, a `partial_validator` gives
-live feedback while the matrix is edited and blocks submitting it while a start
+**Validation in two layers.** As the validators of `e04` and `e05` do, the
+matrix's `partial_validator` gives live feedback while the matrix is edited and blocks submitting it while a start
 date is not before its end date. It gets the current answers and the
 `CellPosition` that changed, or `None` when nothing has changed yet or the
 shape changed. Its `PartMatrixValidationRes` can also disable irrelevant cells

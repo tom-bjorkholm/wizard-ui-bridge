@@ -4,11 +4,14 @@
 A form question asks several related fields at once. :class:`FormEditor`
 builds a two-column grid, a label on the left and an input widget on the
 right, one row per :class:`AskField`. It reads one :class:`AnswerField`
-per row, runs the optional partial validator after every change to show
-advisory feedback and disable irrelevant rows, and validates every
-enabled field on submit so a submitted form is always complete. The input
-of each row is a :class:`~wizard_tk_bridge.wizard_cell.CellInput`, the
-same input a matrix form shows in a cell.
+per row, and runs the optional live validator when the form is shown, to
+disable irrelevant rows and write prefills, and after every change to
+show advisory feedback as well. On submit the validator runs first, then
+every enabled field is validated, so a submitted form is always complete,
+and the keyboard focus moves to the first field that fails its own
+check. The input of each row is a
+:class:`~wizard_tk_bridge.wizard_cell.CellInput`, the same input a matrix
+form shows in a cell.
 """
 
 # Copyright (c) 2026 Tom Björkholm
@@ -18,13 +21,13 @@ import tkinter as tk
 from dataclasses import dataclass
 from functools import partial
 from typing import Callable, Optional, Sequence
-from wizard_ui_bridge import AskField, AnswerField, PartialFormValidator, \
-    PrefillValues, AskTextField, AskIntField, AskPathField, AskYesNoField, \
+from wizard_ui_bridge import AskField, AnswerField, LiveFormValidator, \
+    AskTextField, AskIntField, AskPathField, AskYesNoField, \
     AskChoiceField, AskMultiChoiceField, AskFloatField, AskDateField, \
     AskTimeField, AskDateTimeField, AskDurationField
 from wizard_ui_bridge.form_helpers import answer_of, valid_prefills
 from wizard_tk_bridge.wizard_cell import CellInput, HelpTooltip, \
-    build_input, scrolled_editor, tooltip_text
+    build_input, scroll_into_view, scrolled_editor, tooltip_text
 
 LABEL_WRAP = 220
 _HANDLED = (AskTextField, AskIntField, AskPathField, AskYesNoField,
@@ -77,30 +80,22 @@ class FormEditor:
     """A two-column grid that asks a whole wizard form on one screen."""
 
     def __init__(self, parent: tk.Misc, fields: Sequence[AskField],
-                 validator: Optional[PartialFormValidator],
+                 validator: Optional[LiveFormValidator],
                  on_submit: Callable[[list[AnswerField]], None]) -> None:
-        """Build one labelled input row per field, plus a status line."""
+        """Build one labelled input row per field, plus a status line.
+
+        The validator is called for the whole form, with None, to disable
+        the initially irrelevant rows and write prefills, showing no
+        message yet.
+        """
         self._validator = validator
         self._on_submit = on_submit
         self._disabled: set[int] = set()
-        self._last_changed = 0
-        grid, self._status = scrolled_editor(parent, sideways=False)
-        self._rows = [self._build_row(grid, index, field)
+        self._last_changed: Optional[int] = None
+        self._grid, self._status = scrolled_editor(parent, sideways=False)
+        self._rows = [self._build_row(self._grid, index, field)
                       for index, field in enumerate(fields)]
-        self._apply_initial()
-
-    def _apply_initial(self) -> None:
-        """Disable the initially irrelevant rows, showing no message yet."""
-        if self._validator is not None:
-            result = self._validator(self.answers(), 0)
-            self._apply_disabled(result.disable_row_idxs)
-            self._apply_prefills(result.prefill_values, 0)
-
-    def _apply_prefills(self, prefills: PrefillValues, changed: int) -> None:
-        """Write the validator's valid prefills into their row inputs."""
-        fields = [row.field for row in self._rows]
-        for index, value in valid_prefills(fields, changed, prefills):
-            self._rows[index].cell_input.write(value)
+        self._validate(None, live=True)
 
     def _build_row(self, grid: tk.Misc, index: int,
                    field: AskField) -> FormRow:
@@ -118,57 +113,60 @@ class FormEditor:
         return [self._read(index) for index in range(len(self._rows))]
 
     def submit(self) -> None:
-        """Validate every enabled field and submit when all pass."""
-        answers = self.answers()
-        error = self._first_error()
-        if error is not None:
-            self._show(error)
-            return
-        if self._validator_blocks(answers):
-            return
-        self._on_submit(answers)
+        """Validate the whole form and submit its answers when valid.
 
-    def _validator_blocks(self, answers: list[AnswerField]) -> bool:
-        """Run the whole-form validator and return whether it blocks."""
-        if self._validator is None:
-            return False
-        result = self._validator(answers, self._last_changed)
-        self._apply_disabled(result.disable_row_idxs)
-        if not result.is_valid:
-            self._show(result.message)
-        return not result.is_valid
+        The validator runs first, so the rows it disables are not
+        checked. Every enabled field must then pass its own check, and
+        the first that does not gets the keyboard focus. Last the
+        validator must accept the form.
+        """
+        problem = self._validate(self._last_changed, live=False)
+        invalid = self._first_invalid()
+        if invalid is not None:
+            self._reveal(invalid)
+            self._show(self._field_error(invalid) or '')
+        elif problem is not None:
+            self._show(problem)
+        else:
+            self._on_submit(self.answers())
 
     def _changed(self, index: int) -> None:
         """React to a field change with live feedback and row enabling."""
         self._last_changed = index
-        self._show(self._feedback(self.answers(), index))
+        message = self._validate(index, live=True)
+        own = None if index in self._disabled else self._field_error(index)
+        self._show(own or message or '')
 
-    def _feedback(self, answers: list[AnswerField], index: int) -> str:
-        """Return the live message for the field that just changed."""
-        validator_msg = self._run_validator(answers, index)
-        if index in self._disabled:
-            return validator_msg
-        own = self._field_error(index)
-        return validator_msg if own is None else own
+    def _validate(self, changed: Optional[int], live: bool) -> Optional[str]:
+        """Run the validator and return its message when invalid.
 
-    def _run_validator(self, answers: list[AnswerField], index: int) -> str:
-        """Apply the validator's disabled rows and return its message."""
+        The disabled rows of its result are applied, and while the user
+        edits (live) its prefills too, which are ignored on submit.
+        """
         if self._validator is None:
-            return ''
-        result = self._validator(answers, index)
+            return None
+        result = self._validator(self.answers(), changed)
         self._apply_disabled(result.disable_row_idxs)
-        self._apply_prefills(result.prefill_values, index)
-        return '' if result.is_valid else result.message
+        if live:
+            fields = [row.field for row in self._rows]
+            for index, value in valid_prefills(fields, changed,
+                                               result.prefill_values):
+                self._rows[index].cell_input.write(value)
+        return None if result.is_valid else result.message
 
-    def _first_error(self) -> Optional[str]:
-        """Return the first enabled field's own error, or None."""
-        for index in range(len(self._rows)):
-            if index in self._disabled:
-                continue
-            error = self._field_error(index)
-            if error is not None:
-                return error
+    def _first_invalid(self) -> Optional[int]:
+        """Return the first enabled row failing its own check, or None."""
+        for index, row in enumerate(self._rows):
+            if index not in self._disabled \
+                    and row.cell_input.error() is not None:
+                return index
         return None
+
+    def _reveal(self, index: int) -> None:
+        """Scroll a row into view and give its input the keyboard focus."""
+        cell_input = self._rows[index].cell_input
+        scroll_into_view(self._grid, cell_input.widget)
+        cell_input.main_widget().focus_set()
 
     def _apply_disabled(self, disable_row_idxs: tuple[int, ...]) -> None:
         """Enable or disable each row to match the validator result."""

@@ -12,6 +12,7 @@ cell, and serve both questions.
 from collections.abc import Sequence
 from dataclasses import replace
 from datetime import date, datetime, time, timedelta
+import warnings
 from pathlib import Path
 from typing import Iterator, NoReturn, Optional, TypeVar, overload
 from wizard_ui_bridge.matrix_cell_defs import PrefillValueType, AskCell, \
@@ -28,10 +29,42 @@ from wizard_ui_bridge.form_defs import AskField, \
     AnswerIntField, AnswerPathField, AnswerYesNoField, AnswerChoiceField, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField, \
     AnswerTimeField, AnswerDateTimeField, AnswerDurationField, \
-    PrefillValues
+    PrefillValues, AnswerFields, LiveFormValidator, \
+    PartFormValidationResult, PartialFormValidator
 _ORDERED_CELLS = (AskIntCell, AskFloatCell, AskDateCell, AskTimeCell,
                   AskDateTimeCell, AskDurationCell)
 _T = TypeVar('_T')
+
+
+def live_validator_of(partial_validator: Optional[PartialFormValidator],
+                      live_validator: Optional[LiveFormValidator]
+                      ) -> Optional[LiveFormValidator]:
+    """Return the validator a caller of ask_form() gave, as a live one.
+
+    ask_form() takes the deprecated partial_validator next to its
+    replacement live_validator until version 2.0, when partial_validator
+    and this function will be removed. A bridge that overrides ask_form()
+    calls this first. The deprecated partial_validator issues a
+    DeprecationWarning, pointing at the caller of ask_form(), and is
+    wrapped so that it gets the index 0 where a live validator gets None,
+    as if row 0 had changed. Raises TypeError when both are given.
+    """
+    if partial_validator is None:
+        return live_validator
+    if live_validator is not None:
+        raise TypeError('give live_validator or partial_validator, not both')
+    warnings.warn('The parameter partial_validator is deprecated and will '
+                  'be removed in version 2.0; please use live_validator.',
+                  DeprecationWarning, stacklevel=3)
+    return _as_live(partial_validator)
+
+
+def _as_live(old: PartialFormValidator) -> LiveFormValidator:
+    """Return a live validator that calls old with 0 in place of None."""
+    def validator(answers: AnswerFields,
+                  changed: Optional[int]) -> PartFormValidationResult:
+        return old(answers, 0 if changed is None else changed)
+    return validator
 
 
 def nullable_choice(field: AskField) -> bool:
@@ -57,8 +90,8 @@ def initial_answer(field: AskCell) -> AnswerCell:
 
     The value is the field's start value, else its default, or the empty
     or not-yet-answered state when the field has neither. A choice field
-    with neither starts as None, which tells a partial validator the
-    choice is not answered yet; a bridge must not leave that None in a
+    with neither starts as None, which tells a live or partial validator
+    the choice is not answered yet; a bridge must not leave that None in a
     submitted form.
     A form field gets its Answer*Field and a matrix cell its Answer*Cell.
     A label cell has no answer and must not be passed.
@@ -190,14 +223,15 @@ def _temporal_answer(ask: AskCell,
         if isinstance(ask, AskDurationField) else AnswerDurationCell(ask, span)
 
 
-def valid_prefills(fields: Sequence[AskField], changed: int,
+def valid_prefills(fields: Sequence[AskField], changed: Optional[int],
                    prefill_values: PrefillValues
                    ) -> Iterator[tuple[int, PrefillValueType]]:
     """Yield the prefill requests a bridge should apply, validated.
 
     Each yielded (index, value) pair is ready to place into the row's
     input. A prefill aimed at the changed row is skipped, so writing back
-    never fights the user's current edit. A row index outside the form
+    never fights the user's current edit; with changed None no row is
+    skipped. A row index outside the form
     raises IndexError and a value whose Python type does not match the
     field raises TypeError, since both are validator bugs. A choice value
     not among the field's choices, any prefill of a sensitive text field,

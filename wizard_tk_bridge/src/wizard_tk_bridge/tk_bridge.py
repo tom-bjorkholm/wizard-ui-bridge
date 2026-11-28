@@ -40,7 +40,9 @@ from typing import Literal, Optional, Sequence, TextIO, overload
 from pathlib import Path
 import tkinter as tk
 from wizard_ui_bridge import AnswerCells, AnswerFields, AskField, AskFields, \
-    MatrixRequest, PartialFormValidator, PathAskOptions, WizardUiBridge
+    MatrixRequest, LiveFormValidator, PartialFormValidator, PathAskOptions, \
+    WizardUiBridge
+from wizard_ui_bridge.form_helpers import live_validator_of
 from wizard_ui_bridge.arg_types import check_nullable, check_choice_args, \
     check_multi_args
 from wizard_ui_bridge.bridge_helpers import check_text_args
@@ -183,11 +185,13 @@ class WizardUiBridgeTk(WizardUiBridge):
 
     def ask_form(self, long_question: str, ask_fields: AskFields, *,
                  re_ask_reason: Optional[str] = None,
-                 partial_validator: Optional[PartialFormValidator] = None) \
+                 partial_validator: Optional[PartialFormValidator] = None,
+                 live_validator: Optional[LiveFormValidator] = None) \
             -> AnswerFields:
         """Ask a whole form on one screen; see WizardUiBridge.ask_form."""
+        validator = live_validator_of(partial_validator, live_validator)
         return self._window_obj().ask_form(long_question, ask_fields,
-                                           re_ask_reason, partial_validator)
+                                           re_ask_reason, validator)
 
     def ask_matrix_form(self, request: MatrixRequest, *,
                         re_ask_reason: Optional[str] = None) -> AnswerCells:

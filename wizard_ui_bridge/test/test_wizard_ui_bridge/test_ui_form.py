@@ -13,9 +13,9 @@ from wizard_ui_bridge import AskField, AskChoiceField, AskIntField, \
     AskMultiChoiceField, AskPathField, AskTextField, AskYesNoField, \
     AnswerChoiceField, AnswerField, AnswerIntField, AnswerMultiChoiceField, \
     AnswerPathField, AnswerTextField, AnswerYesNoField, \
-    PartFormValidationResult, PartialFormValidator, PathAskOptions, \
+    PartFormValidationResult, LiveFormValidator, PathAskOptions, \
     PrefillValues, PrefillValueType, WizardBack, WizardUiBridge
-from wizard_ui_bridge.form_helpers import initial_answer, \
+from wizard_ui_bridge.form_helpers import initial_answer, live_validator_of, \
     valid_prefills
 
 
@@ -257,21 +257,21 @@ def test_form_shows_help() -> None:
 def test_form_partial_message() -> None:
     """A not-valid partial result shows its message to the user."""
     def validator(answers: Sequence[object],
-                  index: int) -> PartFormValidationResult:
+                  index: Optional[int]) -> PartFormValidationResult:
         _ = (answers, index)
         return PartFormValidationResult(False, 'looks wrong')
     bridge = _FormBridge(['Tom'])
     bridge.ask_form('Q', [AskTextField('Name', None)],
-                    partial_validator=validator)
+                    live_validator=validator)
     assert 'looks wrong' in bridge.shown
 
 
 def test_form_partial_disable(toggle_fields: list[AskField],
-                              toggle_validator: PartialFormValidator) -> None:
+                              toggle_validator: LiveFormValidator) -> None:
     """A disabled field is not asked and keeps its start value."""
     bridge = _FormBridge([False])
     answers = bridge.ask_form('Q', toggle_fields,
-                              partial_validator=toggle_validator)
+                              live_validator=toggle_validator)
     assert bridge.asked == ['Color?']
     assert answers[1].value is None
 
@@ -378,7 +378,7 @@ def test_prefill_text() -> None:
                               AskTextField('B', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         first = answers[0]
         assert isinstance(first, AnswerTextField)
         prefill: PrefillValues = ()
@@ -386,7 +386,7 @@ def test_prefill_text() -> None:
             prefill = ((1, f'derived {first.value}'),)
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'ignored'])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, 'derived KEY']
     assert bridge.defaults == [None, None]
 
@@ -397,11 +397,11 @@ def test_prefill_bool() -> None:
                               AskYesNoField('B', None, False)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, True),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge([False, False])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, True]
     assert bridge.defaults == [False, False]
 
@@ -413,7 +413,7 @@ def test_prefill_persists() -> None:
                               AskTextField('B', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         first = answers[0]
         assert isinstance(first, AnswerTextField)
         prefill: PrefillValues = ()
@@ -421,7 +421,7 @@ def test_prefill_persists() -> None:
             prefill = ((2, 'from A'),)
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'mid', 'x'])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, None, 'from A']
 
 
@@ -431,10 +431,12 @@ def test_prefill_own_row() -> None:
                               AskTextField('B', None)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
-        return PartFormValidationResult(True, '', (), ((changed, 'self'),))
+             changed: Optional[int]) -> PartFormValidationResult:
+        prefill: PrefillValues = () if changed is None \
+            else ((changed, 'self'),)
+        return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['a', 'b'])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, None]
 
 
@@ -444,12 +446,12 @@ def test_prefill_bad_type() -> None:
                               AskYesNoField('B', None, False)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, 'yes'),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', False])
     with pytest.raises(TypeError):
-        bridge.ask_form('Q', fields, partial_validator=rule)
+        bridge.ask_form('Q', fields, live_validator=rule)
 
 
 def test_prefill_int_range() -> None:
@@ -459,11 +461,11 @@ def test_prefill_int_range() -> None:
         AskIntField('B', None, min_value=1, max_value=5, default=3)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, 99),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 4])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, None]
     assert bridge.defaults == [None, 3]
 
@@ -475,11 +477,11 @@ def test_prefill_choice_ok() -> None:
         AskChoiceField('B', None, choices=('r', 'g', 'b'), default='r')]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, 'g'),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'g'])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, 'g']
     assert bridge.defaults == [None, 'r']
 
@@ -491,11 +493,11 @@ def test_prefill_choice_bad() -> None:
         AskChoiceField('B', None, choices=('r', 'g', 'b'), default='r')]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, 'purple'),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 'r'])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, None]
     assert bridge.defaults == [None, 'r']
 
@@ -510,11 +512,11 @@ def test_prefill_nullable() -> None:
                               AskIntField('B', None, nullable=True)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, 5),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', None])
-    answers = bridge.ask_form('Q', fields, partial_validator=rule)
+    answers = bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, 5]
     assert bridge.defaults == [None, None]
     assert bridge.nullables == [True]
@@ -528,11 +530,11 @@ def test_prefill_path(tmp_path: Path) -> None:
                               AskPathField('B', None, PathAskOptions())]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, target),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', target])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, target]
 
 
@@ -543,11 +545,11 @@ def test_prefill_int_ok() -> None:
         AskIntField('B', None, min_value=1, max_value=5, default=3)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, 4),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', 4])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, 4]
     assert bridge.defaults == [None, 3]
 
@@ -559,9 +561,116 @@ def test_prefill_multi() -> None:
         AskMultiChoiceField('B', None, choices=('a', 'b', 'c'))]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         prefill: PrefillValues = ((1, ['a', 'c']),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
     bridge = _FormBridge(['KEY', ['a']])
-    bridge.ask_form('Q', fields, partial_validator=rule)
+    bridge.ask_form('Q', fields, live_validator=rule)
     assert bridge.starts == [None, ['a', 'c']]
+
+
+# pylint: disable-next=too-few-public-methods
+class _Recorder:
+    """A live validator recording its calls and giving set results.
+
+    The first call gets first, every later call gets later.
+    """
+
+    def __init__(self, first: PartFormValidationResult,
+                 later: PartFormValidationResult) -> None:
+        """Keep the results to return and start with no calls."""
+        self.first = first
+        self.later = later
+        self.calls: list[Optional[int]] = []
+
+    def __call__(self, _answers: Sequence[AnswerField],
+                 changed: Optional[int]) -> PartFormValidationResult:
+        """Record the changed index and return the result for the call."""
+        self.calls.append(changed)
+        return self.first if len(self.calls) == 1 else self.later
+
+
+def test_open_call_quiet() -> None:
+    """The validator is first called with None, and its message hidden."""
+    nope = PartFormValidationResult(False, 'nope')
+    rule = _Recorder(nope, nope)
+    bridge = _FormBridge(['a'])
+    bridge.ask_form('Q', [AskTextField('A', None)], live_validator=rule)
+    assert rule.calls == [None, 0]
+    assert bridge.shown.count('nope') == 1
+
+
+def test_open_call_disables() -> None:
+    """A row the validator disables when the form opens is not asked."""
+    rule = _Recorder(PartFormValidationResult(True, '', (0,)),
+                     PartFormValidationResult(True, ''))
+    fields: list[AskField] = [AskTextField('A', None),
+                              AskTextField('B', None)]
+    bridge = _FormBridge(['b'])
+    answers = bridge.ask_form('Q', fields, live_validator=rule)
+    assert bridge.asked == ['B']
+    assert [answer.value for answer in answers] == [None, 'b']
+
+
+def test_open_call_prefill() -> None:
+    """A prefill of row 0 when the form opens is its start value."""
+    rule = _Recorder(PartFormValidationResult(True, '', (), ((0, 'pre'),)),
+                     PartFormValidationResult(True, ''))
+    bridge = _FormBridge(['a'])
+    bridge.ask_form('Q', [AskTextField('A', None)], live_validator=rule)
+    assert bridge.starts == ['pre']
+
+
+def test_form_deprecated() -> None:
+    """A deprecated partial_validator warns and gets 0 in place of None."""
+    calls: list[int] = []
+
+    def old(_answers: Sequence[AnswerField],
+            index: int) -> PartFormValidationResult:
+        calls.append(index)
+        return PartFormValidationResult(True, '')
+    fields: list[AskField] = [AskTextField('A', None),
+                              AskTextField('B', None)]
+    bridge = _FormBridge(['a', 'b'])
+    with pytest.warns(DeprecationWarning, match='partial_validator'):
+        bridge.ask_form('Q', fields, partial_validator=old)
+    assert calls == [0, 0, 1]
+
+
+def test_form_both_raises() -> None:
+    """Giving both partial_validator and live_validator raises TypeError."""
+    rule = _Recorder(PartFormValidationResult(True, ''),
+                     PartFormValidationResult(True, ''))
+    bridge = _FormBridge([])
+    with pytest.raises(TypeError, match='not both'):
+        bridge.ask_form('Q', [AskTextField('A', None)], partial_validator=rule,
+                        live_validator=rule)
+    assert not bridge.asked
+
+
+def test_live_of_none() -> None:
+    """With no validator given there is none, and no warning."""
+    assert live_validator_of(None, None) is None
+
+
+def test_live_of_live() -> None:
+    """A live validator given as live_validator is used unchanged."""
+    rule = _Recorder(PartFormValidationResult(True, ''),
+                     PartFormValidationResult(True, ''))
+    assert live_validator_of(None, rule) is rule
+
+
+@pytest.mark.parametrize('changed, expected', [(None, 0), (0, 0), (2, 2)])
+def test_live_of_partial(changed: Optional[int], expected: int) -> None:
+    """A partial_validator is wrapped to get 0 in place of None."""
+    calls: list[int] = []
+
+    def old(_answers: Sequence[AnswerField],
+            index: int) -> PartFormValidationResult:
+        calls.append(index)
+        return PartFormValidationResult(False, 'old')
+    with pytest.warns(DeprecationWarning, match='live_validator'):
+        live = live_validator_of(old, None)
+    assert live is not None
+    assert live([], changed) == PartFormValidationResult(False, 'old')
+    assert calls == [expected]

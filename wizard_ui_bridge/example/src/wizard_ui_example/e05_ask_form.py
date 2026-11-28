@@ -48,7 +48,7 @@ from wizard_ui_bridge import make_text_ui_bridge, UiBridgeType, \
 # The form is always asked in this fixed order. Each name is the index of
 # that field both in the list returned by build_export_form() and in the
 # AnswerFields returned by ask_form(). Keeping them as named constants lets
-# the partial validator and the summary read a specific answer by meaning
+# the live validator and the summary read a specific answer by meaning
 # instead of by a bare number.
 _TITLE, _OUTPUT, _FORMAT, _DELIMITER, _LIMIT, _HEADER, _COLUMNS = range(7)
 
@@ -111,12 +111,19 @@ def build_export_form() -> list[AskField]:
 
 
 def export_validator(answers: AnswerFields,
-                     _changed: int) -> PartFormValidationResult:
-    """Give early per-field feedback while the export form is filled.
+                     _changed: Optional[int]) -> PartFormValidationResult:
+    """Give live feedback while the export form is filled.
 
-    ask_form() calls this after every change (on a GUI or textual bridge)
-    or after every answered field (on the console fallback), passing the
-    current answers and the index of the field that changed. It returns a
+    ask_form() calls this once when the form is first shown, then after
+    every change (on a GUI or textual bridge) or after every answered field
+    (on the console fallback), and on a GUI or textual bridge also when the
+    user submits. It passes the current answers and the index of the field
+    that changed, or None when nothing has changed yet. The form is often
+    incomplete when this is called: an unanswered field, or one whose text
+    is not yet a valid answer, reads as not answered (None), so the
+    validator must cope with that. This validator looks at the whole form
+    every time, so it ignores the index. Its message is not shown for the
+    first call, when the user has not done anything yet. It returns a
     PartFormValidationResult with three parts shown below and a fourth field
     that is described in example e06_typed_form.py:
 
@@ -156,7 +163,7 @@ def ask_export_settings(bridge: WizardUiBridge,
                         out_file: TextIO) -> Optional[AnswerFields]:
     """Ask the export form until the submitted answers are consistent.
 
-    A graphical or textual bridge already enforces the partial validator on
+    A graphical or textual bridge already enforces the live validator on
     submit, but the console fallback treats validator messages as advisory
     only. To behave the same on every bridge this loop re-shows the form,
     with a re_ask_reason, until a final whole-form check passes.
@@ -172,7 +179,7 @@ def ask_export_settings(bridge: WizardUiBridge,
         try:
             answers = bridge.ask_form(_FORM_QUESTION, fields,
                                       re_ask_reason=reason,
-                                      partial_validator=export_validator)
+                                      live_validator=export_validator)
         except WizardNavigation:
             out_file.write('Export configuration cancelled.\n')
             return None

@@ -27,8 +27,8 @@ from wizard_ui_bridge.arg_types import PartialCheck, TableCell, \
     WizardNavigation, WizardPathKind
 from wizard_ui_bridge.console import WizardUiBridgeConsole
 from wizard_ui_bridge.form_defs import AskField, AskFields, AnswerField, \
-    AnswerFields, PartialFormValidator, PartFormValidationResult, \
-    PrefillValues, AskTextField, AskIntField, \
+    AnswerFields, LiveFormValidator, PartialFormValidator, \
+    PartFormValidationResult, PrefillValues, AskTextField, AskIntField, \
     AskPathField, AskYesNoField, AskChoiceField, AskMultiChoiceField, \
     AskFloatField, AskDateField, AskTimeField, AskDateTimeField, \
     AskDurationField, AnswerTextField, AnswerIntField, AnswerPathField, \
@@ -70,7 +70,8 @@ __all__ = ['WizardUiBridge', 'WizardUiBridgeConsole', 'WizardUiBridgeTextual',
            'make_text_ui_bridge', 'UiBridgeType', 'textual_installed',
            'load_textual_bridge', 'PathAskOptions', 'WizardPathKind',
            'AskField', 'AskFields', 'AnswerField', 'AnswerFields',
-           'PartialFormValidator', 'PartFormValidationResult',
+           'LiveFormValidator', 'PartialFormValidator',
+           'PartFormValidationResult',
            'PrefillValues', 'PrefillValueType',
            'AskTextField', 'AskIntField', 'AskPathField', 'AskYesNoField',
            'AskChoiceField', 'AskMultiChoiceField', 'AskFloatField',

@@ -24,7 +24,7 @@ from textual.widgets import Button, Checkbox, Input, Select, SelectionList, \
 from wizard_ui_bridge import AskField, AskChoiceField, AskIntField, \
     AskMultiChoiceField, AskPathField, AskTextField, AskYesNoField, \
     AnswerField, AnswerTextField, AnswerYesNoField, \
-    PartFormValidationResult, PartialFormValidator, PathAskOptions, \
+    PartFormValidationResult, LiveFormValidator, PathAskOptions, \
     PrefillValues, WizardBack, WizardCancelLevel, WizardPathKind
 from wizard_ui_bridge.textual_bridge import _FormApp
 from wizard_ui_bridge._textual_widgets import _cell_position, \
@@ -157,7 +157,7 @@ def test_multi_prefill_drop() -> None:
                             default=('a', 'b'))]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         _ = answers
         prefill: PrefillValues = ((1, ['a']),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
@@ -173,7 +173,7 @@ def test_multi_prefill_swap() -> None:
                             default=('a',))]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         _ = answers
         prefill: PrefillValues = ((1, ['b', 'c']),) if changed == 0 else ()
         return PartFormValidationResult(True, '', (), prefill)
@@ -182,7 +182,7 @@ def test_multi_prefill_swap() -> None:
 
 
 def test_form_partial_disable(toggle_fields: list[AskField],
-                              toggle_validator: PartialFormValidator) -> None:
+                              toggle_validator: LiveFormValidator) -> None:
     """A disabled row's widgets are disabled and skip validation."""
     app = _FormApp('H', toggle_fields, [], toggle_validator)
 
@@ -295,7 +295,7 @@ def test_validator_msg_plain() -> None:
     fields: list[AskField] = [AskTextField('Name', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         _ = (answers, changed)
         return PartFormValidationResult(False, 'Not ready yet.')
     app = _FormApp('H', fields, [], rule)
@@ -309,7 +309,7 @@ def test_validator_msg_plain() -> None:
 
 
 def test_form_live_disabled(toggle_fields: list[AskField],
-                            toggle_validator: PartialFormValidator) -> None:
+                            toggle_validator: LiveFormValidator) -> None:
     """A disabled field shows no live error of its own."""
     app = _FormApp('H', toggle_fields, [], toggle_validator)
 
@@ -447,12 +447,13 @@ def test_mount_not_change() -> None:
 
     Textual posts a change event when it mounts an input or drop-down
     holding a value, after the form's on_mount. The form must not run
-    the validator for it, nor open with the validator's complaint.
+    the validator for it, nor open with the validator's complaint. The
+    validator is only called once, with None, as the form is shown.
     """
-    calls: list[int] = []
+    calls: list[Optional[int]] = []
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         """Record the call and reject the form."""
         calls.append(changed)
         return PartFormValidationResult(False, 'Rejected.')
@@ -467,7 +468,7 @@ def test_mount_not_change() -> None:
             await pilot.pause()
             return str(app.query_one('#form_status', Static).render())
     assert asyncio.run(scenario()) == ''
-    assert not calls
+    assert calls == [None]
 
 
 def test_form_browse_bad_id() -> None:
@@ -507,7 +508,7 @@ def test_prefill_text() -> None:
                               AskTextField('Filter', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         key = answers[0]
         filt = answers[1]
         assert isinstance(key, AnswerTextField)
@@ -535,7 +536,7 @@ def test_prefill_bool() -> None:
                               AskYesNoField('B', None, False)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         gate = answers[0]
         assert isinstance(gate, AnswerYesNoField)
         prefill: PrefillValues = ()
@@ -563,7 +564,7 @@ def test_prefill_choice() -> None:
         AskChoiceField('B', None, choices=('r', 'g', 'b'))]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         first = answers[0]
         assert isinstance(first, AnswerTextField)
         prefill: PrefillValues = ()
@@ -590,7 +591,7 @@ def test_prefill_multi() -> None:
         AskMultiChoiceField('B', None, choices=('a', 'b', 'c'))]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         first = answers[0]
         assert isinstance(first, AnswerTextField)
         prefill: PrefillValues = ()
@@ -606,7 +607,7 @@ def test_prefill_disabled() -> None:
                               AskTextField('B', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         gate = answers[0]
         assert isinstance(gate, AnswerYesNoField)
         disable = () if gate.value else (1,)
@@ -639,8 +640,10 @@ def test_prefill_own_row() -> None:
     fields: list[AskField] = [AskTextField('A', None)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
-        return PartFormValidationResult(True, '', (), ((changed, 'over'),))
+             changed: Optional[int]) -> PartFormValidationResult:
+        prefill: PrefillValues = () if changed is None \
+            else ((changed, 'over'),)
+        return PartFormValidationResult(True, '', (), prefill)
     app = _FormApp('H', fields, [], rule)
 
     async def scenario() -> str:
@@ -653,12 +656,12 @@ def test_prefill_own_row() -> None:
 
 def test_prefill_converges() -> None:
     """A stable prefill applies once and does not loop."""
-    calls: list[int] = []
+    calls: list[Optional[int]] = []
     fields: list[AskField] = [AskTextField('A', None),
                               AskTextField('B', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         calls.append(changed)
         second = answers[1]
         assert isinstance(second, AnswerTextField)
@@ -677,14 +680,21 @@ def test_prefill_converges() -> None:
 
 
 def test_prefill_on_submit() -> None:
-    """Prefills are not applied on submit, only during live editing."""
+    """Prefills are not applied on submit, only during live editing.
+
+    The rule prefills on every call after the first, which is made with
+    None as the form is shown, so its only prefill comes on submit.
+    """
+    calls: list[Optional[int]] = []
     fields: list[AskField] = [AskTextField('A', None),
                               AskTextField('B', None, nullable=True)]
 
     def rule(_answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
-        _ = changed
-        return PartFormValidationResult(True, '', (), ((1, 'onsubmit'),))
+             changed: Optional[int]) -> PartFormValidationResult:
+        calls.append(changed)
+        prefill: PrefillValues = ((1, 'onsubmit'),) if len(calls) > 1 \
+            else ()
+        return PartFormValidationResult(True, '', (), prefill)
     app = _FormApp('H', fields, [], rule)
 
     async def scenario() -> None:
@@ -701,7 +711,7 @@ def test_prefill_int() -> None:
         AskIntField('B', None, min_value=1, max_value=99)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         first = answers[0]
         assert isinstance(first, AnswerTextField)
         prefill: PrefillValues = ()
@@ -729,7 +739,7 @@ def test_prefill_path(tmp_path: Path) -> None:
         AskPathField('B', None, PathAskOptions())]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         first = answers[0]
         assert isinstance(first, AnswerTextField)
         prefill: PrefillValues = ()
@@ -787,3 +797,95 @@ def test_form_width_lists() -> None:
         AskChoiceField('C', None, ('a', 'b'), width=10),
         AskMultiChoiceField('M', None, ('a', 'b'), width=10)]
     assert all(has_width for _, has_width in _mounted_inputs(fields))
+
+
+def test_form_open_disables() -> None:
+    """A row the validator disables when the form is shown starts off.
+
+    The validator is called with None, and its message is not shown.
+    """
+    calls: list[Optional[int]] = []
+
+    def rule(_answers: Sequence[AnswerField],
+             changed: Optional[int]) -> PartFormValidationResult:
+        calls.append(changed)
+        return PartFormValidationResult(False, 'Rejected.', (1,))
+    fields: list[AskField] = [AskTextField('A', None),
+                              AskTextField('B', None)]
+    app = _FormApp('H', fields, [], rule)
+
+    async def scenario() -> tuple[bool, str]:
+        async with app.run_test() as pilot:
+            await pilot.pause()
+            return (app.query_one('#field_1').disabled, _status(app))
+    assert asyncio.run(scenario()) == (True, '')
+    assert calls == [None]
+
+
+def test_form_open_prefill() -> None:
+    """A prefill aimed at row 0 is written when the form is shown."""
+    def rule(_answers: Sequence[AnswerField],
+             changed: Optional[int]) -> PartFormValidationResult:
+        prefill: PrefillValues = ((0, 'pre'),) if changed is None else ()
+        return PartFormValidationResult(True, '', (), prefill)
+    driven = drive(_FormApp('H', [AskTextField('A', None)], [], rule),
+                   ['#submit'])
+    assert _submitted(driven)[0].value == 'pre'
+
+
+def test_form_submit_disable() -> None:
+    """A row the validator disables on submit is not checked."""
+    calls: list[Optional[int]] = []
+
+    def rule(_answers: Sequence[AnswerField],
+             changed: Optional[int]) -> PartFormValidationResult:
+        calls.append(changed)
+        disable = (1,) if len(calls) > 1 else ()
+        return PartFormValidationResult(True, '', disable)
+    fields: list[AskField] = [
+        AskTextField('A', None, default='x'),
+        AskChoiceField('Delim', None, choices=(',', ';'))]
+    driven = drive(_FormApp('H', fields, [], rule), ['#submit'])
+    assert [answer.value for answer in _submitted(driven)] == ['x', None]
+    assert calls == [None, None]
+
+
+def test_form_invalid_focus() -> None:
+    """Submit focuses the first enabled field failing its own check."""
+    fields: list[AskField] = [
+        AskTextField('A', None, default='x'),
+        AskIntField('Age', None, min_value=1, max_value=5),
+        AskIntField('Size', None, min_value=1, max_value=5)]
+    app = _FormApp('H', fields, [], None)
+
+    async def scenario() -> Optional[str]:
+        async with app.run_test() as pilot:
+            app.query_one('#field_1', Input).value = '9'
+            app.query_one('#field_2', Input).value = '9'
+            await pilot.pause()
+            await pilot.click('#submit')
+            await pilot.pause()
+            return None if app.focused is None else app.focused.id
+    assert asyncio.run(scenario()) == 'field_1'
+    assert app.return_value is None
+
+
+def test_ask_form_deprecated() -> None:
+    """A deprecated partial_validator warns and gets 0 in place of None."""
+    calls: list[int] = []
+
+    def old(_answers: Sequence[AnswerField],
+            index: int) -> PartFormValidationResult:
+        calls.append(index)
+        return PartFormValidationResult(True, '')
+    field = AskTextField('Name', None)
+    bridge = _CannedBridge([[AnswerTextField(field, 'x')]])
+    with pytest.warns(DeprecationWarning, match='partial_validator'):
+        bridge.ask_form('H', [field], partial_validator=old)
+    app = bridge.launched[0]
+    assert isinstance(app, _FormApp)
+    # pylint: disable-next=protected-access
+    validator = app._validator
+    assert validator is not None
+    validator([], None)
+    assert calls == [0]

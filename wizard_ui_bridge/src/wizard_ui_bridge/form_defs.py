@@ -340,15 +340,18 @@ class PartFormValidationResult(NamedTuple):
                         other rows' inputs, as a tuple of (row_index, value)
                         pairs. Each value must match the answer type of the
                         field in that row. A bridge applies each request
-                        during live editing as if the user had typed the
-                        value; setting a value equal to the one already there
-                        is a no-op, so a validator that emits a stable value
-                        does not loop. The validator owns idempotency: it
-                        should emit a prefill only when it means to fill or
-                        overwrite the target. A prefill aimed at the row that
-                        just changed is ignored, so writing back never fights
-                        the user's current edit. A prefill aimed at a disabled
-                        row is still applied, so the value shows in the greyed
+                        when the form is first shown and during live editing
+                        as if the user had typed the value; setting a value
+                        equal to the one already there is a no-op, so a
+                        validator that emits a stable value does not loop.
+                        The validator owns idempotency: it should emit a
+                        prefill only when it means to fill or overwrite the
+                        target. A prefill aimed at the row that just changed
+                        is ignored, so writing back never fights the user's
+                        current edit; when the form is first shown no row has
+                        changed, so none is ignored. A prefill aimed at a
+                        disabled row is still applied, so the value shows in
+                        the greyed
                         row and takes effect if the row is later enabled. A
                         row index outside the form, or a value whose type does
                         not match the field, raises an exception, since both
@@ -366,12 +369,24 @@ class PartFormValidationResult(NamedTuple):
     prefill_values: PrefillValues = ()
 
 
-type PartialFormValidator = Callable[[AnswerFields, int],
-                                     PartFormValidationResult]
-"""Callback for early per-row feedback while a form is filled.
+type LiveFormValidator = Callable[[AnswerFields, Optional[int]],
+                                  PartFormValidationResult]
+"""Callback for live feedback while a form is filled, also when incomplete.
 
+   The callback is called with partly filled forms: when the form is
+   first shown, after every change the user makes, and when the user
+   tries to submit the form. It must therefore accept answers that are
+   not yet given, and a field whose input fails its own check (such as
+   text that is not an integer) reads as not answered. It must not
+   assume that the form is as complete as the user means to make it.
    The callback receives the current state of the form as AnswerFields,
-   and the index of the row most recently filled in.
+   and the index of the row most recently changed, or None when no row
+   has changed yet. With None the validator should evaluate the whole
+   form from the answers.
+   A bridge calls it when the form is first shown, with None, to find the
+   rows that start disabled and any prefills, but does not show its
+   message until the user has changed something or tries to submit the
+   form.
    It returns a PartFormValidationResult, which indicates whether the form is
    valid, and if not valid, a message to be displayed to the user, a tuple
    of row indexes that should be disabled in the form because they are
@@ -381,4 +396,18 @@ type PartialFormValidator = Callable[[AnswerFields, int],
    interface makes it reasonable, refuse to accept the form while it is
    not valid, but the caller must not rely on that: a bridge may only show
    the message, so the wizard must validate the final answers.
+"""
+
+
+type PartialFormValidator = Callable[[AnswerFields, int],
+                                     PartFormValidationResult]
+"""Deprecated callback for early per-row feedback while a form is filled.
+
+   Deprecated: use LiveFormValidator, passed as live_validator. This type
+   and the partial_validator parameter will be removed in version 2.0.
+   The callback is called as a LiveFormValidator, except that it gets
+   the index 0 where a LiveFormValidator gets None, as if row 0 had
+   changed. It receives the current state of the form as AnswerFields,
+   and the index of the row most recently filled in.
+   It returns a PartFormValidationResult, see LiveFormValidator.
 """

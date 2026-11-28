@@ -12,7 +12,7 @@ for the float, date, time, date-time and duration fields.
 from datetime import date, datetime, time, timedelta
 from io import StringIO
 from pathlib import Path
-from typing import Sequence
+from typing import Optional, Sequence
 
 import pytest
 
@@ -125,13 +125,13 @@ def test_console_prefill_date() -> None:
                               AskDateField('D', None)]
 
     def rule(answers: Sequence[AnswerField],
-             changed: int) -> PartFormValidationResult:
+             changed: Optional[int]) -> PartFormValidationResult:
         _ = answers
         prefill: PrefillValues = ((1, date(2024, 5, 6)),) if changed == 0 \
             else ()
         return PartFormValidationResult(True, '', (), prefill)
     out = StringIO()
     bridge = WizardUiBridgeConsole(out, StringIO('key\n\n'), StringIO())
-    answers = bridge.ask_form('Q', fields, partial_validator=rule)
+    answers = bridge.ask_form('Q', fields, live_validator=rule)
     assert answers[1].value == date(2024, 5, 6)
     assert '[2024-05-06]' in out.getvalue()

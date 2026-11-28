@@ -4,7 +4,7 @@
 This teaching example builds on e05_ask_form.py. Where e05 uses the six
 original field kinds (text, integer, path, yes/no, single choice and
 multi choice), this example shows the five typed fields added on top of
-them, and it shows how a partial validator can *prefill* one field from
+them, and it shows how a live validator can *prefill* one field from
 the answers to others.
 
 The typed fields
@@ -30,7 +30,7 @@ a real terminal.
 Prefilling a field
 ------------------
 The form has an "Ends at" date-time field that the user rarely wants to
-compute by hand. The partial validator computes it from the event date,
+compute by hand. The live validator computes it from the event date,
 the start time and the duration and returns it as a *prefill*: the bridge
 places the value into the "Ends at" input exactly as if the user had
 typed it, and the user is still free to change it afterwards. The same
@@ -110,12 +110,14 @@ def build_schedule_form() -> list[AskField]:
 
 
 def schedule_validator(answers: AnswerFields,
-                       changed: int) -> PartFormValidationResult:
-    """Give early feedback while the scheduling form is filled.
+                       changed: Optional[int]) -> PartFormValidationResult:
+    """Give live feedback while the scheduling form is filled.
 
-    ask_form() calls this after every change (graphical or textual bridge)
-    or after every answered field (console fallback), passing the current
-    answers and the index of the field that changed. This validator uses
+    ask_form() calls this once when the form is first shown, with changed
+    None, then after every change (graphical or textual bridge) or after
+    every answered field (console fallback), passing the current answers
+    and the index of the field that changed. The form is usually still
+    incomplete, so every answer read here may be None. This validator uses
     two of the four parts of a PartFormValidationResult:
 
     - disable_row_idxs: a free event has no price, so the price row is
@@ -135,13 +137,17 @@ def schedule_validator(answers: AnswerFields,
                                     _end_prefill(answers, changed))
 
 
-def _end_prefill(answers: AnswerFields, changed: int) -> PrefillValues:
+def _end_prefill(answers: AnswerFields,
+                 changed: Optional[int]) -> PrefillValues:
     """Return a prefill of the computed end time, or nothing.
 
     The end time is only recomputed when one of the fields it depends on
     changed, so a stable value is emitted and the prefill does not loop.
+    When the form is first shown (changed is None) nothing has changed
+    yet, so the whole form is evaluated and the end time is offered if
+    it can already be computed.
     """
-    if changed not in _END_INPUTS:
+    if changed is not None and changed not in _END_INPUTS:
         return ()
     end = _computed_end(answers)
     return () if end is None else ((_END, end),)
@@ -179,7 +185,7 @@ def ask_schedule(bridge: WizardUiBridge,
     """
     try:
         return bridge.ask_form(_FORM_QUESTION, build_schedule_form(),
-                               partial_validator=schedule_validator)
+                               live_validator=schedule_validator)
     except WizardNavigation:
         out_file.write('Scheduling cancelled.\n')
         return None

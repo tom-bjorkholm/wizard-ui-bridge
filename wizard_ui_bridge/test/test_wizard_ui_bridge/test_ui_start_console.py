@@ -173,7 +173,7 @@ def test_form_back_empty(first: str, expected: Optional[int],
 
 
 def _prefill_rule(_answers: Sequence[AnswerField],
-                  changed: int) -> PartFormValidationResult:
+                  changed: Optional[int]) -> PartFormValidationResult:
     """Prefill field 1 with 5 once field 0 is answered."""
     return PartFormValidationResult(True, '', (),
                                     ((1, 5),) if changed == 0 else ())
@@ -185,7 +185,7 @@ def test_form_prefill(line: str, expected: Optional[int]) -> None:
     bridge, out = _console(['x', line])
     fields: list[AskField] = [AskTextField('A?', None),
                               AskIntField('B?', None, nullable=True)]
-    answers = bridge.ask_form('Q', fields, partial_validator=_prefill_rule)
+    answers = bridge.ask_form('Q', fields, live_validator=_prefill_rule)
     assert answers[1].value == expected
     assert 'B? [5]' in out.getvalue()
 

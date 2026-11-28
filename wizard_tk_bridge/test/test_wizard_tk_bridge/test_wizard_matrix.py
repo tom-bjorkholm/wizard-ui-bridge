@@ -16,7 +16,8 @@ from wizard_ui_bridge import AnswerCells, AskCell, CellPosition, \
     AskYesNoCell, AnswerIntCell, AnswerTextCell, AnswerYesNoCell
 from wizard_tk_bridge.wizard_matrix import ADD_COLUMN, ADD_ROW, \
     LABEL_WRAP, REMOVE_COLUMN, REMOVE_ROW, MatrixEditor
-from .gui_test_helpers import find_widgets, gui_root, set_entry
+from .gui_test_helpers import find_widgets, gui_root, \
+    record_focus, set_entry
 
 _POS = CellPosition
 _CONSOLE = MatrixConsoleQuestion(False, True, True)
@@ -88,21 +89,6 @@ def _change(editor: MatrixEditor, row: int, column: int) -> None:
     """React as the editor does when the user changes one cell."""
     # pylint: disable-next=protected-access
     editor._changed(_POS(row, column))
-
-
-def _record_focus(monkeypatch: pytest.MonkeyPatch) -> list[tk.Misc]:
-    """Record each widget given the keyboard focus, in order.
-
-    A window of the tests is never shown, and Tk does not record the
-    focus of a widget in a window that is not shown.
-    """
-    focused: list[tk.Misc] = []
-
-    def _focus_set(widget: tk.Misc) -> None:
-        """Record the widget instead of focusing it."""
-        focused.append(widget)
-    monkeypatch.setattr(tk.Misc, 'focus_set', _focus_set)
-    return focused
 
 
 def _focus_on(editor: MatrixEditor, widget: Optional[tk.Widget],
@@ -419,7 +405,7 @@ def test_matrix_cell_namer() -> None:
 
 def test_matrix_invalid_focus(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test submit moves the focus to the first invalid enabled cell."""
-    focused = _record_focus(monkeypatch)
+    focused = record_focus(monkeypatch)
     with gui_root() as root:
         validator = _Validator(PartMatrixValidationRes(True, '',
                                                        (_POS(1, 2),)))
@@ -436,7 +422,7 @@ def test_matrix_focus_new_row(monkeypatch: pytest.MonkeyPatch,
                               disabled: tuple[CellPosition, ...],
                               column: int) -> None:
     """Test an appended row's first enabled input gets the focus."""
-    focused = _record_focus(monkeypatch)
+    focused = record_focus(monkeypatch)
     with gui_root() as root:
         validator = _Validator(PartMatrixValidationRes(True, '', disabled))
         editor, _ = _build(root, _request(_SHEET, _RESIZABLE, validator))
@@ -446,7 +432,7 @@ def test_matrix_focus_new_row(monkeypatch: pytest.MonkeyPatch,
 
 def test_matrix_focus_new_col(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test an appended column's first input, below its label, is focused."""
-    focused = _record_focus(monkeypatch)
+    focused = record_focus(monkeypatch)
     with gui_root() as root:
         editor, _ = _build(root, _request(_SHEET, _RESIZABLE))
         editor.add_column()
@@ -455,7 +441,7 @@ def test_matrix_focus_new_col(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_label_row_no_focus(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test an appended row of only labels gives no input the focus."""
-    focused = _record_focus(monkeypatch)
+    focused = record_focus(monkeypatch)
     with gui_root() as root:
         cells: list[list[AskCell]] = [[AskLabelCell('Name')]]
         dims = MatrixDimensions(MatrixDimension(1, 1), MatrixDimension(2, 1),
@@ -489,7 +475,7 @@ def test_remove_row_refocus(monkeypatch: pytest.MonkeyPatch,
     The focus is left alone when it was in a row that is kept, or not in
     the matrix at all.
     """
-    focused = _record_focus(monkeypatch)
+    focused = record_focus(monkeypatch)
     with gui_root() as root:
         editor, _ = _build(root, _request(_SHEET, _RESIZABLE))
         editor.add_row()
@@ -502,7 +488,7 @@ def test_remove_row_refocus(monkeypatch: pytest.MonkeyPatch,
 
 def test_remove_col_refocus(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test deleting the focused column focuses the new last column."""
-    focused = _record_focus(monkeypatch)
+    focused = record_focus(monkeypatch)
     with gui_root() as root:
         editor, _ = _build(root, _request(_SHEET, _RESIZABLE))
         _focus_on(editor, _entry(editor, 2, 2), monkeypatch)

@@ -9,8 +9,9 @@ from tkinter import ttk
 from datetime import date
 from pathlib import Path
 from typing import Optional, Sequence
+import pytest
 from wizard_ui_bridge import AnswerFields, AnswerField, AskField, \
-    PartFormValidationResult, PartialFormValidator, PathAskOptions, \
+    PartFormValidationResult, LiveFormValidator, PathAskOptions, \
     PrefillValues, WizardPathKind, AskTextField, AskIntField, AskPathField, \
     AskYesNoField, AskChoiceField, AskMultiChoiceField, AskFloatField, \
     AskDateField, AskDurationField, AnswerTextField, AnswerIntField, \
@@ -18,11 +19,11 @@ from wizard_ui_bridge import AnswerFields, AnswerField, AskField, \
     AnswerMultiChoiceField, AnswerFloatField, AnswerDateField
 from wizard_tk_bridge.auto_scroll import _wheel_area
 from wizard_tk_bridge.wizard_form import FormEditor, handles_field
-from .gui_test_helpers import gui_root
+from .gui_test_helpers import gui_root, record_focus
 
 
 def _build(root: tk.Tk, fields: Sequence[AskField],
-           validator: Optional[PartialFormValidator] = None
+           validator: Optional[LiveFormValidator] = None
            ) -> tuple[FormEditor, list[list[AnswerField]]]:
     """Build a form editor recording every submitted answer set."""
     recorded: list[list[AnswerField]] = []
@@ -188,7 +189,8 @@ def test_form_path_required() -> None:
         assert editor._status.cget('text') != ''
 
 
-def _invalid(_answers: AnswerFields, _index: int) -> PartFormValidationResult:
+def _invalid(_answers: AnswerFields,
+             _index: Optional[int]) -> PartFormValidationResult:
     """Return a validator result that always rejects the form."""
     return PartFormValidationResult(False, 'nope')
 
@@ -205,7 +207,7 @@ def test_form_valid_blocks() -> None:
 
 
 def _disable_second(_answers: AnswerFields,
-                    _index: int) -> PartFormValidationResult:
+                    _index: Optional[int]) -> PartFormValidationResult:
     """Return a validator result that disables the second row."""
     return PartFormValidationResult(True, '', (1,))
 
@@ -396,7 +398,7 @@ def test_form_disable_typed() -> None:
 
 
 def _prefill_date(_answers: AnswerFields,
-                  _index: int) -> PartFormValidationResult:
+                  _index: Optional[int]) -> PartFormValidationResult:
     """Return a validator result prefilling the second row with a date."""
     return PartFormValidationResult(True, '', (), ((1, date(2026, 8, 1)),))
 
@@ -430,13 +432,14 @@ def test_write_value_kinds() -> None:
     A value of each basic field type flows through CellInput.write() and its
     setters, and is then read back through the row's own answer.
     """
+    prefills: PrefillValues = ((0, 'Bob'), (1, 42), (2, Path('/x/y')),
+                               (3, True), (4, 'b'), (5, ['a', 'c']))
+
+    def rule(_answers: AnswerFields,
+             _index: Optional[int]) -> PartFormValidationResult:
+        return PartFormValidationResult(True, '', (), prefills)
     with gui_root() as root:
-        fields = _basic_fields()
-        editor, _ = _build(root, fields)
-        prefills: PrefillValues = ((0, 'Bob'), (1, 42), (2, Path('/x/y')),
-                                   (3, True), (4, 'b'), (5, ['a', 'c']))
-        # pylint: disable-next=protected-access
-        editor._apply_prefills(prefills, -1)
+        editor, _ = _build(root, _basic_fields(), rule)
         answers = editor.answers()
         assert isinstance(answers[0], AnswerTextField)
         assert answers[0].value == 'Bob'
@@ -458,3 +461,83 @@ def test_form_wheel_area() -> None:
         editor, _ = _build(root, [AskTextField('Name', None, default='Bob')])
         # pylint: disable-next=protected-access
         assert _wheel_area(editor._rows[0].cell_input.widget) is not None
+
+
+# pylint: disable-next=too-few-public-methods
+class _Validator:
+    """A live validator recording its calls and giving a set result."""
+
+    def __init__(self, result: PartFormValidationResult) -> None:
+        """Keep the result to return and start with no calls."""
+        self.result = result
+        self.calls: list[Optional[int]] = []
+
+    def __call__(self, _answers: AnswerFields,
+                 changed: Optional[int]) -> PartFormValidationResult:
+        """Record the call and return the set result."""
+        self.calls.append(changed)
+        return self.result
+
+
+def test_form_open_none() -> None:
+    """Test the validator gets None at open and on an unchanged submit.
+
+    Its message is not shown when the form opens, only on submit.
+    """
+    rule = _Validator(PartFormValidationResult(False, 'nope'))
+    with gui_root() as root:
+        editor, recorded = _build(root, [AskTextField('A', None)], rule)
+        # pylint: disable-next=protected-access
+        assert editor._status.cget('text') == ''
+        editor.submit()
+        # pylint: disable-next=protected-access
+        assert editor._status.cget('text') == 'nope'
+    assert rule.calls == [None, None]
+    assert not recorded
+
+
+def test_form_open_prefill() -> None:
+    """Test a prefill aimed at row 0 is applied when the form opens."""
+    rule = _Validator(PartFormValidationResult(True, '', (), ((0, 'pre'),)))
+    with gui_root() as root:
+        field = AskTextField('A', None)
+        editor, _ = _build(root, [field], rule)
+        assert editor.answers() == [AnswerTextField(field, 'pre')]
+
+
+def test_form_submit_disable() -> None:
+    """Test a row the validator disables on submit is not checked."""
+    rule = _Validator(PartFormValidationResult(True, ''))
+    with gui_root() as root:
+        first = AskTextField('A', None, default='x')
+        second = AskChoiceField('Delim', None, choices=(',', ';'))
+        editor, recorded = _build(root, [first, second], rule)
+        # pylint: disable-next=protected-access
+        assert not editor._disabled
+        rule.result = PartFormValidationResult(True, '', (1,))
+        editor.submit()
+    assert len(recorded) == 1
+
+
+@pytest.mark.parametrize('validator', [None, _invalid])
+def test_form_invalid_focus(monkeypatch: pytest.MonkeyPatch,
+                            validator: Optional[LiveFormValidator]) -> None:
+    """Test submit focuses the first invalid row, before the validator."""
+    focused = record_focus(monkeypatch)
+    with gui_root() as root:
+        fields: list[AskField] = [
+            AskTextField('A', None, default='x'),
+            AskIntField('Age', None, min_value=1, max_value=5),
+            AskIntField('Size', None, min_value=1, max_value=5)]
+        editor, recorded = _build(root, fields, validator)
+        # pylint: disable-next=protected-access
+        rows = editor._rows
+        for row in rows[1:]:
+            entry = row.cell_input.widget
+            assert isinstance(entry, tk.Entry)
+            entry.insert(0, '9')
+        editor.submit()
+        assert focused == [rows[1].cell_input.main_widget()]
+        # pylint: disable-next=protected-access
+        assert 'Age' in editor._status.cget('text')
+    assert not recorded

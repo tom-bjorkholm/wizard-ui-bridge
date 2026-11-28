@@ -15,15 +15,21 @@ still sees and edits every field together. The parsing, formatting and
 range messages are shared with the console and Textual forms through the
 wizard_ui_bridge._parse module, so the faked fields accept exactly the
 same text.
+
+The bridge's ask_form() gets the validator as live_validator, or, with a
+DeprecationWarning, as partial_validator when it was written before
+live_validator existed.
 """
 
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
-from typing import Optional, Protocol
+import warnings
+from typing import Callable, Optional, Protocol, TypedDict
 from wizard_ui_bridge.form_defs import AskField, AskFields, \
-    AnswerField, AnswerFields, AnswerTextField, PartialFormValidator, \
-    PartFormValidationResult, PrefillValues
+    AnswerField, AnswerFields, AnswerTextField, LiveFormValidator, \
+    PartialFormValidator, PartFormValidationResult, PrefillValues
+from wizard_ui_bridge._help import accepts_keyword
 from wizard_ui_bridge.matrix_cell_defs import PrefillValueType
 from wizard_ui_bridge._parse import NEW_FIELD_TYPES, \
     fake_field, format_new_value, new_answer, resolve_new
@@ -37,14 +43,22 @@ class _FakeableBridge(Protocol):
 
     def ask_form(self, long_question: str, ask_fields: AskFields, *,
                  re_ask_reason: Optional[str] = None,
-                 partial_validator: Optional[PartialFormValidator] = None
+                 partial_validator: Optional[PartialFormValidator] = None,
+                 live_validator: Optional[LiveFormValidator] = None
                  ) -> AnswerFields:
         """Show the whole form and return one answer per field."""
 
 
+class LiveKwargs(TypedDict, total=False):
+    """The keyword arguments that carry a validator to ask_form()."""
+
+    live_validator: Optional[LiveFormValidator]
+    partial_validator: Optional[PartialFormValidator]
+
+
 def ask_form_faking(bridge: _FakeableBridge, long_question: str,
                     ask_fields: AskFields, *, re_ask_reason: Optional[str],
-                    partial_validator: Optional[PartialFormValidator]
+                    live_validator: Optional[LiveFormValidator]
                     ) -> AnswerFields:
     """Show a form, faking the fields the bridge cannot show as text.
 
@@ -56,14 +70,33 @@ def ask_form_faking(bridge: _FakeableBridge, long_question: str,
     if not any(is_fake):
         return bridge.ask_form(long_question, fields,
                                re_ask_reason=re_ask_reason,
-                               partial_validator=partial_validator)
+                               **live_kwargs(bridge.ask_form, live_validator))
     shown = [field for field, _ in plans]
-    validator = _wrap_validator(fields, is_fake, partial_validator)
+    validator = _wrap_validator(fields, is_fake, live_validator)
     answers = bridge.ask_form(long_question, shown,
                               re_ask_reason=re_ask_reason,
-                              partial_validator=validator)
+                              **live_kwargs(bridge.ask_form, validator))
     return [_real_answer(fields[index], is_fake[index], answers[index])
             for index in range(len(fields))]
+
+
+def live_kwargs(method: Callable[..., object],
+                validator: Optional[LiveFormValidator]) -> LiveKwargs:
+    """Return validator as keyword arguments for a bridge's ask_form().
+
+    A method that takes neither live_validator nor **kwargs gets the
+    validator as partial_validator, which it calls with a row index and
+    never None, and a DeprecationWarning names the method.
+    """
+    if validator is None:
+        return {}
+    if accepts_keyword(method, 'live_validator'):
+        return {'live_validator': validator}
+    name = getattr(method, '__qualname__', repr(method))
+    warnings.warn(f'{name}() does not accept the keyword-only parameter '
+                  'live_validator. This is deprecated; please add it.',
+                  DeprecationWarning, stacklevel=3)
+    return {'partial_validator': validator}
 
 
 def _plan(bridge: _FakeableBridge, field: AskField) -> tuple[AskField, bool]:
@@ -88,8 +121,7 @@ def _real_answer(field: AskField, is_fake: bool,
 
 
 def _wrap_validator(fields: list[AskField], is_fake: list[bool],
-                    caller: Optional[PartialFormValidator]
-                    ) -> PartialFormValidator:
+                    caller: Optional[LiveFormValidator]) -> LiveFormValidator:
     """Return a validator over faked answers wrapping the caller's one.
 
     It converts the faked text answers back to typed answers for the
@@ -97,7 +129,7 @@ def _wrap_validator(fields: list[AskField], is_fake: list[bool],
     rows, and blocks submit while any enabled faked field holds text that
     cannot be converted.
     """
-    def validator(answers: AnswerFields, changed: int
+    def validator(answers: AnswerFields, changed: Optional[int]
                   ) -> PartFormValidationResult:
         real = [_real_answer(fields[i], is_fake[i], answers[i])
                 for i in range(len(fields))]

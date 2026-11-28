@@ -4,13 +4,15 @@
 A bridge that overrides ask_form() but reports the typed fields as
 unsupported gets them faked as text fields. These tests check the field
 substitution, the answer conversion back to the typed answers, the
-wrapping of the caller's validator, and the RuntimeError when nothing can
+wrapping of the caller's validator, the fallback for a bridge whose
+ask_form() predates live_validator, and the RuntimeError when nothing can
 be shown.
 """
 
 # Copyright (c) 2026 Tom Björkholm
 # MIT License
 
+import warnings
 from datetime import date
 from typing import Optional, Sequence
 
@@ -19,9 +21,9 @@ import pytest
 from wizard_ui_bridge import AskField, AskFields, AskFloatField, \
     AskDateField, AskTextField, AskChoiceField, AnswerField, AnswerFields, \
     AnswerFloatField, AnswerDateField, AnswerTextField, \
-    PartFormValidationResult, PartialFormValidator, PrefillValues, \
-    WizardUiBridge
-from wizard_ui_bridge.form_helpers import initial_answer
+    PartFormValidationResult, LiveFormValidator, PartialFormValidator, \
+    PrefillValues, WizardUiBridge
+from wizard_ui_bridge.form_helpers import initial_answer, live_validator_of
 
 
 def _shown_answer(field: AskField, text: Optional[str]) -> AnswerField:
@@ -47,7 +49,7 @@ class _FakeBridge(WizardUiBridge):
         self._texts = texts
         self._support_all = support_all
         self.seen: list[AskField] = []
-        self.validator: Optional[PartialFormValidator] = None
+        self.validator: Optional[LiveFormValidator] = None
 
     def supports_form_field(self, field: AskField) -> bool:
         """Support all fields, or only the original kinds by policy."""
@@ -61,14 +63,45 @@ class _FakeBridge(WizardUiBridge):
 
     def ask_form(self, long_question: str, ask_fields: AskFields, *,
                  re_ask_reason: Optional[str] = None,
+                 partial_validator: Optional[PartialFormValidator] = None,
+                 live_validator: Optional[LiveFormValidator] = None
+                 ) -> AnswerFields:
+        """Record the shown fields and validator; return scripted answers."""
+        _ = (long_question, re_ask_reason)
+        self.validator = live_validator_of(partial_validator, live_validator)
+        return self._answers(ask_fields)
+
+    def _answers(self, ask_fields: AskFields) -> AnswerFields:
+        """Record the shown fields and return their scripted answers."""
+        self.seen = list(ask_fields)
+        return [_shown_answer(field, self._texts.get(index))
+                for index, field in enumerate(self.seen)]
+
+
+# pylint: disable-next=abstract-method
+class _OldBridge(_FakeBridge):
+    """A form bridge whose ask_form() predates live_validator.
+
+    It records the partial validator it was given, which it would only
+    call with a row index, never with None.
+    """
+
+    def __init__(self, texts: dict[int, str]) -> None:
+        """Store the scripted texts and no partial validator yet."""
+        super().__init__(texts)
+        self.old_validator: Optional[PartialFormValidator] = None
+
+    # This deliberately has the signature of a bridge written before
+    # live_validator existed.
+    # pylint: disable-next=arguments-differ
+    def ask_form(self, long_question: str,  # type: ignore[override]
+                 ask_fields: AskFields, *, re_ask_reason: Optional[str] = None,
                  partial_validator: Optional[PartialFormValidator] = None
                  ) -> AnswerFields:
         """Record the shown fields and validator; return scripted answers."""
         _ = (long_question, re_ask_reason)
-        self.seen = list(ask_fields)
-        self.validator = partial_validator
-        return [_shown_answer(field, self._texts.get(index))
-                for index, field in enumerate(self.seen)]
+        self.old_validator = partial_validator
+        return self._answers(ask_fields)
 
 
 # pylint: disable-next=abstract-method
@@ -133,9 +166,9 @@ def test_fake_runtime_error() -> None:
 
 
 def _drive(bridge: _FakeBridge, fields: list[AskField],
-           validator: PartialFormValidator) -> PartialFormValidator:
+           validator: LiveFormValidator) -> LiveFormValidator:
     """Run ask_form_w_fake and return the wrapped validator it installed."""
-    bridge.ask_form_w_fake('Q', fields, partial_validator=validator)
+    bridge.ask_form_w_fake('Q', fields, live_validator=validator)
     assert bridge.validator is not None
     return bridge.validator
 
@@ -146,7 +179,7 @@ def test_fake_validator_typed() -> None:
     seen: list[Sequence[AnswerField]] = []
 
     def caller(answers: AnswerFields,
-               changed: int) -> PartFormValidationResult:
+               changed: Optional[int]) -> PartFormValidationResult:
         _ = changed
         seen.append(list(answers))
         return PartFormValidationResult(True, '')
@@ -163,7 +196,7 @@ def test_fake_guidance() -> None:
     fields: list[AskField] = [AskFloatField('R', None)]
 
     def caller(answers: AnswerFields,
-               changed: int) -> PartFormValidationResult:
+               changed: Optional[int]) -> PartFormValidationResult:
         _ = (answers, changed)
         return PartFormValidationResult(True, '')
     bridge = _FakeBridge({0: 'x'})
@@ -179,7 +212,7 @@ def test_fake_prefill_convert() -> None:
     fields: list[AskField] = [name, AskDateField('D', None)]
 
     def caller(answers: AnswerFields,
-               changed: int) -> PartFormValidationResult:
+               changed: Optional[int]) -> PartFormValidationResult:
         _ = (answers, changed)
         prefill: PrefillValues = ((1, date(2024, 5, 6)),)
         return PartFormValidationResult(True, '', (), prefill)
@@ -211,7 +244,7 @@ def test_fake_caller_invalid() -> None:
     fields: list[AskField] = [AskDateField('D', None)]
 
     def caller(answers: AnswerFields,
-               changed: int) -> PartFormValidationResult:
+               changed: Optional[int]) -> PartFormValidationResult:
         _ = (answers, changed)
         prefill: PrefillValues = ((0, date(2024, 1, 1)),)
         return PartFormValidationResult(False, 'nope', (), prefill)
@@ -230,7 +263,7 @@ def test_fake_prefill_kept() -> None:
     fields: list[AskField] = [name, AskDateField('D', None)]
 
     def caller(answers: AnswerFields,
-               changed: int) -> PartFormValidationResult:
+               changed: Optional[int]) -> PartFormValidationResult:
         _ = (answers, changed)
         prefill: PrefillValues = ((0, 'kept'), (5, 'far'))
         return PartFormValidationResult(True, '', (), prefill)
@@ -247,3 +280,64 @@ def _text_field(bridge: _FakeBridge, index: int) -> AskTextField:
     field = bridge.seen[index]
     assert isinstance(field, AskTextField)
     return field
+
+
+def test_fake_old_bridge() -> None:
+    """A bridge without live_validator gets it as partial_validator."""
+    fields: list[AskField] = [AskDateField('D', None)]
+
+    def caller(answers: AnswerFields,
+               changed: Optional[int]) -> PartFormValidationResult:
+        _ = (answers, changed)
+        return PartFormValidationResult(True, '')
+    bridge = _OldBridge({0: '2024-05-06'})
+    with pytest.warns(DeprecationWarning, match='_OldBridge.ask_form'):
+        answers = bridge.ask_form_w_fake('Q', fields, live_validator=caller)
+    assert bridge.old_validator is not None
+    assert answers[0].value == date(2024, 5, 6)
+
+
+def test_old_no_validator() -> None:
+    """A bridge without live_validator gets no warning with no validator.
+
+    Nothing is faked, so no wrapping validator is installed either.
+    """
+    bridge = _OldBridge({0: 'Tom'})
+    with warnings.catch_warnings():
+        warnings.simplefilter('error')
+        answers = bridge.ask_form_w_fake('Q', [AskTextField('T', None)])
+    assert bridge.old_validator is None
+    assert answers[0].value == 'Tom'
+
+
+def test_fake_passes_none() -> None:
+    """The wrapped validator passes None on to the caller's validator."""
+    calls: list[Optional[int]] = []
+
+    def caller(answers: AnswerFields,
+               changed: Optional[int]) -> PartFormValidationResult:
+        _ = answers
+        calls.append(changed)
+        return PartFormValidationResult(True, '')
+    bridge = _FakeBridge({0: '3.5'})
+    wrapped = _drive(bridge, [AskFloatField('R', None)], caller)
+    wrapped([AnswerTextField(_text_field(bridge, 0), '3.5')], None)
+    assert calls == [None]
+
+
+def test_fake_deprecated() -> None:
+    """A deprecated partial_validator warns once, at ask_form_w_fake()."""
+    calls: list[int] = []
+
+    def old(answers: AnswerFields, index: int) -> PartFormValidationResult:
+        _ = answers
+        calls.append(index)
+        return PartFormValidationResult(True, '')
+    bridge = _FakeBridge({0: '3.5'})
+    with pytest.warns(DeprecationWarning) as record:
+        bridge.ask_form_w_fake('Q', [AskFloatField('R', None)],
+                               partial_validator=old)
+    assert len(record) == 1
+    assert bridge.validator is not None
+    bridge.validator([AnswerTextField(_text_field(bridge, 0), '3.5')], None)
+    assert calls == [0]

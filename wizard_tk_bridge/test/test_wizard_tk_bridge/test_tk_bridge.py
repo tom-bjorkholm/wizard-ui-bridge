@@ -6,12 +6,13 @@
 
 from io import StringIO
 from pathlib import Path
+from typing import Optional
 import tkinter as tk
 import pytest
 from wizard_ui_bridge import AskChoiceField, AskFloatField, AskTextField, \
     PathAskOptions, TableCell, TableColumn, WizardPathKind, AskLabelCell, \
     AskIntCell, AnswerIntCell, MatrixConsoleQuestion, MatrixDimensions, \
-    MatrixRequest
+    MatrixRequest, AnswerFields, PartFormValidationResult
 from wizard_tk_bridge import WizardUiBridgeTk
 from wizard_tk_bridge._no_text_io import NoTextIO
 from wizard_tk_bridge.wizard_window import WizardWindow
@@ -277,23 +278,55 @@ def test_window_is_reused() -> None:
         bridge.close()
 
 
+def _submit_form(bridge: WizardUiBridgeTk) -> None:
+    """Submit the form the bridge's window is showing."""
+    # pylint: disable-next=protected-access
+    window = bridge._window
+    assert window is not None
+    # pylint: disable-next=protected-access
+    assert window._form is not None
+    # pylint: disable-next=protected-access
+    window._form.submit()
+
+
 def test_ask_form_delegates() -> None:
     """Test ask_form builds the whole-form editor and submits its answer."""
     with gui_root() as root:
         bridge = WizardUiBridgeTk(root)
         field = AskTextField('Name', None, default='Bob')
-
-        def _submit() -> None:
-            # pylint: disable-next=protected-access
-            window = bridge._window
-            assert window is not None
-            # pylint: disable-next=protected-access
-            assert window._form is not None
-            # pylint: disable-next=protected-access
-            window._form.submit()
-        root.after(0, _submit)
+        root.after(0, lambda: _submit_form(bridge))
         answers = bridge.ask_form('Fill this in', [field])
         assert answers[0].value == 'Bob'
+        bridge.close()
+
+
+def test_ask_form_deprecated() -> None:
+    """Test a deprecated partial_validator warns and gets 0 for None."""
+    calls: list[int] = []
+
+    def old(_answers: AnswerFields, index: int) -> PartFormValidationResult:
+        calls.append(index)
+        return PartFormValidationResult(True, '')
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        root.after(0, lambda: _submit_form(bridge))
+        with pytest.warns(DeprecationWarning, match='partial_validator'):
+            bridge.ask_form('Q', [AskTextField('Name', None, default='x')],
+                            partial_validator=old)
+        bridge.close()
+    assert calls == [0, 0]
+
+
+def test_ask_form_both_raises() -> None:
+    """Test giving both partial_validator and live_validator raises."""
+    def rule(_answers: AnswerFields,
+             _index: Optional[int]) -> PartFormValidationResult:
+        return PartFormValidationResult(True, '')
+    with gui_root() as root:
+        bridge = WizardUiBridgeTk(root)
+        with pytest.raises(TypeError, match='not both'):
+            bridge.ask_form('Q', [AskTextField('Name', None)],
+                            partial_validator=rule, live_validator=rule)
         bridge.close()
 
 
